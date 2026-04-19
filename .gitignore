@@ -1,0 +1,58 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+*.DS_Store
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+
+# Credentials & sensitive files
+*.env
+*.key
+*.pem
+cookie.file
+secrets/
+.secret
+*.secret
+*.credentials
+*.token
+
+# Logs
+*.log
+logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+dist/
+build/
+*.egg-info/
+.hatch/
+*.whl
+
+# Environment locals (secrets)
+.env
+.env.local
+.env.*.local
+
+# Tests & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+coverage.xml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude Code (local settings, memory, session data)
+.claude/

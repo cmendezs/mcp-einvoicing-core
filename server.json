@@ -1,0 +1,26 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.cmendezs/mcp-einvoicing-core",
+  "version": "0.1.0",
+  "title": "MCP E-Invoicing Core",
+  "description": "Base library for building MCP e-invoicing servers: abstract base classes, shared Pydantic models, XML utilities, and an OAuth2-capable async HTTP client.",
+  "repository": {
+    "url": "https://github.com/cmendezs/mcp-einvoicing-core",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "mcp-einvoicing-core",
+      "version": "0.1.0",
+      "runtimeArguments": [],
+      "installationInstructions": "pip install mcp-einvoicing-core",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ],
+  "license": "Apache-2.0",
+  "categories": ["finance"],
+  "tags": ["e-invoicing", "mcp", "base-library", "oauth2", "pydantic", "xml", "b2b", "b2g"]
+}
