@@ -1,5 +1,7 @@
 # mcp-einvoicing-core
 
+**Topics:** `mcp` `mcp-server` `e-invoicing` `electronic-invoicing` `european-invoicing` `python` `fastmcp` `peppol` `en16931` `ubl` `fatturapa` `xp-z12-013` `xml` `base-library`
+
 Base package for European electronic invoicing MCP servers.
 
 Provides abstract base classes, shared Pydantic models, XML utilities, and an HTTP client
@@ -25,7 +27,7 @@ share a common foundation without duplicating code.
 pip install mcp-einvoicing-core
 ```
 
-This package has **no country-specific dependencies**.  `lxml` (needed for XSD validation
+This package has **no country-specific dependencies**. `lxml` (needed for XSD validation
 in IT and future countries) is declared by each country package individually.
 
 ## Architecture
@@ -74,6 +76,12 @@ server.register_plugin(register_flow_tools, "fr-flow")
 server.run()
 ```
 
+## Claude Desktop / Cursor / Kiro compatibility
+
+Existing configurations for `mcp-facture-electronique-fr` and `mcp-fattura-elettronica-it`
+require **no changes**: tool names, signatures, environment variables, and entry points
+(`server:main`) are fully preserved.
+
 ## Roadmap compatibility
 
 | Country | Standard | Inherits | Overrides | Known gaps |
@@ -85,49 +93,6 @@ server.run()
 | 🇩🇪 DE | ZUGFeRD / XRechnung | all base classes | `generate()` returns PDF bytes (base64) | `generate()` return type: `str` vs `bytes` ambiguity |
 | 🇪🇸 ES | FACeB2B / FacturaE | all base classes | mTLS auth | `MTLS` auth mode not yet implemented |
 
----
+## License
 
-## Compatibilité Claude Desktop / Cursor / Kiro
-
-Les packages pays existants (`mcp-facture-electronique-fr`, `mcp-fattura-elettronica-it`)
-**ne nécessitent aucun changement** de configuration côté client. Les noms d'outils, signatures,
-et points d'entrée (`server:main`) sont préservés à l'identique.
-
----
-
-# mcp-einvoicing-core (FR)
-
-Package de base pour les serveurs MCP de facturation électronique européenne.
-
-Fournit les classes abstraites, les modèles Pydantic partagés, les utilitaires XML
-et le client HTTP OAuth2 réutilisables par tous les adaptateurs pays.
-
-## Ce que ce package apporte
-
-- **Modèles partagés** : `InvoiceParty`, `InvoiceLineItem`, `VATSummary`, `PaymentTerms`,
-  `InvoiceDocument` — représentent le concept de facture indépendamment du format pays.
-- **Classes abstraites** : contrats d'interface clairs (ABC) pour la génération, validation,
-  parsing, gestion du cycle de vie et validation des parties.
-- **Client HTTP réutilisable** : `BaseEInvoicingClient` avec OAuth2 `client_credentials`,
-  cache de token, retry automatique sur 401 — extrait verbatim de `mcp-facture-electronique-fr`.
-- **Utilitaires XML** : `format_amount`, `validate_iban`, `xml_element`, `filter_empty_values` —
-  extraits de `mcp-fattura-elettronica-it`.
-- **Exceptions standardisées** : hiérarchie `EInvoicingError` commune à tous les adaptateurs.
-- **Registre de plugins** : `EInvoicingMCPServer` permet de combiner plusieurs pays dans un
-  seul serveur MCP sans modifier les `server.py` existants.
-
-## Installation
-
-```bash
-pip install mcp-einvoicing-core
-```
-
-## Rétrocompatibilité
-
-Les configurations Claude Desktop / Cursor / Kiro existantes pour `mcp-facture-electronique-fr`
-et `mcp-fattura-elettronica-it` sont **entièrement préservées** : noms d'outils, signatures,
-variables d'environnement, points d'entrée.
-
-## Licence
-
-Apache 2.0 — voir [LICENSE](LICENSE).
+Apache 2.0 — see [LICENSE](LICENSE).
