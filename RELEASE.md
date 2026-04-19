@@ -1,48 +1,40 @@
-# Release Notes
+# Release Process
 
-## v0.1.0 — 2026-04-18
+This document describes how to release a new version of `mcp-einvoicing-core` to PyPI.
 
-Initial public release.
+## One-Time Setup Requirements
 
-### What's included
+### PyPI Trusted Publishing
 
-**Abstract base classes** (`base_server.py`):
-- `BaseDocumentGenerator` — generate e-invoice documents from `InvoiceDocument`
-- `BaseDocumentValidator` — validate documents against a schema, returning `DocumentValidationResult`
-- `BaseDocumentParser` — parse raw XML/bytes into structured dicts or `InvoiceDocument`
-- `BaseLifecycleManager` — async submit, status, search, and lifecycle-event operations
-- `BasePartyValidator` — validate seller/buyer parties and tax identifiers
-- `EInvoicingMCPServer` — thin wrapper around `FastMCP` with plugin registration
+PyPI publishing is fully automated via OIDC (no token stored). The Trusted Publisher is configured on PyPI under `cmendezs/mcp-einvoicing-core`, workflow `publish.yml`, environment `pypi`. No `.env` or secret needed.
 
-**Shared Pydantic v2 models** (`models.py`):
-- `TaxIdentifier`, `PartyAddress`, `InvoiceParty`, `InvoiceLineItem`
-- `VATSummary`, `PaymentTerms`, `InvoiceDocument`, `DocumentValidationResult`
+---
 
-**XML utilities** (`xml_utils.py`):
-- `format_amount`, `format_quantity` — Decimal-safe monetary/quantity formatting
-- `validate_date_iso`, `validate_iban` — format validators
-- `xml_element`, `xml_optional`, `xml_escape` — XML building helpers
-- `format_error`, `filter_empty_values` — dict/response helpers
+## Release Steps
 
-**HTTP client** (`http_client.py`):
-- `BaseEInvoicingClient` — async httpx client with OAuth2 client_credentials, Bearer token, or no-auth modes; automatic token refresh and 401-retry
-- `TokenCache` — in-memory token cache with configurable expiry margin
-- `AuthMode` — enum (OAUTH2_CLIENT_CREDENTIALS, BEARER_TOKEN, NONE, MTLS†, API_KEY†)
-- `OAuthConfig`, `BaseEInvoicingConfig` — pydantic-settings base configs
+### 1. Bump the version
 
-**Logging utilities** (`logging_utils.py`):
-- `setup_logging`, `get_logger` — stderr-based structured logging
+Edit **both** files — replace `X.X.X` with the new version (e.g. `0.1.0` → `0.1.1`):
 
-### Country packages using this base
+- `pyproject.toml` → `version = "X.X.X"`
+- `server.json` → `"version": "X.X.X"` and `"version": "X.X.X"` (in `packages[]`)
 
-| Package | Version | Country |
-|---------|---------|---------|
-| `mcp-facture-electronique-fr` | v0.2.0 | 🇫🇷 France (AFNOR XP Z12-013) |
-| `mcp-fattura-elettronica-it` | v0.2.0 | 🇮🇹 Italy (FatturaPA v1.6.1 / SDI) |
+### 2. Commit, tag and push
 
-### Known limitations
+GitHub Actions publishes to PyPI automatically on tag push.
 
-- MTLS and API_KEY auth modes are stubs (raise `NotImplementedError`)
-- `BaseDocumentParser.to_invoice_document()` raises `NotImplementedError` by default
-- `BaseLifecycleManager.submit_lifecycle_status()` and `healthcheck()` are stubs
-- `lxml` is intentionally excluded — country packages that need XSD validation must declare it as their own dependency
+```bash
+git add pyproject.toml server.json
+git commit -m "chore: bump version to X.X.X"
+git push origin main
+git tag vX.X.X
+git push origin vX.X.X
+```
+
+---
+
+## Notes
+
+- PyPI rejects re-uploads of the same version — always bump before tagging.
+- GitHub Actions creates the GitHub Release automatically (with release notes) alongside the PyPI publish.
+- The `server.json` description field must be **≤ 100 characters**.
