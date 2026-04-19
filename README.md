@@ -90,8 +90,8 @@ require **no changes**: tool names, signatures, environment variables, and entry
 
 | Country | Standard | Inherits | Overrides | Known gaps |
 |---------|----------|----------|-----------|------------|
-| 🇫🇷 FR (existing) | XP Z12-013 | `BaseEInvoicingClient`, `BaseLifecycleManager` | `submit_lifecycle_status`, `healthcheck` | None |
-| 🇮🇹 IT (existing) | FatturaPA v1.6.1 | `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BasePartyValidator` | all abstract methods | `to_invoice_document()` not yet implemented |
+| [🇫🇷 FR (existing)](https://github.com/cmendezs/mcp-facture-electronique-fr) | XP Z12-013 | `BaseEInvoicingClient`, `BaseLifecycleManager` | `submit_lifecycle_status`, `healthcheck` | None |
+| [🇮🇹 IT (existing)](https://github.com/cmendezs/mcp-fattura-elettronica-it) | FatturaPA v1.6.1 | `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BasePartyValidator` | all abstract methods | `to_invoice_document()` not yet implemented |
 | 🇧🇪 BE 2026 | Peppol BIS 3.0 | all base classes | `generate()` → UBL 2.1, `validate()` → Schematron EN16931 | Need `BaseSchematronValidator` variant |
 | 🇵🇱 PL 2026 | KSeF FA(2) | `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseLifecycleManager` | KSeF session auth flow | `MTLS` auth mode not yet implemented |
 | 🇩🇪 DE | ZUGFeRD / XRechnung | all base classes | `generate()` returns PDF bytes (base64) | `generate()` return type: `str` vs `bytes` ambiguity |
