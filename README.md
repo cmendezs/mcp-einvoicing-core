@@ -88,14 +88,38 @@ require **no changes**: tool names, signatures, environment variables, and entry
 
 ## Roadmap compatibility
 
-| Country | Standard | Inherits | Overrides | Known gaps |
-|---------|----------|----------|-----------|------------|
-| [🇫🇷 FR (existing)](https://github.com/cmendezs/mcp-facture-electronique-fr) | XP Z12-013 | `BaseEInvoicingClient`, `BaseLifecycleManager` | `submit_lifecycle_status`, `healthcheck` | None |
-| [🇮🇹 IT (existing)](https://github.com/cmendezs/mcp-fattura-elettronica-it) | FatturaPA v1.6.1 | `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BasePartyValidator` | all abstract methods | `to_invoice_document()` not yet implemented |
-| 🇧🇪 BE 2026 | Peppol BIS 3.0 | all base classes | `generate()` → UBL 2.1, `validate()` → Schematron EN16931 | Need `BaseSchematronValidator` variant |
-| 🇵🇱 PL 2026 | KSeF FA(2) | `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseLifecycleManager` | KSeF session auth flow | `MTLS` auth mode not yet implemented |
-| 🇩🇪 DE | ZUGFeRD / XRechnung | all base classes | `generate()` returns PDF bytes (base64) | `generate()` return type: `str` vs `bytes` ambiguity |
-| 🇪🇸 ES | FACeB2B / FacturaE | all base classes | mTLS auth | `MTLS` auth mode not yet implemented |
+| Country | Status | Standard | Transport | Inherits | Overrides | Known gaps |
+|---------|--------|----------|-----------|----------|-----------|------------|
+| [🇫🇷 FR](https://github.com/cmendezs/mcp-facture-electronique-fr) | ✅ Done | XP Z12-013 | Hybrid / PPF hub | `BaseEInvoicingClient`, `BaseLifecycleManager` | `submit_lifecycle_status`, `healthcheck` | None |
+| [🇮🇹 IT](https://github.com/cmendezs/mcp-fattura-elettronica-it) | ✅ Done | FatturaPA v1.6.1 | Direct / SDI | `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BasePartyValidator` | all abstract methods | `to_invoice_document()` not yet implemented |
+| [🇧🇪 BE](https://github.com/cmendezs/mcp-einvoicing-be) | ✅ Done | Peppol BIS 3.0 | AS4 / Peppol | all base classes | `generate()` → UBL 2.1, `validate()` → Schematron EN16931 | None |
+| 🇵🇱 PL | 🔄 In progress | KSeF FA(2) | Direct API | `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseLifecycleManager` | KSeF session auth flow | `MTLS` auth mode not yet implemented |
+| 🇩🇪 DE | 🔄 In progress | ZUGFeRD / XRechnung | AS4 / Peppol | all base classes | `generate()` returns PDF bytes (base64) | `generate()` return type: `str` vs `bytes` ambiguity |
+| 🇪🇸 ES | 🔄 In progress | FACeB2B / FacturaE | Direct API | all base classes | mTLS auth | `MTLS` auth mode not yet implemented |
+| 🇷🇴 RO | 📋 Backlog | RO-UBL (EN 16931) | Direct API / clearance | `BaseDocumentGenerator`, `BaseLifecycleManager` | ANAF clearance flow | `BaseSchematronValidator` variant needed |
+| 🇬🇷 GR | 📋 Backlog | myDATA XML | Direct API / reporting | `BaseEInvoicingClient`, `BaseLifecycleManager` | myDATA auth + reporting flow | myDATA API client not yet designed |
+| 🇳🇱🇸🇪🇩🇰🇳🇴 Nordics/NL | 📋 Backlog | Peppol BIS 3.0 / UBL | AS4 / Peppol | all base classes | `generate()` → UBL 2.1, `validate()` → Schematron | Reuses BE AS4 transport layer |
+| 🇵🇹 PT | 📋 Backlog | CIUS-PT + QR Code | Signature / direct | `BaseDocumentGenerator`, `BaseDocumentValidator` | Qualified signature + QR injection | Qualified signature integration not designed |
+
+## Architectural notes
+
+### Transport interface
+
+As the adapter count grows, a `TransportInterface` abstraction in core will prevent duplication across countries that share the same transport layer:
+
+| Transport | Countries |
+|-----------|-----------|
+| **Direct API** (clearance / reporting) | FR, RO, GR, HU |
+| **AS4 / Peppol network** | BE, DE, Nordics/NL |
+| **Hybrid / hub** | FR (PPF/PDP dual path) |
+
+### Germany: 80% reuse from FR
+
+Germany's mandate (active since Jan 2025 for B2B receiving) heavily favors ZUGFeRD/Factur-X — the same PDF-embedded XML model as the French Factur-X profile. The `mcp-facture-electronique-fr` XML generation and validation logic can be reused with minimal changes, making DE the lowest-effort next adapter after BE.
+
+### ViDA / DRR (2030)
+
+By July 2030, all national systems must align with the EU Digital Reporting Requirement for cross-border transactions. Using **EN 16931** as the internal `InvoiceDocument` data model in this core package already future-proofs the project: country adapters translate EN 16931 → local format, not the other way around.
 
 ## License
 
