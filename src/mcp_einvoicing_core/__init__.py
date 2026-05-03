@@ -16,14 +16,38 @@ from mcp_einvoicing_core.base_server import (
     BasePartyValidator,
     EInvoicingMCPServer,
 )
+from mcp_einvoicing_core.download_rules import DownloadSpec, download_artefacts
+from mcp_einvoicing_core.en16931 import (
+    EN16931Address,
+    EN16931AllowanceCharge,
+    EN16931Invoice,
+    EN16931LineItem,
+    EN16931Party,
+    EN16931PaymentMeans,
+    EN16931Tax,
+)
 from mcp_einvoicing_core.exceptions import (
     AuthenticationError,
     DocumentGenerationError,
     EInvoicingError,
     PartyValidationError,
     PlatformError,
+    SchematronValidationError,
     ValidationError,
     XSDValidationError,
+)
+from mcp_einvoicing_core.peppol import (
+    PEPPOL_BIS_BILLING_30,
+    PeppolEnvironment,
+    PeppolLookupResult,
+    PeppolParticipantId,
+    PeppolServiceInfo,
+    PeppolSMPClient,
+)
+from mcp_einvoicing_core.schematron import (
+    SchematronValidator,
+    ValidationMessage,
+    ValidationResult,
 )
 from mcp_einvoicing_core.http_client import (
     AuthMode,
@@ -41,18 +65,22 @@ from mcp_einvoicing_core.models import (
     TaxIdentifier,
     VATSummary,
 )
+from mcp_einvoicing_core.pdf import PDFEmbedder
+from mcp_einvoicing_core.profile_registry import ProfileEntry, ProfileRegistry, profile_registry
+from mcp_einvoicing_core.testing import InvoiceFixtureFactory
 from mcp_einvoicing_core.xml_utils import (
     filter_empty_values,
     format_amount,
     format_error,
     format_quantity,
+    resolve_xml_input,
     validate_date_iso,
     validate_iban,
     xml_element,
     xml_optional,
 )
 
-__version__ = "0.1.2"
+__version__ = "0.3.0"
 
 __all__ = [
     # Base classes
@@ -68,6 +96,7 @@ __all__ = [
     "PartyValidationError",
     "DocumentGenerationError",
     "XSDValidationError",
+    "SchematronValidationError",
     "AuthenticationError",
     "PlatformError",
     # HTTP client
@@ -75,7 +104,7 @@ __all__ = [
     "BaseEInvoicingClient",
     "OAuthConfig",
     "TokenCache",
-    # Models
+    # Country-agnostic models
     "TaxIdentifier",
     "PartyAddress",
     "InvoiceParty",
@@ -84,6 +113,36 @@ __all__ = [
     "PaymentTerms",
     "InvoiceDocument",
     "DocumentValidationResult",
+    # EN 16931 base models
+    "EN16931Address",
+    "EN16931Party",
+    "EN16931Tax",
+    "EN16931AllowanceCharge",
+    "EN16931LineItem",
+    "EN16931PaymentMeans",
+    "EN16931Invoice",
+    # Schematron validation
+    "ValidationMessage",
+    "ValidationResult",
+    "SchematronValidator",
+    # Peppol SMP client
+    "PeppolEnvironment",
+    "PeppolParticipantId",
+    "PeppolServiceInfo",
+    "PeppolLookupResult",
+    "PeppolSMPClient",
+    "PEPPOL_BIS_BILLING_30",
+    # Profile registry
+    "ProfileEntry",
+    "ProfileRegistry",
+    "profile_registry",
+    # Test fixture factory
+    "InvoiceFixtureFactory",
+    # PDF/A-3 utilities
+    "PDFEmbedder",
+    # Download-rules framework
+    "DownloadSpec",
+    "download_artefacts",
     # XML / format utilities
     "format_amount",
     "format_quantity",
@@ -93,4 +152,5 @@ __all__ = [
     "xml_optional",
     "format_error",
     "filter_empty_values",
+    "resolve_xml_input",
 ]

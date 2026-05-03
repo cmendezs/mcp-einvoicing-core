@@ -20,6 +20,7 @@ it locally. xml_utils works with plain string manipulation and stdlib xml.etree 
 
 from __future__ import annotations
 
+import base64
 import re
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Optional
@@ -158,6 +159,36 @@ def format_error(message: str, code: Optional[str] = None) -> dict[str, str]:
 # ---------------------------------------------------------------------------
 # Dict utilities (reused in IT export_to_json)
 # ---------------------------------------------------------------------------
+
+
+def resolve_xml_input(xml_content: Optional[str], xml_base64: Optional[str]) -> bytes:
+    """Resolve the xml_content / xml_base64 pair to raw bytes.
+
+    Every MCP tool that accepts XML uses the same two-field input pattern:
+    either a plain string or a base64-encoded blob.  This helper centralises
+    the decode/encode logic so it only needs to be correct once.
+
+    Base64 takes precedence when both fields are present.
+
+    Args:
+        xml_content: Raw XML string.
+        xml_base64:  Base64-encoded XML bytes.
+
+    Returns:
+        The XML as raw bytes (UTF-8 for xml_content).
+
+    Raises:
+        ValueError: If neither field is provided, or if xml_base64 is
+                    not valid base64.
+    """
+    if xml_base64 is not None:
+        try:
+            return base64.b64decode(xml_base64)
+        except Exception as exc:
+            raise ValueError(f"xml_base64 is not valid base64: {exc}") from exc
+    if xml_content is not None:
+        return xml_content.encode("utf-8")
+    raise ValueError("Provide either xml_content or xml_base64.")
 
 
 def filter_empty_values(obj: Any) -> Any:

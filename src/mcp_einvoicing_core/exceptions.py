@@ -13,6 +13,11 @@ Design philosophy:
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from mcp_einvoicing_core.schematron import ValidationMessage
+
 
 class EInvoicingError(Exception):
     """Root exception for all e-invoicing errors raised by this package."""
@@ -54,6 +59,33 @@ class XSDValidationError(ValidationError):
         self.schema_version = schema_version
         summary = errors[0] if len(errors) == 1 else f"{len(errors)} errors"
         super().__init__(f"XSD validation ({schema_version}) failed: {summary}")
+
+
+class SchematronValidationError(ValidationError):
+    """Document failed Schematron business-rule validation.
+
+    Raised by country tool handlers when SchematronValidator.validate() returns
+    is_valid=False.  Carries the full list of ValidationMessage findings so that
+    MCP tool error envelopes can include per-rule diagnostic information.
+
+    Args:
+        errors: ValidationMessage findings from failed Schematron assertions.
+        profile: Profile name at the time of validation (e.g. "EN_16931").
+        syntax: Syntax variant at the time of validation (e.g. "CII", "UBL").
+    """
+
+    def __init__(
+        self,
+        errors: list[ValidationMessage],
+        profile: str = "",
+        syntax: str = "",
+    ) -> None:
+        self.errors = errors
+        self.profile = profile
+        self.syntax = syntax
+        summary = errors[0].text if len(errors) == 1 else f"{len(errors)} errors"
+        context = f" [{profile}/{syntax}]" if profile or syntax else ""
+        super().__init__(f"Schematron validation{context} failed: {summary}")
 
 
 # ---------------------------------------------------------------------------
