@@ -33,7 +33,6 @@ from decimal import Decimal
 
 from mcp_einvoicing_core.en16931 import (
     EN16931Address,
-    EN16931AllowanceCharge,
     EN16931Invoice,
     EN16931LineItem,
     EN16931Party,

@@ -384,7 +384,7 @@ class PeppolSMPClient:
         if not response.is_success:
             raise PlatformError(
                 status_code=response.status_code,
-                message=f"SMP service group request failed",
+                message="SMP service group request failed",
             )
 
         return self._parse_service_group(response.content)
