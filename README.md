@@ -92,11 +92,11 @@ require **no changes**: tool names, signatures, environment variables, and entry
 
 | Country | Status | Standard | Transport | Inherits | Overrides | Known gaps |
 |---------|--------|----------|-----------|----------|-----------|------------|
-| [🇫🇷 FR](https://github.com/cmendezs/mcp-facture-electronique-fr) | ✅ Done | XP Z12-013 | Hybrid / PPF hub | `BaseEInvoicingClient`, `BaseLifecycleManager` | `submit_lifecycle_status`, `healthcheck` | None |
-| [🇮🇹 IT](https://github.com/cmendezs/mcp-fattura-elettronica-it) | ✅ Done | FatturaPA v1.6.1 | Direct / SDI | `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BasePartyValidator` | all abstract methods | `to_invoice_document()` not yet implemented |
 | [🇧🇪 BE](https://github.com/cmendezs/mcp-einvoicing-be) | ✅ Done | Peppol BIS 3.0 | AS4 / Peppol | all base classes | `generate()` → UBL 2.1, `validate()` → Schematron EN16931 | None |
+| [🇫🇷 FR](https://github.com/cmendezs/mcp-facture-electronique-fr) | ✅ Done | XP Z12-013 | Hybrid / PPF hub | `BaseEInvoicingClient`, `BaseLifecycleManager` | `submit_lifecycle_status`, `healthcheck` | None |
+| [🇩🇪 DE](https://github.com/cmendezs/mcp-einvoicing-de) | ✅ Done | ZUGFeRD / XRechnung | AS4 / Peppol | all base classes | `generate()` returns PDF bytes (base64) | `generate()` return type: `str` vs `bytes` ambiguity |
+| [🇮🇹 IT](https://github.com/cmendezs/mcp-fattura-elettronica-it) | ✅ Done | FatturaPA v1.6.1 | Direct / SDI | `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BasePartyValidator` | all abstract methods | `to_invoice_document()` not yet implemented |
 | 🇵🇱 PL | 🔄 In progress | KSeF FA(2) | Direct API | `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseLifecycleManager` | KSeF session auth flow | `MTLS` auth mode not yet implemented |
-| 🇩🇪 DE | 🔄 In progress | ZUGFeRD / XRechnung | AS4 / Peppol | all base classes | `generate()` returns PDF bytes (base64) | `generate()` return type: `str` vs `bytes` ambiguity |
 | 🇪🇸 ES | 🔄 In progress | FACeB2B / FacturaE | Direct API | all base classes | mTLS auth | `MTLS` auth mode not yet implemented |
 | 🇷🇴 RO | 📋 Backlog | RO-UBL (EN 16931) | Direct API / clearance | `BaseDocumentGenerator`, `BaseLifecycleManager` | ANAF clearance flow | `BaseSchematronValidator` variant needed |
 | 🇬🇷 GR | 📋 Backlog | myDATA XML | Direct API / reporting | `BaseEInvoicingClient`, `BaseLifecycleManager` | myDATA auth + reporting flow | myDATA API client not yet designed |
