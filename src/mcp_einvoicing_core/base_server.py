@@ -200,7 +200,8 @@ class BaseLifecycleManager(ABC):
     Concrete use — FR: FlowClient (submit_flow, search_flows, get_flow,
                         submit_lifecycle_status, healthcheck)
     Concrete use — BE: Peppol AS4 document submission (B2B/B2G)
-    Concrete use — PL: KSeF API (submit, check status, fetch UPO receipt)
+    Concrete use — PL: KSeF API v2 (open session, send encrypted invoice, close
+                        session, status, search)
     Concrete use — IT: (out of scope v0.1.0 — no direct SDI submission yet)
     Concrete use — ES: FACeB2B API (submit, check status)
     """
@@ -210,7 +211,7 @@ class BaseLifecycleManager(ABC):
         """Submit a document to the national platform.
 
         FR: POST /v1/flows (multipart: file + flowInfo JSON)
-        PL: POST /api/online/Send/Invoice (KSeF — requires prior session token)
+        PL: KSeF v2 — open session → POST /sessions/online/{ref}/invoices (encrypted) → close
         BE: AS4 message via Peppol Access Point
 
         Args:
@@ -226,7 +227,7 @@ class BaseLifecycleManager(ABC):
         """Get the status of a previously submitted document.
 
         FR:  GET /v1/flows/{flowId}?docType=Metadata
-        PL:  GET /api/online/Invoice/Status/{invoiceElementReference}
+        PL:  GET /sessions/{sessionRef}/invoices/{invoiceRef}
         """
 
     @abstractmethod
@@ -234,7 +235,7 @@ class BaseLifecycleManager(ABC):
         """Search for submitted documents by criteria.
 
         FR: POST /v1/flows/search (processingRule, flowType, status, updatedAfter)
-        PL: POST /api/online/Query/Invoice/Sync
+        PL: POST /invoices/query/metadata (subjectType, dateRange)
         """
 
     async def submit_lifecycle_status(
