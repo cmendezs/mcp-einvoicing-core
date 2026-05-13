@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-einvoicing-core"
-version = "0.3.0"
+version = "0.4.0"
 description = "Base package for European electronic invoicing MCP servers"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -37,12 +37,16 @@ dependencies = [
 pdf = [
     "pikepdf>=8.0.0",
 ]
+qr = [
+    "qrcode[pil]>=7.4.0",
+]
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
     "pytest-httpx>=0.30.0",
     "mypy>=1.10.0",
     "ruff>=0.4.0",
+    "qrcode[pil]>=7.4.0",
 ]
 
 [project.scripts]

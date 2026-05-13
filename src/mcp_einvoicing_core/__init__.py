@@ -68,6 +68,7 @@ from mcp_einvoicing_core.models import (
 from mcp_einvoicing_core.pdf import PDFEmbedder
 from mcp_einvoicing_core.profile_registry import ProfileEntry, ProfileRegistry, profile_registry
 from mcp_einvoicing_core.testing import InvoiceFixtureFactory
+from mcp_einvoicing_core.qr import generate_qr_png_base64
 from mcp_einvoicing_core.xml_utils import (
     filter_empty_values,
     format_amount,
@@ -80,7 +81,7 @@ from mcp_einvoicing_core.xml_utils import (
     xml_optional,
 )
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 __all__ = [
     # Base classes
@@ -153,4 +154,6 @@ __all__ = [
     "format_error",
     "filter_empty_values",
     "resolve_xml_input",
+    # QR code generation
+    "generate_qr_png_base64",
 ]
