@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-einvoicing-core"
-version = "0.5.0"
+version = "0.6.0"
 description = "Base package for European electronic invoicing MCP servers"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -24,7 +24,12 @@ classifiers = [
 # are now core abstractions shared by every EN 16931 country package, promoting lxml
 # to a core dependency is correct.  Countries that do not use Schematron (FR) still
 # have lxml installed transitively but never import it.
+# [DECISION: cryptography promoted to required in v0.6.0] MTLS is a first-class
+# AuthMode on BaseEInvoicingClient; the PKCS#12 loader (_build_mtls_ssl_context)
+# requires it.  Countries that use OAuth2 or no-auth still have cryptography
+# installed but never invoke the PKCS#12 path.
 dependencies = [
+    "cryptography>=42.0.0",
     "fastmcp>=2.0.0",
     "httpx>=0.27.0",
     "lxml>=5.0.0",
@@ -40,9 +45,7 @@ pdf = [
 qr = [
     "qrcode[pil]>=7.4.0",
 ]
-xml-sign = [
-    "cryptography>=42.0.0",
-]
+xml-sign = []
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
@@ -50,7 +53,6 @@ dev = [
     "mypy>=1.10.0",
     "ruff>=0.4.0",
     "qrcode[pil]>=7.4.0",
-    "cryptography>=42.0.0",
 ]
 
 [project.scripts]

@@ -7,23 +7,26 @@ The FR package uses OAuth2 client_credentials for both FlowClient and DirectoryC
 IT does not use HTTP at all (local processing only).
 Future countries:
   Belgium/Poland (Peppol)     → OAuth2 or API-key against Access Point
-  Germany (XRechnung)         → mTLS certificate (AuthMode.MTLS — gap flagged in Step 5)
-  Spain (FACeB2B)             → mTLS certificate (same gap)
+  Germany (XRechnung)         → mTLS certificate (AuthMode.MTLS)
+  Spain (FACeB2B / AEAT)      → mTLS certificate (same)
   Poland (KSeF)               → Bearer token (session-based, not client_credentials)
 
 [DECISION: TokenCache is extracted verbatim from FR config.py. It is generic enough
  (any Bearer token with expires_in) to serve future countries.]
 
-[DECISION: The base client supports OAUTH2_CLIENT_CREDENTIALS and NONE.
- MTLS and API_KEY are placeholders (raise NotImplementedError) — added to make it
- clear where country adapters should plug in, without implementing unvalidated logic.]
+[DECISION: The base client supports OAUTH2_CLIENT_CREDENTIALS, NONE, BEARER_TOKEN,
+ and MTLS. API_KEY remains a placeholder (raise NotImplementedError) — subclass and
+ override _get_headers() when a country needs it.]
 """
 
 from __future__ import annotations
 
 import logging
+import ssl
+import tempfile
 import time
 from enum import Enum
+from pathlib import Path
 from typing import Any, Optional
 
 import httpx
@@ -33,6 +36,77 @@ from pydantic_settings import BaseSettings
 from mcp_einvoicing_core.exceptions import AuthenticationError, PlatformError
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# PKCS#12 / mTLS helpers
+# ---------------------------------------------------------------------------
+
+
+def _build_mtls_ssl_context(cert_path: str, cert_password: Optional[str]) -> ssl.SSLContext:
+    """Return an SSLContext loaded with the client certificate from a PKCS#12 file.
+
+    The certificate and private key are extracted in memory using the
+    ``cryptography`` library, written to a short-lived temporary file with
+    restricted permissions, and immediately deleted after ``load_cert_chain``
+    reads them.  The temp-file pattern is required because CPython's
+    ``ssl.SSLContext.load_cert_chain`` only accepts file paths or PEM bytes
+    (not in-memory key objects).
+
+    Args:
+        cert_path: Path to the PKCS#12 (.p12 / .pfx) file.
+        cert_password: Passphrase for the file, or ``None`` if unprotected.
+
+    Returns:
+        An ``ssl.SSLContext`` configured for mutual TLS client authentication.
+
+    Raises:
+        ImportError: If ``cryptography`` is not installed.
+        ValueError: If the PKCS#12 file has no certificate or private key.
+        FileNotFoundError: If *cert_path* does not exist.
+    """
+    try:
+        from cryptography.hazmat.primitives import serialization  # noqa: PLC0415
+        from cryptography.hazmat.primitives.serialization.pkcs12 import (  # noqa: PLC0415
+            load_pkcs12,
+        )
+    except ImportError as exc:
+        raise ImportError(
+            "cryptography>=42.0.0 is required for MTLS. "
+            "Install it: pip install 'cryptography>=42.0.0'"
+        ) from exc
+
+    raw = Path(cert_path).read_bytes()
+    password = cert_password.encode() if cert_password else None
+    p12 = load_pkcs12(raw, password)
+
+    if p12.cert is None:
+        raise ValueError(f"No certificate found in PKCS#12 file: {cert_path}")
+    if p12.key is None:
+        raise ValueError(f"No private key found in PKCS#12 file: {cert_path}")
+
+    cert_pem = p12.cert.certificate.public_bytes(serialization.Encoding.PEM)
+    key_pem = p12.key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+
+    # Write cert+key to a restricted tempfile, load, then delete immediately.
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pem") as tmp:
+        tmp_path = tmp.name
+        tmp.write(cert_pem + key_pem)
+
+    try:
+        ctx.load_cert_chain(tmp_path)
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
+
+    return ctx
 
 
 # ---------------------------------------------------------------------------
@@ -53,9 +127,11 @@ class AuthMode(str, Enum):
     """No authentication — local processing or unauthenticated endpoints."""
 
     MTLS = "mtls"
-    """Mutual TLS with client certificate (ES FACeB2B, DE ELSTER, Peppol AS4).
-    [GAP: Not yet implemented. Country adapters must subclass BaseEInvoicingClient
-     and override _get_httpx_client() to inject the cert/key pair.]"""
+    """Mutual TLS with client certificate (ES FACeB2B / AEAT, DE ELSTER, Peppol AS4).
+
+    Pass ``cert_path`` and optionally ``cert_password`` to ``BaseEInvoicingClient``
+    to activate. The PKCS#12 file is loaded once and reused for all requests.
+    """
 
     API_KEY = "api_key"
     """API-key authentication (header or query param).
@@ -232,6 +308,8 @@ class BaseEInvoicingClient:
         token_cache: Optional[TokenCache] = None,
         static_bearer_token: Optional[str] = None,
         http_timeout: float = 30.0,
+        cert_path: Optional[str] = None,
+        cert_password: Optional[str] = None,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._auth_mode = auth_mode
@@ -239,9 +317,34 @@ class BaseEInvoicingClient:
         self._token_cache = token_cache if token_cache is not None else TokenCache()
         self._static_token = static_bearer_token
         self._http_timeout = http_timeout
+        self._cert_path = cert_path
+        self._cert_password = cert_password
+        self._mtls_ssl_context: Optional[ssl.SSLContext] = None
 
         if auth_mode == AuthMode.OAUTH2_CLIENT_CREDENTIALS and oauth_config is None:
             raise ValueError("oauth_config is required for OAUTH2_CLIENT_CREDENTIALS auth mode")
+        if auth_mode == AuthMode.MTLS and cert_path is None:
+            raise ValueError("cert_path is required for MTLS auth mode")
+
+    def _get_httpx_client(self) -> httpx.AsyncClient:
+        """Return an ``httpx.AsyncClient`` configured for the active auth mode.
+
+        For ``MTLS``: builds (and caches) an SSL context from the PKCS#12 cert
+        on first call.  For all other modes: returns a plain client.
+
+        Override this method in a subclass to inject custom TLS configuration
+        (e.g. a trust store, per-request cert rotation, or a test transport).
+        """
+        if self._auth_mode == AuthMode.MTLS:
+            if self._mtls_ssl_context is None:
+                assert self._cert_path is not None
+                self._mtls_ssl_context = _build_mtls_ssl_context(
+                    self._cert_path, self._cert_password
+                )
+            return httpx.AsyncClient(
+                timeout=self._http_timeout, verify=self._mtls_ssl_context
+            )
+        return httpx.AsyncClient(timeout=self._http_timeout)
 
     async def _fetch_oauth_token(self) -> str:
         """Obtain a new token via client_credentials grant.
@@ -310,11 +413,9 @@ class BaseEInvoicingClient:
             headers["Authorization"] = f"Bearer {token}"
 
         elif self._auth_mode == AuthMode.MTLS:
-            # [GAP: mTLS — subclass and override _get_httpx_client()]
-            raise NotImplementedError(
-                "MTLS auth requires subclassing BaseEInvoicingClient and overriding "
-                "_get_httpx_client() to provide the client certificate."
-            )
+            # The client certificate (loaded in _get_httpx_client) is the
+            # authentication mechanism; no Authorization header is needed.
+            pass
 
         elif self._auth_mode == AuthMode.API_KEY:
             # [GAP: API_KEY — subclass and override _get_headers()]
@@ -353,7 +454,7 @@ class BaseEInvoicingClient:
         if json is not None and files is None:
             headers["Content-Type"] = "application/json"
 
-        async with httpx.AsyncClient(timeout=self._http_timeout) as client:
+        async with self._get_httpx_client() as client:
             response = await client.request(
                 method,
                 url,
