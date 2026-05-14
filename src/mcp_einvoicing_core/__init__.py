@@ -15,6 +15,7 @@ from mcp_einvoicing_core.base_server import (
     BaseLifecycleManager,
     BasePartyValidator,
     EInvoicingMCPServer,
+    SubmitResult,
 )
 from mcp_einvoicing_core.download_rules import DownloadSpec, download_artefacts
 from mcp_einvoicing_core.en16931 import (
@@ -45,6 +46,7 @@ from mcp_einvoicing_core.peppol import (
     PeppolSMPClient,
 )
 from mcp_einvoicing_core.schematron import (
+    BaseStructuredValidator,
     SchematronValidator,
     ValidationMessage,
     ValidationResult,
@@ -68,8 +70,13 @@ from mcp_einvoicing_core.models import (
 from mcp_einvoicing_core.pdf import PDFEmbedder
 from mcp_einvoicing_core.profile_registry import ProfileEntry, ProfileRegistry, profile_registry
 from mcp_einvoicing_core.testing import InvoiceFixtureFactory
-from mcp_einvoicing_core.digital_signature import XAdESEPESSigner, XAdESSignerConfig
+from mcp_einvoicing_core.digital_signature import (
+    BaseDocumentSigner,
+    XAdESEPESSigner,
+    XAdESSignerConfig,
+)
 from mcp_einvoicing_core.qr import generate_qr_png_base64
+from decimal import ROUND_HALF_EVEN, ROUND_HALF_UP
 from mcp_einvoicing_core.xml_utils import (
     filter_empty_values,
     format_amount,
@@ -82,6 +89,22 @@ from mcp_einvoicing_core.xml_utils import (
     xml_optional,
 )
 
+from mcp_einvoicing_core.audit import (
+    DEFAULT_CORE_MODULES,
+    AuditReport,
+    CheckFinding,
+    CheckResult,
+    SEVERITY_BLOCKING,
+    SEVERITY_OK,
+    SEVERITY_SKIP,
+    SEVERITY_WARNING,
+    make_report,
+    parse_audit_args,
+    render_summary_table,
+    run_check_core_coverage,
+    run_check_version_compatibility,
+)
+
 __version__ = "0.6.0"
 
 __all__ = [
@@ -92,6 +115,7 @@ __all__ = [
     "BaseLifecycleManager",
     "BasePartyValidator",
     "EInvoicingMCPServer",
+    "SubmitResult",
     # Exceptions
     "EInvoicingError",
     "ValidationError",
@@ -123,7 +147,8 @@ __all__ = [
     "EN16931LineItem",
     "EN16931PaymentMeans",
     "EN16931Invoice",
-    # Schematron validation
+    # Structured document validation
+    "BaseStructuredValidator",
     "ValidationMessage",
     "ValidationResult",
     "SchematronValidator",
@@ -145,6 +170,9 @@ __all__ = [
     # Download-rules framework
     "DownloadSpec",
     "download_artefacts",
+    # Rounding constants (re-exported for convenience)
+    "ROUND_HALF_UP",
+    "ROUND_HALF_EVEN",
     # XML / format utilities
     "format_amount",
     "format_quantity",
@@ -157,7 +185,22 @@ __all__ = [
     "resolve_xml_input",
     # QR code generation
     "generate_qr_png_base64",
-    # XAdES digital signature
+    # Document signing
+    "BaseDocumentSigner",
     "XAdESSignerConfig",
     "XAdESEPESSigner",
+    # Audit infrastructure (mcp-einvoicing-core[audit] optional extra)
+    "DEFAULT_CORE_MODULES",
+    "AuditReport",
+    "CheckFinding",
+    "CheckResult",
+    "SEVERITY_BLOCKING",
+    "SEVERITY_OK",
+    "SEVERITY_SKIP",
+    "SEVERITY_WARNING",
+    "make_report",
+    "parse_audit_args",
+    "render_summary_table",
+    "run_check_core_coverage",
+    "run_check_version_compatibility",
 ]

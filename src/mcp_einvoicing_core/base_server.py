@@ -29,9 +29,10 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 from fastmcp import FastMCP
+from pydantic import BaseModel, Field
 
 from mcp_einvoicing_core.models import (
     DocumentValidationResult,
@@ -194,6 +195,57 @@ class BaseDocumentParser(ABC):
 # ---------------------------------------------------------------------------
 
 
+class SubmitResult(BaseModel):
+    """Standard return type for BaseLifecycleManager.submit_document.
+
+    All country implementations must return this type so callers can treat
+    submission results uniformly regardless of the underlying platform.
+
+    Fields
+    ------
+    invoice_ref : str
+        Primary platform-assigned document identifier. Use this as the
+        ``document_id`` argument to ``get_document_status``.
+        Mapping: KSeF → invoiceRef, FR → flowId, BE → AS4 message-id.
+    session_ref : str | None
+        Session or batch wrapper reference for platforms that require it.
+        KSeF: the online session referenceNumber opened before upload.
+        Stateless platforms (FR, BE, ES): None.
+    status : str
+        Initial submission status returned by the platform (platform-specific
+        string, e.g. "Deposited", "Processing", "Accepted"). Defaults to
+        "submitted" when the platform provides no immediate status.
+    raw : dict[str, Any]
+        Full platform response payload, preserved verbatim for tracing and
+        debugging. Not used in application logic.
+    """
+
+    invoice_ref: str = Field(..., description="Primary platform document identifier")
+    session_ref: Optional[str] = Field(
+        default=None,
+        description="Session reference for session-based platforms (KSeF, some AS4)",
+    )
+    status: str = Field(
+        default="submitted",
+        description="Initial submission status (platform-specific string)",
+    )
+    raw: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Full platform response payload for debugging",
+    )
+
+    @property
+    def compound_id(self) -> str:
+        """Compound identifier for get_document_status on session-based platforms.
+
+        Returns ``"{session_ref}:{invoice_ref}"`` when ``session_ref`` is set,
+        otherwise returns ``invoice_ref`` alone.
+        """
+        if self.session_ref:
+            return f"{self.session_ref}:{self.invoice_ref}"
+        return self.invoice_ref
+
+
 class BaseLifecycleManager(ABC):
     """Abstract lifecycle manager for national e-invoicing platforms.
 
@@ -207,7 +259,7 @@ class BaseLifecycleManager(ABC):
     """
 
     @abstractmethod
-    async def submit_document(self, document: bytes | str, metadata: dict) -> dict:
+    async def submit_document(self, document: bytes | str, metadata: dict) -> SubmitResult:
         """Submit a document to the national platform.
 
         FR: POST /v1/flows (multipart: file + flowInfo JSON)
@@ -219,7 +271,8 @@ class BaseLifecycleManager(ABC):
             metadata: Platform-specific metadata (flowSyntax, processingRule, etc.)
 
         Returns:
-            Platform response dict (flowId/status in FR, sessionToken in PL, etc.)
+            SubmitResult with invoice_ref, optional session_ref, status, and raw
+            platform response. Pass result.compound_id to get_document_status.
         """
 
     @abstractmethod

@@ -39,6 +39,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+audit = [
+    "packaging>=21.0",
+]
 pdf = [
     "pikepdf>=8.0.0",
 ]

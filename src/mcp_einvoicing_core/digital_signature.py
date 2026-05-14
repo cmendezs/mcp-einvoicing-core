@@ -1,10 +1,15 @@
-"""XAdES-EPES digital signature for e-invoicing XML documents.
+"""Digital signature ABCs and XAdES-EPES implementation for e-invoicing XML.
 
-Implements XMLDSig enveloped signature with XAdES-EPES qualifying properties
-(signing time, signer certificate digest, optional signature policy identifier).
+Public API
+----------
+BaseDocumentSigner
+    Abstract base class for all document-level signers. Extend this for any
+    new signing standard (CAdES, PKCS#7, ZATCA stamp, Sello Digital …).
 
-Requires the [xml-sign] optional extra:
-    pip install 'mcp-einvoicing-core[xml-sign]'
+XAdESSignerConfig, XAdESEPESSigner
+    Concrete XAdES-EPES implementation for ES Facturae and TicketBAI.
+    Requires the [xml-sign] optional extra:
+        pip install 'mcp-einvoicing-core[xml-sign]'
 
 Used by:
   ES — Facturae 3.2.2 (Orden EHA/962/2007 signature policy)
@@ -17,11 +22,56 @@ from __future__ import annotations
 import base64
 import hashlib
 import uuid
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
 
 from lxml import etree
+
+
+# ---------------------------------------------------------------------------
+# Abstract base
+# ---------------------------------------------------------------------------
+
+
+class BaseDocumentSigner(ABC):
+    """Abstract base class for all document-level signers.
+
+    Concrete implementations cover different signing standards:
+
+    - ``XAdESEPESSigner`` — XAdES-EPES enveloped XML signature
+      (ES Facturae / TicketBAI; ETSI TS 101 903)
+    - [Future] CAdES — CAdES attached/detached for FR Chorus Pro PDF/A-3
+    - [Future] PKCS7Signer — PKCS#7 detached for BR NF-e / CT-e
+    - [Future] ZATCASigner — ZATCA cryptographic stamp (HSM-backed, SA Phase 2)
+    - [Future] SelloDigitalSigner — MX CFDI Sello Digital (RSA-SHA256 + base64)
+
+    All implementations must satisfy two invariants:
+    1. ``sign(document)`` is idempotent for the same *document* + credential pair.
+    2. ``sign(document)`` never mutates *document* in place.
+
+    Credential loading (PKCS#12, HSM, environment key) is an implementation
+    concern and is not part of this interface.
+    """
+
+    @abstractmethod
+    def sign(self, document: bytes) -> bytes:
+        """Sign *document* and return the signed result.
+
+        Args:
+            document: Raw document bytes to sign. The format (XML, PDF, JSON)
+                is determined by the concrete signer.
+
+        Returns:
+            Signed document bytes. The embedding strategy (enveloped, detached,
+            attached) and output format are implementation-specific.
+
+        Raises:
+            ImportError: If a required signing library is not installed.
+            ValueError: If signing material is missing, invalid, or incompatible
+                with the document format.
+        """
 
 # XML namespace constants
 _DS = "http://www.w3.org/2000/09/xmldsig#"
@@ -269,7 +319,7 @@ def _sign_bytes(private_key: object, data: bytes) -> bytes:
     return private_key.sign(data, padding.PKCS1v15(), hashes.SHA256())  # type: ignore[union-attr]
 
 
-class XAdESEPESSigner:
+class XAdESEPESSigner(BaseDocumentSigner):
     """Apply an XAdES-EPES enveloped signature to an XML document.
 
     The signer adds a ``ds:Signature`` element as the last child of the root
