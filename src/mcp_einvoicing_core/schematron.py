@@ -1,12 +1,19 @@
-"""Schematron XSLT-based validation for mcp-einvoicing-core.
+"""Document validation ABCs and Schematron XSLT implementation.
 
-Provides a concrete SchematronValidator that applies pre-compiled XSLT
-stylesheets (Skeleton Schematron) to XML documents and parses the SVRL
-(Schematron Validation Report Language) output into structured results.
+Public API
+----------
+BaseStructuredValidator
+    Abstract base class for all document validators. Extend this for any
+    schema format: XSD, JSON Schema, CSV, SVRL, or proprietary rule engines.
+    All implementations return ``ValidationResult`` so callers handle findings
+    uniformly regardless of the underlying schema format.
 
-Country packages subclass SchematronValidator and supply their own stylesheet
-path.  The XSLT execution and SVRL parsing are handled here so they do not
-need to be re-implemented per country.
+ValidationMessage, ValidationResult
+    Shared result types returned by every BaseStructuredValidator implementation.
+
+SchematronValidator
+    Concrete XSLT 1.0 / SVRL implementation for EN 16931, Peppol, XRechnung.
+    Country packages subclass it and supply their own stylesheet path.
 
 Usage in a country package:
 
@@ -31,6 +38,7 @@ Skeleton Schematron: https://github.com/Schematron/schematron
 from __future__ import annotations
 
 import logging
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -92,11 +100,61 @@ class ValidationResult:
 
 
 # ---------------------------------------------------------------------------
+# Abstract base
+# ---------------------------------------------------------------------------
+
+
+class BaseStructuredValidator(ABC):
+    """Abstract base class for all document structure validators.
+
+    Concrete implementations cover different schema and validation formats:
+
+    - ``SchematronValidator`` — XSLT 1.0 Schematron / SVRL
+      (EN 16931, Peppol BIS 3.0, XRechnung, PINT-*)
+    - [Future] XSDValidator — XML Schema Definition
+      (DE ZUGFeRD, IT FatturaPA, PL KSeF FA(3))
+    - [Future] JSONSchemaValidator — JSON Schema Draft 2020-12
+      (MY MyInvois, IN GSTN e-invoice, SA ZATCA Phase 2 clearance payload)
+    - [Future] HybridValidator — JSON envelope + embedded XML
+      (SA ZATCA UBL inside JSON, EG ETA)
+
+    All implementations return ``ValidationResult`` so callers can handle
+    findings uniformly regardless of the underlying schema format.
+
+    The ``validate()`` contract requires that the method never raise —
+    parsing failures and schema errors must be captured as findings inside
+    the returned ``ValidationResult``.
+    """
+
+    @abstractmethod
+    def validate(
+        self,
+        document: bytes,
+        *,
+        profile: str = "",
+        syntax: str = "",
+    ) -> ValidationResult:
+        """Validate *document* bytes and return structured findings.
+
+        Args:
+            document: Raw document bytes (XML, JSON, or other format).
+            profile: Profile label to embed in the result (e.g. ``"EN_16931"``).
+                     Not used in validation logic — informational only.
+            syntax:  Syntax variant label (e.g. ``"CII"``, ``"UBL"``, ``"JSON"``).
+                     Not used in validation logic — informational only.
+
+        Returns:
+            ``ValidationResult`` with ``is_valid``, ``errors``, and ``warnings``.
+            Never raises — XML/JSON parse errors appear as error-severity findings.
+        """
+
+
+# ---------------------------------------------------------------------------
 # Validator
 # ---------------------------------------------------------------------------
 
 
-class SchematronValidator:
+class SchematronValidator(BaseStructuredValidator):
     """Apply a Schematron XSLT stylesheet to an XML document and parse SVRL.
 
     The stylesheet must be a pre-compiled Skeleton Schematron XSLT 1.0 file.

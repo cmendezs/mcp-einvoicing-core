@@ -320,6 +320,7 @@ class BaseEInvoicingClient:
         self._cert_path = cert_path
         self._cert_password = cert_password
         self._mtls_ssl_context: Optional[ssl.SSLContext] = None
+        self._client: Optional[httpx.AsyncClient] = None  # long-lived; built on first use
 
         if auth_mode == AuthMode.OAUTH2_CLIENT_CREDENTIALS and oauth_config is None:
             raise ValueError("oauth_config is required for OAUTH2_CLIENT_CREDENTIALS auth mode")
@@ -327,13 +328,15 @@ class BaseEInvoicingClient:
             raise ValueError("cert_path is required for MTLS auth mode")
 
     def _get_httpx_client(self) -> httpx.AsyncClient:
-        """Return an ``httpx.AsyncClient`` configured for the active auth mode.
+        """Build and return a new ``httpx.AsyncClient`` for the active auth mode.
 
-        For ``MTLS``: builds (and caches) an SSL context from the PKCS#12 cert
-        on first call.  For all other modes: returns a plain client.
+        Called once by ``_get_client()`` to initialise the long-lived client.
+        The SSL context for MTLS is built here and cached on the instance.
 
-        Override this method in a subclass to inject custom TLS configuration
-        (e.g. a trust store, per-request cert rotation, or a test transport).
+        Override in a subclass to inject a custom transport (e.g. ``respx``
+        mock), a non-default trust store, or per-environment cert rotation.
+        The returned client is kept alive for the lifetime of this instance —
+        do not close it inside this method.
         """
         if self._auth_mode == AuthMode.MTLS:
             if self._mtls_ssl_context is None:
@@ -345,6 +348,33 @@ class BaseEInvoicingClient:
                 timeout=self._http_timeout, verify=self._mtls_ssl_context
             )
         return httpx.AsyncClient(timeout=self._http_timeout)
+
+    async def _get_client(self) -> httpx.AsyncClient:
+        """Return the long-lived ``AsyncClient``, building it on first call.
+
+        Rebuilds automatically if the client has been closed (e.g. after
+        ``aclose()`` followed by reuse).
+        """
+        if self._client is None or self._client.is_closed:
+            self._client = self._get_httpx_client()
+        return self._client
+
+    async def aclose(self) -> None:
+        """Close the underlying ``AsyncClient`` and release all connections.
+
+        Call this when the client instance will no longer be used.
+        After calling ``aclose()``, the next ``_request()`` call will rebuild
+        the client automatically, so the instance may be reused if needed.
+        """
+        if self._client is not None and not self._client.is_closed:
+            await self._client.aclose()
+        self._client = None
+
+    async def __aenter__(self) -> "BaseEInvoicingClient":
+        return self
+
+    async def __aexit__(self, *_: object) -> None:
+        await self.aclose()
 
     async def _fetch_oauth_token(self) -> str:
         """Obtain a new token via client_credentials grant.
@@ -454,16 +484,16 @@ class BaseEInvoicingClient:
         if json is not None and files is None:
             headers["Content-Type"] = "application/json"
 
-        async with self._get_httpx_client() as client:
-            response = await client.request(
-                method,
-                url,
-                headers=headers,
-                params=params,
-                json=json,
-                data=data,
-                files=files,
-            )
+        client = await self._get_client()
+        response = await client.request(
+            method,
+            url,
+            headers=headers,
+            params=params,
+            json=json,
+            data=data,
+            files=files,
+        )
 
         if response.status_code == 401 and retry_on_401:
             logger.info("Token rejected (401), invalidating and retrying once")

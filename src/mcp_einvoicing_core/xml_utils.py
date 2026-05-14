@@ -31,16 +31,38 @@ from typing import Any, Optional
 # ---------------------------------------------------------------------------
 
 
-def format_amount(value: float | Decimal | str, decimals: int = 2) -> str:
+def format_amount(
+    value: float | Decimal | str,
+    decimals: int = 2,
+    *,
+    rounding_mode: str = ROUND_HALF_UP,
+) -> str:
     """Format a monetary or percentage amount to fixed decimal places.
+
+    Args:
+        value: Numeric value to format (float, Decimal, or string).
+            Floats are converted via ``str()`` before quantization to avoid
+            IEEE-754 representation errors.
+        decimals: Number of decimal places in the output (default 2).
+        rounding_mode: A ``decimal`` module rounding constant.
+            ``ROUND_HALF_UP`` (default) — used by ES VeriFactu, IT FatturaPA,
+            SAT Mexico-influenced formats, and most line-item amounts.
+            ``ROUND_HALF_EVEN`` (banker's rounding) — required by EN 16931
+            BR-CO-09 for VAT totals, KSeF, and several other formats.
+
+    Returns:
+        String representation with exactly *decimals* decimal places.
 
     >>> format_amount(1250.0)
     '1250.00'
     >>> format_amount(Decimal('22'), 2)
     '22.00'
+    >>> from decimal import ROUND_HALF_EVEN
+    >>> format_amount(Decimal('2.345'), 2, rounding_mode=ROUND_HALF_EVEN)
+    '2.34'
     """
     quantizer = Decimal("0." + "0" * decimals)
-    return str(Decimal(str(value)).quantize(quantizer, rounding=ROUND_HALF_UP))
+    return str(Decimal(str(value)).quantize(quantizer, rounding=rounding_mode))
 
 
 def format_quantity(value: float | Decimal | str, max_decimals: int = 8) -> str:

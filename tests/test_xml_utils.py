@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import base64
-from decimal import Decimal
+from decimal import ROUND_HALF_EVEN, ROUND_HALF_UP, Decimal
 
 import pytest
 
@@ -39,6 +39,37 @@ class TestFormatAmount:
 
     def test_four_decimals(self) -> None:
         assert format_amount(1.0, 4) == "1.0000"
+
+    # --- ROUND_HALF_EVEN (banker's rounding) ---------------------------------
+    # EN 16931 BR-CO-09 and KSeF require ROUND_HALF_EVEN for VAT totals.
+    # At the exact midpoint (.5), ROUND_HALF_EVEN rounds to the nearest even digit.
+
+    def test_half_even_rounds_down_when_preceding_digit_even(self) -> None:
+        # 2.345 → 2.34 because 4 is even
+        assert format_amount(Decimal("2.345"), 2, rounding_mode=ROUND_HALF_EVEN) == "2.34"
+
+    def test_half_even_rounds_up_when_preceding_digit_odd(self) -> None:
+        # 2.355 → 2.36 because 6 is even (rounds away from 5)
+        assert format_amount(Decimal("2.355"), 2, rounding_mode=ROUND_HALF_EVEN) == "2.36"
+
+    def test_half_even_vat_total_zero_preceding(self) -> None:
+        # 10.005 → 10.00 because 0 is even (EN 16931 BR-CO-09 use-case)
+        assert format_amount(Decimal("10.005"), 2, rounding_mode=ROUND_HALF_EVEN) == "10.00"
+
+    def test_half_even_vat_total_odd_preceding(self) -> None:
+        # 10.015 → 10.02 because 2 is even
+        assert format_amount(Decimal("10.015"), 2, rounding_mode=ROUND_HALF_EVEN) == "10.02"
+
+    def test_half_even_non_midpoint_unchanged_vs_half_up(self) -> None:
+        # Away from the midpoint both modes agree
+        assert format_amount(Decimal("1.234"), 2, rounding_mode=ROUND_HALF_EVEN) == "1.23"
+        assert format_amount(Decimal("1.236"), 2, rounding_mode=ROUND_HALF_EVEN) == "1.24"
+
+    def test_explicit_half_up_matches_default(self) -> None:
+        # Explicit ROUND_HALF_UP must equal the default behaviour
+        result_default = format_amount(Decimal("2.345"), 2)
+        result_explicit = format_amount(Decimal("2.345"), 2, rounding_mode=ROUND_HALF_UP)
+        assert result_default == result_explicit == "2.35"
 
 
 class TestFormatQuantity:
