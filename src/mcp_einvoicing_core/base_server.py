@@ -38,6 +38,7 @@ from mcp_einvoicing_core.models import (
     DocumentValidationResult,
     InvoiceDocument,
     InvoiceParty,
+    TaxIdValidationResult,
 )
 
 logger = logging.getLogger(__name__)
@@ -362,7 +363,7 @@ class BasePartyValidator(ABC):
         """
 
     @abstractmethod
-    def validate_tax_id(self, tax_id: str, country_code: str) -> dict:
+    def validate_tax_id(self, tax_id: str, country_code: str) -> TaxIdValidationResult:
         """Validate a tax identifier format and checksum.
 
         IT:  validate_partita_iva — 11 digits, modulo-10 checksum
@@ -375,7 +376,9 @@ class BasePartyValidator(ABC):
             country_code: ISO 3166-1 alpha-2 country code.
 
         Returns:
-            {"valid": bool, "value": cleaned_str} or {"valid": False, "error": "..."}
+            TaxIdValidationResult with valid=True and normalised value on success,
+            or valid=False and an error message on failure.
+            Use TaxIdValidationResult.ok() / TaxIdValidationResult.fail() helpers.
         """
 
     def validate_party(self, party: InvoiceParty) -> list[str]:

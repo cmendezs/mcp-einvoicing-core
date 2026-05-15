@@ -32,7 +32,7 @@ from typing import Any, Optional
 
 
 def format_amount(
-    value: float | Decimal | str,
+    value: Decimal | str,
     decimals: int = 2,
     *,
     rounding_mode: str = ROUND_HALF_UP,
@@ -40,9 +40,9 @@ def format_amount(
     """Format a monetary or percentage amount to fixed decimal places.
 
     Args:
-        value: Numeric value to format (float, Decimal, or string).
-            Floats are converted via ``str()`` before quantization to avoid
-            IEEE-754 representation errors.
+        value: Numeric value to format (Decimal or string). Float is intentionally
+            excluded: float literals carry IEEE-754 representation error that
+            silently corrupts rounding. Convert to Decimal at the pipeline boundary.
         decimals: Number of decimal places in the output (default 2).
         rounding_mode: A ``decimal`` module rounding constant.
             ``ROUND_HALF_UP`` (default) — used by ES VeriFactu, IT FatturaPA,
@@ -53,7 +53,7 @@ def format_amount(
     Returns:
         String representation with exactly *decimals* decimal places.
 
-    >>> format_amount(1250.0)
+    >>> format_amount(Decimal('1250'))
     '1250.00'
     >>> format_amount(Decimal('22'), 2)
     '22.00'
@@ -65,14 +65,16 @@ def format_amount(
     return str(Decimal(str(value)).quantize(quantizer, rounding=rounding_mode))
 
 
-def format_quantity(value: float | Decimal | str, max_decimals: int = 8) -> str:
+def format_quantity(value: Decimal | str, max_decimals: int = 8) -> str:
     """Format a quantity, stripping trailing zeros (FatturaPA PrezzoUnitario / Quantita pattern).
 
-    >>> format_quantity(1.0)
+    Float is excluded for the same reason as format_amount: use Decimal at the boundary.
+
+    >>> format_quantity(Decimal('1.0'))
     '1'
-    >>> format_quantity(1.50000)
+    >>> format_quantity(Decimal('1.50000'))
     '1.5'
-    >>> format_quantity(3.14159265)
+    >>> format_quantity(Decimal('3.14159265'))
     '3.14159265'
     """
     formatted = f"{Decimal(str(value)):.{max_decimals}f}"

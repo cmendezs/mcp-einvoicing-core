@@ -132,12 +132,14 @@ class InvoiceParty(BaseModel):
     """
 
     tax_id: TaxIdentifier
-    alt_tax_id: Optional[str] = Field(
-        default=None,
+    alt_tax_ids: list[TaxIdentifier] = Field(
+        default_factory=list,
         description=(
-            "Alternative national identifier. "
-            "IT: CodiceFiscale (16-char individual / 11-digit company). "
-            "ES: NIF when IdFiscale differs. Ignored for countries that don't use it."
+            "Additional tax identifiers beyond the primary tax_id. "
+            "IT: CodiceFiscale alongside IdFiscaleIVA. "
+            "ES: NIF when the primary IdFiscale is the EU VAT number. "
+            "KSeF cross-border: EU VAT ID when the seller is non-PL. "
+            "Use one TaxIdentifier per secondary identifier; order is not significant."
         ),
     )
     name: Optional[str] = Field(default=None, description="Legal entity name (Denominazione)")
@@ -178,7 +180,7 @@ class InvoiceLineItem(BaseModel):
     vat_exemption_code: Country-specific exemption code (IT: N1–N7, DE: S/Z/E, BE: VATEX-EU-...).
     """
 
-    line_number: int = Field(..., ge=1, le=9999)
+    line_number: int = Field(..., ge=1)
     description: str = Field(..., max_length=1000)
     quantity: Optional[Decimal] = Field(default=None, description="Quantity. Omit for lump sums.")
     unit_of_measure: Optional[str] = Field(default=None, max_length=10)
@@ -296,6 +298,29 @@ class InvoiceDocument(BaseModel):
 # ---------------------------------------------------------------------------
 # Validation result
 # ---------------------------------------------------------------------------
+
+
+class TaxIdValidationResult(BaseModel):
+    """Typed result returned by BasePartyValidator.validate_tax_id.
+
+    valid:        True when the identifier passed format and checksum checks.
+    value:        Cleaned / normalised identifier on success (no spaces, no prefix).
+    country_code: ISO 3166-1 alpha-2 country code used for validation.
+    error:        Human-readable failure reason when valid is False.
+    """
+
+    valid: bool
+    value: Optional[str] = None
+    country_code: Optional[str] = None
+    error: Optional[str] = None
+
+    @classmethod
+    def ok(cls, value: str, country_code: str) -> "TaxIdValidationResult":
+        return cls(valid=True, value=value, country_code=country_code)
+
+    @classmethod
+    def fail(cls, error: str, country_code: Optional[str] = None) -> "TaxIdValidationResult":
+        return cls(valid=False, error=error, country_code=country_code)
 
 
 class DocumentValidationResult(BaseModel):

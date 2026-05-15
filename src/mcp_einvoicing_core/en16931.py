@@ -271,13 +271,21 @@ class EN16931Invoice(BaseModel):
       Peppol BIS: urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0
     """
 
+    # ── Profile URN enforcement ──────────────────────────────────────────────
+    # Set _allowed_profiles to a frozenset of valid URN strings in each
+    # country subclass that uses a typed enum for `profile`.  The model
+    # validator below rejects any value not in the set.  Leave as None (the
+    # default) to accept any string — appropriate for abstract base use.
+    _allowed_profiles: frozenset[str] | None = None
+
     # ── Header fields ────────────────────────────────────────────────────────
 
     profile: str = Field(
         ...,
         description=(
             "GuidelineID / profile URN (BT-24). "
-            "Country packages constrain this to a typed enum."
+            "Constrain to a typed enum in each country subclass by setting "
+            "_allowed_profiles = frozenset({MyEnum.member.value, ...})."
         ),
     )
     invoice_number: str = Field(..., description="Invoice number (BT-1)")
@@ -361,6 +369,22 @@ class EN16931Invoice(BaseModel):
         if len(self.tax_lines) < 1:
             raise ValueError(
                 "EN 16931 rule BR-CO-18: at least one VAT breakdown line (BG-23) is required."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _check_profile_urn(self) -> "EN16931Invoice":
+        """Enforce allowed profile URNs when _allowed_profiles is set on the subclass.
+
+        Country subclasses that narrow `profile` to a typed enum should also set
+        ``_allowed_profiles = frozenset({e.value for e in MyProfileEnum})`` so that
+        instances constructed with a raw string are rejected at parse time.
+        """
+        allowed = self.__class__._allowed_profiles
+        if allowed is not None and self.profile not in allowed:
+            raise ValueError(
+                f"{self.__class__.__name__}: profile URN {self.profile!r} is not in the "
+                f"allowed set. Allowed values: {sorted(allowed)}"
             )
         return self
 
