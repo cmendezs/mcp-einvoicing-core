@@ -262,3 +262,48 @@ class SchematronValidator(BaseStructuredValidator):
                 warnings.append(msg)
 
         return ValidationResult(is_valid=len(errors) == 0, errors=errors, warnings=warnings)
+
+
+# ---------------------------------------------------------------------------
+# Abstract bases for non-Schematron validation families
+# ---------------------------------------------------------------------------
+
+
+class BaseXSDValidator(BaseStructuredValidator):
+    """Abstract base for XML Schema Definition validators.
+
+    Country packages subclass this for XSD-based format validation:
+    ZUGFeRD (DE), FatturaPA (IT), KSeF FA(3) (PL), and any format
+    that ships an official XSD rather than a Schematron ruleset.
+
+    Implementors must supply a ``validate()`` method that parses the XSD
+    once on construction and reuses it for all calls.
+
+    Usage:
+        class FatturaPAXSDValidator(BaseXSDValidator):
+            def __init__(self, xsd_path: Path) -> None:
+                self._schema = etree.XMLSchema(etree.parse(str(xsd_path)))
+
+            def validate(self, document: bytes, *, profile: str = "", syntax: str = "") -> ValidationResult:
+                ...
+    """
+
+
+class BaseJSONValidator(BaseStructuredValidator):
+    """Abstract base for JSON Schema validators.
+
+    Country packages subclass this for JSON-based e-invoicing formats:
+    MyInvois (MY), GSTN e-invoice (IN), ZATCA Phase 2 (SA), ETA (EG),
+    and any format whose canonical schema is expressed in JSON Schema.
+
+    Implementors must supply a ``validate()`` method that loads the JSON
+    Schema once on construction and reuses it for all calls.
+
+    Usage:
+        class ZATCAJSONValidator(BaseJSONValidator):
+            def __init__(self, schema_path: Path) -> None:
+                self._schema = json.loads(schema_path.read_text())
+
+            def validate(self, document: bytes, *, profile: str = "", syntax: str = "") -> ValidationResult:
+                ...
+    """

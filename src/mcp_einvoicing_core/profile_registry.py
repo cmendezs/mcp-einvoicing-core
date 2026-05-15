@@ -143,3 +143,21 @@ class ProfileRegistry:
 # ---------------------------------------------------------------------------
 
 profile_registry: ProfileRegistry = ProfileRegistry()
+
+
+def set_profile_registry(registry: ProfileRegistry) -> None:
+    """Replace the module-level singleton with a custom instance.
+
+    Useful for multi-tenant deployments where each tenant needs an isolated
+    profile namespace, and for test suites that must start from a clean state
+    without sharing registrations across test modules.
+
+    Args:
+        registry: A freshly constructed ProfileRegistry instance.
+
+    Example:
+        from mcp_einvoicing_core.profile_registry import ProfileRegistry, set_profile_registry
+        set_profile_registry(ProfileRegistry())  # reset to empty
+    """
+    global profile_registry  # noqa: PLW0603
+    profile_registry = registry

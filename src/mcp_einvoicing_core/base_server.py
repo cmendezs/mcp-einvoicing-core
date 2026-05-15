@@ -284,11 +284,13 @@ class BaseLifecycleManager(ABC):
         """
 
     @abstractmethod
-    async def search_documents(self, criteria: dict) -> dict:
+    async def search_documents(self, criteria: dict) -> list[dict]:
         """Search for submitted documents by criteria.
 
         FR: POST /v1/flows/search (processingRule, flowType, status, updatedAfter)
         PL: POST /invoices/query/metadata (subjectType, dateRange)
+
+        Returns a list of document metadata dicts (empty list when no results).
         """
 
     async def submit_lifecycle_status(
@@ -425,10 +427,9 @@ class EInvoicingMCPServer:
         # Country packages can also use their own standalone FastMCP instance
         # (backward-compatible — no change required to existing server.py files).
 
-    [DECISION: Country packages are not forced to use EInvoicingMCPServer.]
-    FR and IT currently create a bare FastMCP in their server.py.  They can continue
-    to do so.  EInvoicingMCPServer is an optional convenience for scenarios where
-    multiple countries run in a single process.
+    All country packages should use EInvoicingMCPServer for their entry point.
+    This ensures a uniform compliance tier across packages and allows multi-country
+    in-process deployments to combine tools from several adapters in one server.
     """
 
     def __init__(

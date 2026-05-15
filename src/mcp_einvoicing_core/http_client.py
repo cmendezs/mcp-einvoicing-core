@@ -30,7 +30,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 import httpx
-from pydantic import Field, field_validator
+from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings
 
 from mcp_einvoicing_core.exceptions import AuthenticationError, PlatformError
@@ -143,14 +143,14 @@ class AuthMode(str, Enum):
 # ---------------------------------------------------------------------------
 
 
-class OAuthConfig(BaseSettings):
-    """OAuth2 client_credentials configuration.
+class OAuthValues(BaseModel):
+    """Plain value object for OAuth2 credentials — no environment variable loading.
 
-    Country adapters subclass this to add platform-specific base URLs.
-    FR: PAConfig(OAuthConfig) adds pa_base_url_flow and pa_base_url_directory.
+    Use this when constructing credentials programmatically (multi-country in-process
+    deployments, secrets managers, test fixtures). BaseEInvoicingClient accepts
+    OAuthValues directly so callers are not forced to bind to .env.
 
-    [DECISION: Separate OAuthConfig from BaseEInvoicingConfig so countries that
-     use no-auth (IT) can still inherit BaseEInvoicingConfig without OAuth fields.]
+    For env-var / .env loading, use OAuthConfig (which extends this class).
     """
 
     token_url: str = Field(..., description="OAuth2 token endpoint URL")
@@ -163,6 +163,18 @@ class OAuthConfig(BaseSettings):
     @classmethod
     def strip_slash(cls, v: str) -> str:
         return v.rstrip("/")
+
+
+class OAuthConfig(OAuthValues, BaseSettings):
+    """OAuth2 client_credentials configuration loaded from environment variables.
+
+    Country adapters subclass this to add platform-specific base URLs.
+    FR: PAConfig(OAuthConfig) adds pa_base_url_flow and pa_base_url_directory.
+
+    Inherits all fields from OAuthValues. The BaseSettings layer reads them from
+    environment variables or a .env file. Pass an OAuthValues instance instead
+    when you want to supply credentials without touching the process environment.
+    """
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
@@ -304,7 +316,7 @@ class BaseEInvoicingClient:
         self,
         base_url: str,
         auth_mode: AuthMode = AuthMode.NONE,
-        oauth_config: Optional[OAuthConfig] = None,
+        oauth_config: Optional[OAuthValues] = None,
         token_cache: Optional[TokenCache] = None,
         static_bearer_token: Optional[str] = None,
         http_timeout: float = 30.0,

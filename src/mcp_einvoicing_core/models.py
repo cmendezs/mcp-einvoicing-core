@@ -28,6 +28,7 @@ Mapping notes:
 
 from __future__ import annotations
 
+import re
 from decimal import Decimal
 from typing import Optional
 
@@ -56,6 +57,38 @@ class TaxIdentifier(BaseModel):
     @classmethod
     def upper_country(cls, v: str) -> str:
         return v.upper()
+
+    @staticmethod
+    def validate_it_partita_iva(identifier: str) -> tuple[bool, str]:
+        """Validate an Italian Partita IVA (11-digit VAT number).
+
+        Applies the Agenzia delle Entrate modulo-10 control algorithm:
+        odd-position digits (0-indexed) are taken as-is; even-position
+        digits are doubled (subtract 9 if the result exceeds 9). The final
+        digit must equal (10 - sum % 10) % 10.
+
+        Args:
+            identifier: Raw VAT string. Whitespace is stripped before checking.
+
+        Returns:
+            ``(True, "")`` on success, ``(False, error_message)`` on failure.
+        """
+        piva = identifier.strip()
+        if not re.match(r"^\d{11}$", piva):
+            return False, "Partita IVA must be exactly 11 digits."
+        total = 0
+        for i, digit in enumerate(piva[:10]):
+            d = int(digit)
+            if i % 2 == 1:
+                d *= 2
+                if d > 9:
+                    d -= 9
+            total += d
+        expected = (10 - (total % 10)) % 10
+        actual = int(piva[10])
+        if expected != actual:
+            return False, f"Checksum mismatch: expected {expected}, got {actual}."
+        return True, ""
 
 
 class PartyAddress(BaseModel):

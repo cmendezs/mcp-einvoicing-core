@@ -46,7 +46,9 @@ from mcp_einvoicing_core.peppol import (
     PeppolSMPClient,
 )
 from mcp_einvoicing_core.schematron import (
+    BaseJSONValidator,
     BaseStructuredValidator,
+    BaseXSDValidator,
     SchematronValidator,
     ValidationMessage,
     ValidationResult,
@@ -55,6 +57,7 @@ from mcp_einvoicing_core.http_client import (
     AuthMode,
     BaseEInvoicingClient,
     OAuthConfig,
+    OAuthValues,
     TokenCache,
 )
 from mcp_einvoicing_core.models import (
@@ -68,7 +71,12 @@ from mcp_einvoicing_core.models import (
     VATSummary,
 )
 from mcp_einvoicing_core.pdf import PDFEmbedder
-from mcp_einvoicing_core.profile_registry import ProfileEntry, ProfileRegistry, profile_registry
+from mcp_einvoicing_core.profile_registry import (
+    ProfileEntry,
+    ProfileRegistry,
+    profile_registry,
+    set_profile_registry,
+)
 from mcp_einvoicing_core.testing import InvoiceFixtureFactory
 from mcp_einvoicing_core.digital_signature import (
     BaseDocumentSigner,
@@ -128,6 +136,7 @@ __all__ = [
     # HTTP client
     "AuthMode",
     "BaseEInvoicingClient",
+    "OAuthValues",
     "OAuthConfig",
     "TokenCache",
     # Country-agnostic models
@@ -149,6 +158,8 @@ __all__ = [
     "EN16931Invoice",
     # Structured document validation
     "BaseStructuredValidator",
+    "BaseXSDValidator",
+    "BaseJSONValidator",
     "ValidationMessage",
     "ValidationResult",
     "SchematronValidator",
@@ -163,6 +174,7 @@ __all__ = [
     "ProfileEntry",
     "ProfileRegistry",
     "profile_registry",
+    "set_profile_registry",
     # Test fixture factory
     "InvoiceFixtureFactory",
     # PDF/A-3 utilities
