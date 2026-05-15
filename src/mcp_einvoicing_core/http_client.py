@@ -21,10 +21,12 @@ Future countries:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import ssl
 import tempfile
 import time
+from email.utils import parsedate_to_datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
@@ -255,36 +257,20 @@ _HTTP_ERROR_MESSAGES: dict[int, str] = {
 }
 
 
-def _extract_platform_error(response: httpx.Response) -> PlatformError:
-    """Parse an HTTP error response into a PlatformError.
+def _extract_platform_error(
+    response: httpx.Response,
+    detail: str = "",
+    error_code: Optional[str] = None,
+) -> PlatformError:
+    """Build a PlatformError from a failed HTTP response and pre-parsed detail.
 
-    Attempts to extract structured error details from the response body.
-    FR uses {errorCode, errorMessage} (XP Z12-013 Error schema).
-    Generic fallback: {detail, message, error_description, error}.
+    Body parsing is handled by BaseEInvoicingClient._parse_error_body() so that
+    platform-specific schemas (XP Z12-013, KSeF, GSTN, SEFAZ …) can be handled
+    by subclass overrides rather than growing this shared function.
     """
     code = response.status_code
     base_msg = _HTTP_ERROR_MESSAGES.get(code, f"HTTP error {code}")
-
-    detail = ""
-    error_code: Optional[str] = None
-    try:
-        body = response.json()
-        # FR XP Z12-013 error schema
-        detail = body.get("errorMessage") or ""
-        error_code = body.get("errorCode") or None
-        # Generic REST error schemas
-        if not detail:
-            detail = (
-                body.get("detail")
-                or body.get("message")
-                or body.get("error_description")
-                or body.get("error")
-                or ""
-            )
-    except Exception:
-        detail = response.text[:300] if response.text else ""
-
-    message = f"{base_msg}" + (f" — {detail}" if detail else "")
+    message = base_msg + (f" — {detail}" if detail else "")
     logger.error("HTTP %d from platform: %s", code, message)
     return PlatformError(status_code=code, message=message, error_code=error_code)
 
@@ -322,6 +308,7 @@ class BaseEInvoicingClient:
         http_timeout: float = 30.0,
         cert_path: Optional[str] = None,
         cert_password: Optional[str] = None,
+        max_retries: int = 3,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._auth_mode = auth_mode
@@ -331,6 +318,7 @@ class BaseEInvoicingClient:
         self._http_timeout = http_timeout
         self._cert_path = cert_path
         self._cert_password = cert_password
+        self._max_retries = max_retries
         self._mtls_ssl_context: Optional[ssl.SSLContext] = None
         self._client: Optional[httpx.AsyncClient] = None  # long-lived; built on first use
 
@@ -468,6 +456,58 @@ class BaseEInvoicingClient:
 
         return headers
 
+    def _parse_error_body(self, response: httpx.Response) -> tuple[str, Optional[str]]:
+        """Extract (detail, error_code) from a failed response body.
+
+        Override in a subclass to handle platform-specific error schemas:
+
+            class FRFlowClient(BaseEInvoicingClient):
+                def _parse_error_body(self, response):
+                    try:
+                        body = response.json()
+                        # XP Z12-013 error schema
+                        return body.get("errorMessage") or "", body.get("errorCode")
+                    except Exception:
+                        return super()._parse_error_body(response)
+
+        The base implementation handles generic REST schemas:
+        {detail}, {message}, {error_description}, {error}.
+        """
+        try:
+            body = response.json()
+            detail: str = (
+                body.get("detail")
+                or body.get("message")
+                or body.get("error_description")
+                or body.get("error")
+                or ""
+            )
+            return detail, None
+        except Exception:
+            return (response.text[:300] if response.text else ""), None
+
+    def _retry_delay(self, response: httpx.Response, attempt: int) -> float:
+        """Compute seconds to wait before the next retry attempt.
+
+        Parses the ``Retry-After`` header when present (both integer-seconds
+        and HTTP-date forms). Falls back to exponential backoff: 1s, 2s, 4s
+        … capped at 60s.
+        """
+        header = response.headers.get("Retry-After", "").strip()
+        if header:
+            try:
+                return max(0.0, float(header))
+            except ValueError:
+                pass
+            try:
+                from datetime import datetime, timezone  # noqa: PLC0415
+
+                dt = parsedate_to_datetime(header)
+                return max(0.0, (dt - datetime.now(timezone.utc)).total_seconds())
+            except Exception:
+                pass
+        return min(1.0 * (2**attempt), 60.0)
+
     def invalidate_token(self) -> None:
         """Invalidate the cached token. Call after receiving a 401."""
         self._token_cache.invalidate()
@@ -484,43 +524,64 @@ class BaseEInvoicingClient:
         files: Optional[dict[str, Any]] = None,
         retry_on_401: bool = True,
     ) -> httpx.Response:
-        """Execute an HTTP request with automatic 401 retry.
+        """Execute an HTTP request with automatic 401 retry and backoff for 429/503.
 
-        The retry-on-401 pattern is extracted verbatim from both FR clients.
-        On a 401: invalidate the token cache and retry exactly once.
+        - 401: invalidates the token cache and retries exactly once.
+        - 429 / 503: retries up to self._max_retries times, sleeping according
+          to _retry_delay() (Retry-After header or exponential backoff).
+        - Error body parsing is delegated to _parse_error_body(), which
+          subclasses can override for platform-specific error schemas.
         """
         url = f"{self._base_url}{path}"
-        headers = await self._get_headers()
-
-        # Content-Type is set automatically by httpx for json/multipart
-        if json is not None and files is None:
-            headers["Content-Type"] = "application/json"
-
         client = await self._get_client()
-        response = await client.request(
-            method,
-            url,
-            headers=headers,
-            params=params,
-            json=json,
-            data=data,
-            files=files,
-        )
 
-        if response.status_code == 401 and retry_on_401:
-            logger.info("Token rejected (401), invalidating and retrying once")
-            self.invalidate_token()
-            return await self._request(
+        for attempt in range(self._max_retries + 1):
+            headers = await self._get_headers()
+            # Content-Type is set automatically by httpx for json/multipart
+            if json is not None and files is None:
+                headers["Content-Type"] = "application/json"
+
+            response = await client.request(
                 method,
-                path,
+                url,
+                headers=headers,
                 params=params,
                 json=json,
                 data=data,
                 files=files,
-                retry_on_401=False,
             )
 
-        if not response.is_success:
-            raise _extract_platform_error(response)
+            if response.status_code == 401 and retry_on_401:
+                logger.info("Token rejected (401), invalidating and retrying once")
+                self.invalidate_token()
+                return await self._request(
+                    method,
+                    path,
+                    params=params,
+                    json=json,
+                    data=data,
+                    files=files,
+                    retry_on_401=False,
+                )
 
-        return response
+            if response.status_code in (429, 503) and attempt < self._max_retries:
+                delay = self._retry_delay(response, attempt)
+                logger.warning(
+                    "HTTP %d — retrying in %.1fs (attempt %d/%d)",
+                    response.status_code,
+                    delay,
+                    attempt + 1,
+                    self._max_retries,
+                )
+                await asyncio.sleep(delay)
+                continue
+
+            if not response.is_success:
+                detail, error_code = self._parse_error_body(response)
+                raise _extract_platform_error(response, detail, error_code)
+
+            return response
+
+        # Unreachable: the loop always returns or raises, but satisfies type checkers.
+        detail, error_code = self._parse_error_body(response)  # type: ignore[possibly-undefined]
+        raise _extract_platform_error(response, detail, error_code)  # type: ignore[possibly-undefined]

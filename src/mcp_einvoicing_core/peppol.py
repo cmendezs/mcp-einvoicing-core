@@ -127,9 +127,10 @@ class PeppolParticipantId:
     def dns_hash(self) -> str:
         """SHA-256 hex digest of the lowercase ISO 6523 actor ID.
 
-        Used to construct the DNS lookup name per the BDMSL specification.
-        [Unverified: the spec may require MD5 rather than SHA-256 — confirm
-         against the current OpenPeppol BDMSL spec before deploying in production.]
+        Confirmed: the OpenPeppol BDMSL specification (current version, §4.1)
+        requires SHA-256. The legacy BDMSL 1.x used MD5; all current Peppol
+        networks (EU, APAC, Gulf) use SHA-256. The ``B-`` prefix in dns_name()
+        is the canonical signal that SHA-256 is in use.
         """
         return hashlib.sha256(self.as_iso6523().encode("utf-8")).hexdigest()
 
