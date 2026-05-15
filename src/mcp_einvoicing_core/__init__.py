@@ -68,6 +68,7 @@ from mcp_einvoicing_core.models import (
     PartyAddress,
     PaymentTerms,
     TaxIdentifier,
+    TaxIdValidationResult,
     VATSummary,
 )
 from mcp_einvoicing_core.pdf import PDFEmbedder
@@ -141,6 +142,7 @@ __all__ = [
     "TokenCache",
     # Country-agnostic models
     "TaxIdentifier",
+    "TaxIdValidationResult",
     "PartyAddress",
     "InvoiceParty",
     "InvoiceLineItem",
