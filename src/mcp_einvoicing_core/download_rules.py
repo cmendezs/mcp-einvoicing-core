@@ -41,6 +41,7 @@ import io
 import logging
 import zipfile
 from dataclasses import dataclass, field
+from importlib.metadata import entry_points
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -152,17 +153,39 @@ def download_artefacts(
 def main() -> int:
     """Core-level download-rules CLI.
 
-    Lists available country-specific download commands.
-    Each country package provides its own entry point.
+    Auto-discovers installed country packages that register under the
+    ``mcp_einvoicing.download_rules`` entry-point group and lists their
+    commands. Country packages register via pyproject.toml:
+
+        [project.entry-points."mcp_einvoicing.download_rules"]
+        mcp-einvoicing-de-download-rules = "mcp_einvoicing_de.download_rules:main"
     """
     print("mcp-einvoicing-download-rules")
     print()
-    print("Use a country-specific command to download Schematron artefacts:")
+
+    discovered = sorted(
+        entry_points(group="mcp_einvoicing.download_rules"), key=lambda e: e.name
+    )
+
+    if discovered:
+        print("Available country download commands (installed packages):")
+        print()
+        for ep in discovered:
+            print(f"  {ep.name}")
+        print()
+        print("Run any command above with --help for usage details.")
+    else:
+        print("No country packages with download rules are currently installed.")
+        print()
+        print("Install a country package and its command will appear here.")
+        print("Example:")
+        print()
+        print("  pip install mcp-einvoicing-de")
+        print("  mcp-einvoicing-de-download-rules")
+
     print()
-    print("  mcp-einvoicing-de-download-rules    # ZUGFeRD / XRechnung (DE)")
-    print()
-    print("Or import and call download_artefacts() from your country package's")
-    print("download_rules module directly.")
+    print("Or call download_artefacts() directly from your country package's")
+    print("download_rules module.")
     return 0
 
 

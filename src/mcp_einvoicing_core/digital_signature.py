@@ -38,6 +38,16 @@ from lxml import etree
 class BaseDocumentSigner(ABC):
     """Abstract base class for all document-level signers.
 
+    Lifecycle contract for all concrete implementations:
+
+    1. ``load_credentials()`` — load private key + certificate into memory
+       (PKCS#12, HSM slot, environment-supplied key). Called automatically
+       by ``sign()`` on first use; may also be called explicitly to pre-warm.
+    2. ``sign(document)`` — apply the algorithm-specific signature and return
+       the signed document.
+    3. ``verify(signed_document)`` — verify that the embedded signature is
+       cryptographically valid.
+
     Concrete implementations cover different signing standards:
 
     - ``XAdESEPESSigner`` — XAdES-EPES enveloped XML signature
@@ -50,14 +60,32 @@ class BaseDocumentSigner(ABC):
     All implementations must satisfy two invariants:
     1. ``sign(document)`` is idempotent for the same *document* + credential pair.
     2. ``sign(document)`` never mutates *document* in place.
-
-    Credential loading (PKCS#12, HSM, environment key) is an implementation
-    concern and is not part of this interface.
     """
+
+    @abstractmethod
+    def load_credentials(self) -> None:
+        """Load signing credentials into memory.
+
+        Implementations load a PKCS#12 file, open an HSM slot, or read an
+        environment-supplied key. After this method returns the instance must
+        hold the private key and certificate material needed by ``sign()``.
+
+        Called automatically by ``sign()`` on first use. May also be called
+        explicitly to validate credentials at startup before the first document
+        is signed.
+
+        Raises:
+            ImportError: If a required cryptographic library is not installed.
+            ValueError: If the credential store is missing, corrupt, or
+                incompatible with this signer.
+        """
 
     @abstractmethod
     def sign(self, document: bytes) -> bytes:
         """Sign *document* and return the signed result.
+
+        Implementations must call ``load_credentials()`` if credentials have
+        not been loaded yet (lazy initialisation is acceptable).
 
         Args:
             document: Raw document bytes to sign. The format (XML, PDF, JSON)
@@ -71,6 +99,24 @@ class BaseDocumentSigner(ABC):
             ImportError: If a required signing library is not installed.
             ValueError: If signing material is missing, invalid, or incompatible
                 with the document format.
+        """
+
+    @abstractmethod
+    def verify(self, signed_document: bytes) -> bool:
+        """Return True if the signature embedded in *signed_document* is valid.
+
+        Args:
+            signed_document: Signed document bytes in the same format returned
+                by ``sign()``.
+
+        Returns:
+            True if the signature is cryptographically valid. Implementations
+            may additionally check certificate trust chains and policy OIDs
+            where feasible; document any limitations in the concrete class.
+
+        Raises:
+            ImportError: If a required verification library is not installed.
+            ValueError: If the document format is unrecognised or malformed.
         """
 
 # XML namespace constants
@@ -343,12 +389,31 @@ class XAdESEPESSigner(BaseDocumentSigner):
         self._config = config
         self._cert_info: Optional[_CertInfo] = None
 
+    def load_credentials(self) -> None:
+        """Load the PKCS#12 certificate and private key into memory."""
+        self._cert_info = _load_pkcs12(
+            self._config.cert_path, self._config.cert_password
+        )
+
     def _get_cert_info(self) -> _CertInfo:
         if self._cert_info is None:
-            self._cert_info = _load_pkcs12(
-                self._config.cert_path, self._config.cert_password
-            )
-        return self._cert_info
+            self.load_credentials()
+        return self._cert_info  # type: ignore[return-value]
+
+    def verify(self, signed_document: bytes) -> bool:
+        """XAdES signature verification is not yet implemented.
+
+        Use an external XAdES verifier (e.g. DSS, VerifyCades) to validate
+        signatures produced by this signer.
+
+        Raises:
+            NotImplementedError: Always.
+        """
+        raise NotImplementedError(
+            "XAdES signature verification is not yet implemented in XAdESEPESSigner. "
+            "Use an external XAdES verifier (ETSI DSS, VerifyCades, or xmlsec) to "
+            "validate signatures produced by this signer."
+        )
 
     def sign(self, xml_bytes: bytes) -> bytes:
         """Return *xml_bytes* with an embedded XAdES-EPES signature.

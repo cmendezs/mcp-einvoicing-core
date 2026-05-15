@@ -38,7 +38,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Annotated, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 # ---------------------------------------------------------------------------
@@ -346,8 +346,23 @@ class EN16931Invoice(BaseModel):
     # ── VAT breakdown — BG-23 ────────────────────────────────────────────────
 
     tax_lines: list[EN16931Tax] = Field(
-        ..., min_length=1, description="VAT breakdown lines (BG-23) — at least one required"
+        default_factory=list,
+        description="VAT breakdown lines (BG-23). EN 16931 requires at least one.",
     )
+
+    @model_validator(mode="after")
+    def _require_tax_lines(self) -> "EN16931Invoice":
+        """EN 16931 rule BR-CO-18: at least one VAT breakdown line is mandatory.
+
+        Subclasses that represent summary-only or non-EN-16931 formats (e.g.
+        ZATCA, MyInvois clearance models) may override this validator with a
+        no-op to relax the constraint without re-declaring the field.
+        """
+        if len(self.tax_lines) < 1:
+            raise ValueError(
+                "EN 16931 rule BR-CO-18: at least one VAT breakdown line (BG-23) is required."
+            )
+        return self
 
     # ── Document-level allowances / charges — BG-20 / BG-21 ─────────────────
 
