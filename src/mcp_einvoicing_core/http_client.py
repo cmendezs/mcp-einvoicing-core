@@ -22,7 +22,9 @@ Future countries:
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
+import os
 import ssl
 import tempfile
 import time
@@ -30,6 +32,7 @@ from email.utils import parsedate_to_datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
+from urllib.parse import urlparse
 
 import httpx
 from pydantic import BaseModel, Field, field_validator
@@ -38,6 +41,84 @@ from pydantic_settings import BaseSettings
 from mcp_einvoicing_core.exceptions import AuthenticationError, PlatformError
 
 logger = logging.getLogger(__name__)
+
+# httpx and httpcore emit full request headers (including Authorization/Cookie) at DEBUG
+# level.  Suppress their debug output so credential material never appears in logs even
+# when the root logger is configured at DEBUG.
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+
+# Warn if a proxy env var is set: all httpx clients use trust_env=False so the proxy
+# would be silently ignored, which could produce confusing connectivity failures.
+for _proxy_var in ("HTTPS_PROXY", "HTTP_PROXY", "https_proxy", "http_proxy"):
+    if os.environ.get(_proxy_var):
+        logger.warning(
+            "Environment variable %s is set but all e-invoicing HTTP clients use "
+            "trust_env=False — the proxy will NOT be used.  Pass proxies= explicitly "
+            "to BaseEInvoicingClient if proxy support is required.",
+            _proxy_var,
+        )
+        break
+
+
+# ---------------------------------------------------------------------------
+# Certificate pinning (P2-14)
+# ---------------------------------------------------------------------------
+
+def _parse_cert_pins() -> dict[str, frozenset[str]]:
+    """Parse EINVOICING_CERT_PINS env var into a hostname → fingerprint-set map.
+
+    Format: ``host1:sha256hex,host2:sha256hex`` (multiple pins for the same host
+    may appear as separate comma-separated entries).  Whitespace is ignored.
+
+    Example::
+
+        EINVOICING_CERT_PINS="api.ksef.mf.gov.pl:abc123def456...,agenciatributaria.gob.es:789abc..."
+
+    Returns an empty dict when the env var is absent or empty (pinning disabled).
+    """
+    raw = os.environ.get("EINVOICING_CERT_PINS", "").strip()
+    if not raw:
+        return {}
+    pins: dict[str, set[str]] = {}
+    for entry in raw.split(","):
+        entry = entry.strip()
+        if ":" not in entry:
+            continue
+        host, _, fingerprint = entry.partition(":")
+        host = host.strip().lower()
+        fingerprint = fingerprint.strip().lower()
+        if host and fingerprint:
+            pins.setdefault(host, set()).add(fingerprint)
+    return {h: frozenset(fps) for h, fps in pins.items()}
+
+
+_CERT_PINS: dict[str, frozenset[str]] = _parse_cert_pins()
+
+
+def _make_pin_hook(host: str, pins: frozenset[str]):
+    """Return an httpx async response event hook that validates the peer cert fingerprint."""
+    async def _check_pin(response: httpx.Response) -> None:
+        ssl_obj = response.extensions.get("ssl_object")
+        if ssl_obj is None:
+            return
+        try:
+            cert_der: Optional[bytes] = ssl_obj.getpeercert(binary_form=True)
+        except Exception:
+            return
+        if cert_der is None:
+            return
+        fingerprint = hashlib.sha256(cert_der).hexdigest().lower()
+        if fingerprint not in pins:
+            raise PlatformError(
+                status_code=0,
+                message=(
+                    f"Certificate pin mismatch for {host!r}. "
+                    f"Got SHA-256={fingerprint[:16]}... — not in configured pin set. "
+                    "Update EINVOICING_CERT_PINS or rotate the pinned fingerprint."
+                ),
+            )
+    return _check_pin
 
 
 # ---------------------------------------------------------------------------
@@ -94,19 +175,23 @@ def _build_mtls_ssl_context(cert_path: str, cert_password: Optional[str]) -> ssl
         encryption_algorithm=serialization.NoEncryption(),
     )
 
-    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
+    # create_default_context() leaves check_hostname=True and verify_mode=CERT_REQUIRED.
+    ctx = ssl.create_default_context()
+    ctx.minimum_version = ssl.TLSVersion.TLSv1_2
 
-    # Write cert+key to a restricted tempfile, load, then delete immediately.
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pem") as tmp:
-        tmp_path = tmp.name
-        tmp.write(cert_pem + key_pem)
-
+    # Write cert+key to a mode-0700 temporary directory so the unencrypted PEM
+    # is only visible to the current user, even on shared-runner /tmp.
+    tmp_dir = tempfile.mkdtemp()
+    os.chmod(tmp_dir, 0o700)
+    tmp_path = os.path.join(tmp_dir, "client.pem")
     try:
+        with open(tmp_path, "wb") as fh:
+            fh.write(cert_pem + key_pem)
+        os.chmod(tmp_path, 0o600)
         ctx.load_cert_chain(tmp_path)
     finally:
         Path(tmp_path).unlink(missing_ok=True)
+        os.rmdir(tmp_dir)
 
     return ctx
 
@@ -203,41 +288,63 @@ class BaseEInvoicingConfig(BaseSettings):
 
 
 class TokenCache:
-    """OAuth2 Bearer token cache with expiry management.
+    """OAuth2 Bearer token cache with expiry and idle-timeout management.
 
     The token is renewed EXPIRY_MARGIN_SECONDS before actual expiry to avoid
-    401 rejections during in-flight requests.
+    401 rejections during in-flight requests.  Additionally, a token that has
+    not been used for IDLE_TIMEOUT_SECONDS is evicted even if it has not yet
+    expired — this limits the window during which a dormant token could be
+    abused after a process compromise.
 
-    Extracted verbatim from mcp-facture-electronique-fr config.py.
+    Extracted verbatim from mcp-facture-electronique-fr config.py, then
+    extended with idle-timeout (P2-23).
     """
 
     EXPIRY_MARGIN_SECONDS: int = 30
+    IDLE_TIMEOUT_SECONDS: int = int(
+        os.environ.get("EINVOICING_TOKEN_IDLE_TIMEOUT", "1800")
+    )  # default 30 minutes
 
     def __init__(self) -> None:
         self._access_token: Optional[str] = None
         self._expires_at: float = 0.0
+        self._last_used_at: float = 0.0
 
     def is_valid(self) -> bool:
-        """True if the cached token is still valid (with expiry margin)."""
-        return (
-            self._access_token is not None
-            and time.monotonic() < self._expires_at - self.EXPIRY_MARGIN_SECONDS
-        )
+        """True if the cached token is still valid (with expiry and idle margins)."""
+        if self._access_token is None:
+            return False
+        now = time.monotonic()
+        if now >= self._expires_at - self.EXPIRY_MARGIN_SECONDS:
+            return False
+        if self._last_used_at > 0 and now - self._last_used_at > self.IDLE_TIMEOUT_SECONDS:
+            return False
+        return True
 
-    def set(self, access_token: str, expires_in: int) -> None:
-        """Store a new token with its validity duration in seconds."""
+    def _set(self, access_token: str, expires_in: int) -> None:
+        """Store a new token.  Called only by _fetch_oauth_token (the fetcher)."""
         self._access_token = access_token
         self._expires_at = time.monotonic() + expires_in
+        self._last_used_at = time.monotonic()
         logger.debug("OAuth2 token renewed, expires in %ds", expires_in)
 
+    # Public alias retained for backward compatibility; restricting callers to
+    # the fetcher is enforced by convention (the fetcher is the only site that
+    # calls this, and no tool handler has direct access to a TokenCache instance).
+    set = _set
+
     def get(self) -> Optional[str]:
-        """Return the current valid token, or None if expired/absent."""
-        return self._access_token if self.is_valid() else None
+        """Return the current valid token, or None if expired/idle/absent."""
+        if not self.is_valid():
+            return None
+        self._last_used_at = time.monotonic()
+        return self._access_token
 
     def invalidate(self) -> None:
         """Force renewal on the next call (call after receiving a 401)."""
         self._access_token = None
         self._expires_at = 0.0
+        self._last_used_at = 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -337,7 +444,18 @@ class BaseEInvoicingClient:
         mock), a non-default trust store, or per-environment cert rotation.
         The returned client is kept alive for the lifetime of this instance —
         do not close it inside this method.
+
+        Security properties applied to every client:
+        - ``trust_env=False``: HTTP_PROXY / HTTPS_PROXY env vars are ignored.
+          Proxy configuration must be explicit (pass ``proxies=`` if needed).
+        - Certificate pinning: if ``EINVOICING_CERT_PINS`` is set and the
+          target host is listed, a response hook verifies the peer cert SHA-256.
         """
+        host = urlparse(self._base_url).hostname or ""
+        event_hooks: dict[str, list] = {}
+        if host and host.lower() in _CERT_PINS:
+            event_hooks["response"] = [_make_pin_hook(host.lower(), _CERT_PINS[host.lower()])]
+
         if self._auth_mode == AuthMode.MTLS:
             if self._mtls_ssl_context is None:
                 assert self._cert_path is not None
@@ -345,9 +463,20 @@ class BaseEInvoicingClient:
                     self._cert_path, self._cert_password
                 )
             return httpx.AsyncClient(
-                timeout=self._http_timeout, verify=self._mtls_ssl_context
+                timeout=self._http_timeout,
+                verify=self._mtls_ssl_context,
+                trust_env=False,
+                event_hooks=event_hooks,
             )
-        return httpx.AsyncClient(timeout=self._http_timeout)
+        # Non-mTLS: create a default-trust SSL context and pin TLS 1.2 minimum.
+        ssl_ctx = ssl.create_default_context()
+        ssl_ctx.minimum_version = ssl.TLSVersion.TLSv1_2
+        return httpx.AsyncClient(
+            timeout=self._http_timeout,
+            verify=ssl_ctx,
+            trust_env=False,
+            event_hooks=event_hooks,
+        )
 
     async def _get_client(self) -> httpx.AsyncClient:
         """Return the long-lived ``AsyncClient``, building it on first call.
@@ -392,14 +521,16 @@ class BaseEInvoicingClient:
             data["scope"] = self._oauth_config.scope
 
         try:
-            async with httpx.AsyncClient(timeout=self._oauth_config.http_timeout) as client:
+            async with httpx.AsyncClient(
+                timeout=self._oauth_config.http_timeout, trust_env=False
+            ) as client:
                 response = await client.post(self._oauth_config.token_url, data=data)
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
+            # Response body is redacted — it may echo client_secret in IdP error pages.
             logger.error(
-                "OAuth2 token retrieval failed: %s %s",
+                "OAuth2 token retrieval failed (status=%s, body redacted for security)",
                 exc.response.status_code,
-                exc.response.text,
             )
             raise AuthenticationError(
                 f"OAuth2 token retrieval failed: {exc.response.status_code}"
