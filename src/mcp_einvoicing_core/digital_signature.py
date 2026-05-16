@@ -29,6 +29,8 @@ from typing import Optional
 
 from lxml import etree
 
+from mcp_einvoicing_core.xml_utils import safe_fromstring
+
 
 # ---------------------------------------------------------------------------
 # Abstract base
@@ -385,9 +387,17 @@ class XAdESEPESSigner(BaseDocumentSigner):
         signed_xml = signer.sign(original_xml_bytes)
     """
 
-    def __init__(self, config: XAdESSignerConfig) -> None:
+    def __init__(
+        self,
+        config: XAdESSignerConfig,
+        *,
+        _preloaded_cert_info: Optional[_CertInfo] = None,
+    ) -> None:
         self._config = config
-        self._cert_info: Optional[_CertInfo] = None
+        # _preloaded_cert_info is used by the signer microservice which loads the
+        # PKCS#12 once at process startup and passes the parsed material directly,
+        # avoiding a second disk read and keeping the cert path out of tool handlers.
+        self._cert_info: Optional[_CertInfo] = _preloaded_cert_info
 
     def load_credentials(self) -> None:
         """Load the PKCS#12 certificate and private key into memory."""
@@ -414,6 +424,20 @@ class XAdESEPESSigner(BaseDocumentSigner):
             "Use an external XAdES verifier (ETSI DSS, VerifyCades, or xmlsec) to "
             "validate signatures produced by this signer."
         )
+
+    def cleanup(self) -> None:
+        """Drop references to the private key and certificate material.
+
+        Call from a ``try/finally`` block after each signing session to reduce
+        the window during which key material is reachable in process memory.
+        Python cannot truly zero ``bytes`` objects, but dropping the reference
+        allows the GC to reclaim the memory sooner and prevents accidental
+        re-use of the key after the session ends.
+
+        After ``cleanup()``, the next ``sign()`` call will reload credentials
+        from disk via ``load_credentials()``.
+        """
+        self._cert_info = None
 
     def sign(self, xml_bytes: bytes) -> bytes:
         """Return *xml_bytes* with an embedded XAdES-EPES signature.
@@ -442,7 +466,7 @@ class XAdESEPESSigner(BaseDocumentSigner):
         # Step 1: parse the document and compute its C14N digest
         # (before injecting the signature — this is what the enveloped-
         # signature transform on the final document will reproduce)
-        root = etree.fromstring(xml_bytes)
+        root = safe_fromstring(xml_bytes)
         doc_c14n = _c14n(root)
         doc_digest = _sha256_b64(doc_c14n)
 

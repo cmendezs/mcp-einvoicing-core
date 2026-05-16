@@ -88,6 +88,18 @@ class TestBuildMtlsSslContext:
         ctx = _build_mtls_ssl_context(str(p12_path_no_password), None)
         assert isinstance(ctx, ssl.SSLContext)
 
+    def test_verify_mode_is_cert_required(self, p12_path: Path) -> None:
+        ctx = _build_mtls_ssl_context(str(p12_path), "test")
+        assert ctx.verify_mode == ssl.CERT_REQUIRED
+
+    def test_check_hostname_is_true(self, p12_path: Path) -> None:
+        ctx = _build_mtls_ssl_context(str(p12_path), "test")
+        assert ctx.check_hostname is True
+
+    def test_minimum_tls_version_is_1_2(self, p12_path: Path) -> None:
+        ctx = _build_mtls_ssl_context(str(p12_path), "test")
+        assert ctx.minimum_version == ssl.TLSVersion.TLSv1_2
+
     def test_tempfile_cleaned_up(self, p12_path: Path) -> None:
         import glob
         import os

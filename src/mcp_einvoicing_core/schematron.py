@@ -44,6 +44,8 @@ from pathlib import Path
 
 from lxml import etree
 
+from mcp_einvoicing_core.xml_utils import safe_fromstring, safe_parser
+
 logger = logging.getLogger(__name__)
 
 _SVRL_NS = "http://purl.oclc.org/dsdl/svrl"
@@ -191,7 +193,7 @@ class SchematronValidator(BaseStructuredValidator):
                 "Run the package's download-rules command to fetch official artefacts."
             )
         try:
-            self._transform = etree.XSLT(etree.parse(str(path)))
+            self._transform = etree.XSLT(etree.parse(str(path), safe_parser(load_dtd=True)))
         except etree.XSLTParseError as exc:
             raise ValueError(
                 f"Failed to parse Schematron stylesheet {path}: {exc}"
@@ -212,7 +214,7 @@ class SchematronValidator(BaseStructuredValidator):
             Never raises — XML parse errors appear as "error"-severity findings.
         """
         try:
-            doc = etree.fromstring(xml_bytes)
+            doc = safe_fromstring(xml_bytes)
         except etree.XMLSyntaxError as exc:
             return ValidationResult(
                 is_valid=False,
@@ -282,7 +284,7 @@ class BaseXSDValidator(BaseStructuredValidator):
     Usage:
         class FatturaPAXSDValidator(BaseXSDValidator):
             def __init__(self, xsd_path: Path) -> None:
-                self._schema = etree.XMLSchema(etree.parse(str(xsd_path)))
+                self._schema = etree.XMLSchema(etree.parse(str(xsd_path), safe_parser()))
 
             def validate(self, document: bytes, *, profile: str = "", syntax: str = "") -> ValidationResult:
                 ...

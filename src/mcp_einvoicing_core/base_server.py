@@ -28,6 +28,8 @@ Plugin pattern:
 from __future__ import annotations
 
 import logging
+import os
+import re
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Optional
 
@@ -393,6 +395,107 @@ class BasePartyValidator(ABC):
         if not party.tax_id.identifier:
             errors.append("Tax identifier is empty.")
         return errors
+
+
+# ---------------------------------------------------------------------------
+# Read-only mode guard (P2-13)
+# ---------------------------------------------------------------------------
+
+
+def assert_not_read_only(env_var: str) -> None:
+    """Raise PlatformError if the server is running in read-only mode.
+
+    Each country package passes its own env var name (e.g. ``KSEF_READ_ONLY``
+    for Poland, ``AEAT_READ_ONLY`` for Spain, ``FR_READ_ONLY`` for France).
+    Call this at the top of every submit / sign / delete tool handler.
+
+    Args:
+        env_var: Name of the environment variable that activates read-only mode
+                 when set to ``1``, ``true``, or ``yes`` (case-insensitive).
+
+    Raises:
+        PlatformError: Always, when read-only mode is active.
+
+    Example::
+
+        from mcp_einvoicing_core.base_server import assert_not_read_only
+
+        async def submit_invoice_to_ksef(xml_content: str, ...) -> dict:
+            assert_not_read_only("KSEF_READ_ONLY")
+            ...
+    """
+    from mcp_einvoicing_core.exceptions import PlatformError  # noqa: PLC0415
+
+    if os.environ.get(env_var, "").strip().lower() in {"1", "true", "yes"}:
+        raise PlatformError(
+            status_code=0,
+            message=(
+                f"Server started in read-only mode ({env_var}=1). "
+                "Submission and signing tools are disabled. "
+                "Unset this variable to enable write operations."
+            ),
+        )
+
+
+# ---------------------------------------------------------------------------
+# Output masking layer (P1.5)
+# ---------------------------------------------------------------------------
+
+# Patterns that identify high-sensitivity PII in tool return values.
+# Applied by scrub() before data reaches the LLM context window.
+_IBAN_RE = re.compile(
+    r"\b[A-Z]{2}\d{2}[A-Z0-9 ]{11,30}\b",
+    re.IGNORECASE,
+)
+_BIC_RE = re.compile(
+    r"\b[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}(?:[A-Z0-9]{3})?\b",
+    re.IGNORECASE,
+)
+
+# Sentinel substitutions — descriptive enough to tell the LLM what was masked.
+_IBAN_PLACEHOLDER = "[IBAN REDACTED]"
+_BIC_PLACEHOLDER = "[BIC REDACTED]"
+
+_MASKING_ENABLED: bool = os.environ.get("EINVOICING_DISABLE_LLM_MASKING", "").strip() not in {
+    "1", "true", "yes",
+}
+
+
+def scrub(data: Any) -> Any:
+    """Recursively redact IBAN and BIC/SWIFT codes from tool return values.
+
+    Called by tool handlers before returning data to the LLM.  Controls are:
+
+    - **Default-on**: masking is active unless ``EINVOICING_DISABLE_LLM_MASKING=1``
+      is set (trusted local deployments, integration tests).
+    - **Scope**: only financial identifiers (IBAN, BIC/SWIFT) are redacted.
+      Invoice numbers, amounts, dates, and party names are kept so the LLM
+      can still describe the document without re-reading it from external sources.
+    - **Untrusted content**: text fields from inbound XML should be wrapped with
+      :func:`~mcp_einvoicing_core.xml_utils.mark_untrusted` *before* calling
+      ``scrub()``.  The ``<untrusted-content>`` wrapper is preserved by ``scrub()``.
+
+    Args:
+        data: Return value from a tool handler — dict, list, or scalar.
+
+    Returns:
+        The same structure with IBAN/BIC values replaced by placeholder strings.
+    """
+    if not _MASKING_ENABLED:
+        return data
+    return _scrub_value(data)
+
+
+def _scrub_value(obj: Any) -> Any:
+    if isinstance(obj, dict):
+        return {k: _scrub_value(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_scrub_value(item) for item in obj]
+    if isinstance(obj, str):
+        result = _IBAN_RE.sub(_IBAN_PLACEHOLDER, obj)
+        result = _BIC_RE.sub(_BIC_PLACEHOLDER, result)
+        return result
+    return obj
 
 
 # ---------------------------------------------------------------------------

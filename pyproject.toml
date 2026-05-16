@@ -60,6 +60,7 @@ dev = [
 
 [project.scripts]
 mcp-einvoicing-download-rules = "mcp_einvoicing_core.download_rules:main"
+mcp-einvoicing-signer = "mcp_einvoicing_core.signer_service:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mcp_einvoicing_core"]

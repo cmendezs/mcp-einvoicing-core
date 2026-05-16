@@ -91,12 +91,17 @@ from mcp_einvoicing_core.xml_utils import (
     format_amount,
     format_error,
     format_quantity,
+    mark_untrusted,
+    mark_untrusted_fields,
     resolve_xml_input,
     validate_date_iso,
     validate_iban,
     xml_element,
     xml_optional,
 )
+from mcp_einvoicing_core.base_server import assert_not_read_only, scrub
+from mcp_einvoicing_core.audit_log import AuditAction, AuditLog, get_audit_log
+from mcp_einvoicing_core.confirmation import ConfirmationGate, ConfirmationStore
 
 from mcp_einvoicing_core.audit import (
     DEFAULT_CORE_MODULES,
@@ -197,6 +202,19 @@ __all__ = [
     "format_error",
     "filter_empty_values",
     "resolve_xml_input",
+    "mark_untrusted",
+    "mark_untrusted_fields",
+    # Output masking
+    "scrub",
+    # Read-only mode guard
+    "assert_not_read_only",
+    # Audit log
+    "AuditAction",
+    "AuditLog",
+    "get_audit_log",
+    # HITL confirmation gate
+    "ConfirmationGate",
+    "ConfirmationStore",
     # QR code generation
     "generate_qr_png_base64",
     # Document signing

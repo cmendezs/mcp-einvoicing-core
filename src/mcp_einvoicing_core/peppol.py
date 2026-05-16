@@ -33,6 +33,8 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import os
+import re
 import urllib.parse
 from dataclasses import dataclass, field
 from enum import Enum
@@ -42,6 +44,7 @@ import httpx
 from lxml import etree
 
 from mcp_einvoicing_core.exceptions import PlatformError
+from mcp_einvoicing_core.xml_utils import safe_fromstring
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +66,25 @@ _SML_TEST = "acc.edelivery.tech.ec.europa.eu"
 
 # Participant ID scheme prefix used in DNS and SMP URLs
 _ACTORID_PREFIX = "iso6523-actorid-upis"
+
+# Validation regexes for PeppolParticipantId.parse() (P1.10)
+_SCHEME_RE = re.compile(r"^[0-9]{4}$")
+_VALUE_RE = re.compile(r"^[A-Za-z0-9._:\-]{1,128}$")
+
+# Known Peppol SMP hostname suffixes (P1.11).
+# Sources: OpenPeppol AP registry, published SML production participants.
+# Override at deployment time via EINVOICING_SMP_ALLOWLIST (comma-separated suffixes).
+_SMP_ALLOWLIST_DEFAULT: frozenset[str] = frozenset({
+    ".edelivery.tech.ec.europa.eu",   # OpenPeppol SML production
+    ".acc.edelivery.tech.ec.europa.eu",  # OpenPeppol SML test
+    ".smp.acube.io",
+    ".b2brouter.net",
+    ".galaxygw.com",
+    ".peppolap.com",
+    ".einvoiceservice.eu",
+    ".openpeppol.org",
+    ".digitaldocuments.eu",
+})
 
 # Peppol BIS Billing 3.0 document type identifier
 # [Unverified: confirm against https://docs.peppol.eu/poacc/billing/3.0/]
@@ -107,7 +129,8 @@ class PeppolParticipantId:
                  "0088:4012345678901" or "0204:991-1234512345-06".
 
         Raises:
-            ValueError: If the string does not contain exactly one colon separator.
+            ValueError: If the format is invalid, scheme is not a 4-digit ISO 6523
+                ICD code, or value contains characters outside [A-Za-z0-9._:-].
         """
         parts = raw.split(":", 1)
         if len(parts) != 2 or not parts[0] or not parts[1]:
@@ -115,7 +138,18 @@ class PeppolParticipantId:
                 f"Invalid Peppol participant ID {raw!r}. "
                 "Expected format: '<scheme>:<value>', e.g. '0088:4012345678901'."
             )
-        return cls(scheme=parts[0].strip(), value=parts[1].strip())
+        scheme, value = parts[0].strip(), parts[1].strip()
+        if not _SCHEME_RE.match(scheme):
+            raise ValueError(
+                f"Invalid Peppol scheme {scheme!r}: must be exactly 4 decimal digits "
+                "(ISO 6523 ICD code, e.g. '0088')."
+            )
+        if not _VALUE_RE.match(value):
+            raise ValueError(
+                f"Invalid Peppol participant value {value!r}: must be 1-128 characters "
+                "matching [A-Za-z0-9._:-]."
+            )
+        return cls(scheme=scheme, value=value)
 
     def as_iso6523(self) -> str:
         """Return the full ISO 6523 actor ID string used in DNS and SMP URLs.
@@ -359,10 +393,35 @@ class PeppolSMPClient:
             if answer.get("type") == 5:  # CNAME
                 cname = answer.get("data", "").rstrip(".")
                 if cname:
+                    if not self._is_allowed_smp_hostname(cname):
+                        raise PlatformError(
+                            status_code=0,
+                            message=(
+                                f"Resolved SMP hostname {cname!r} is not in the Peppol "
+                                "AP allowlist. Set EINVOICING_SMP_ALLOWLIST to override."
+                            ),
+                        )
                     logger.debug("Peppol SMP hostname resolved: %s", cname)
                     return cname
 
         return None
+
+    def _is_allowed_smp_hostname(self, hostname: str) -> bool:
+        """Return True if *hostname* ends with a known Peppol AP suffix.
+
+        The allowlist is seeded from ``_SMP_ALLOWLIST_DEFAULT`` and can be
+        extended at deployment time via the ``EINVOICING_SMP_ALLOWLIST``
+        environment variable (comma-separated additional suffixes).
+        """
+        env_extra = os.environ.get("EINVOICING_SMP_ALLOWLIST", "")
+        extra: frozenset[str] = (
+            frozenset(s.strip() for s in env_extra.split(",") if s.strip())
+            if env_extra
+            else frozenset()
+        )
+        allowlist = _SMP_ALLOWLIST_DEFAULT | extra
+        hostname_lower = hostname.lower()
+        return any(hostname_lower.endswith(suffix) for suffix in allowlist)
 
     async def _fetch_service_group(
         self, smp_base_url: str, participant_id: PeppolParticipantId
@@ -436,7 +495,7 @@ class PeppolSMPClient:
         [Unverified: exact XML element names may differ between SMP spec versions.]
         """
         try:
-            root = etree.fromstring(xml_bytes)
+            root = safe_fromstring(xml_bytes)
         except etree.XMLSyntaxError as exc:
             logger.warning("SMP service group XML parse error: %s", exc)
             return []
@@ -474,7 +533,7 @@ class PeppolSMPClient:
          between SMP spec versions and SMP implementations.]
         """
         try:
-            root = etree.fromstring(xml_bytes)
+            root = safe_fromstring(xml_bytes)
         except etree.XMLSyntaxError as exc:
             logger.warning("SMP service metadata XML parse error: %s", exc)
             return PeppolServiceInfo(document_type_id=document_type_id)

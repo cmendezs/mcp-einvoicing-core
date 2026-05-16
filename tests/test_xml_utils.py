@@ -6,13 +6,17 @@ import base64
 from decimal import ROUND_HALF_EVEN, ROUND_HALF_UP, Decimal
 
 import pytest
+from lxml import etree
 
 from mcp_einvoicing_core.xml_utils import (
+    MAX_XML_BYTES,
     filter_empty_values,
     format_amount,
     format_error,
     format_quantity,
     resolve_xml_input,
+    safe_fromstring,
+    safe_parser,
     validate_date_iso,
     validate_iban,
     xml_element,
@@ -200,6 +204,63 @@ class TestResolveXmlInput:
     def test_invalid_base64_raises(self) -> None:
         with pytest.raises(ValueError, match="not valid base64"):
             resolve_xml_input(None, "!!!not-base64!!!")
+
+
+class TestSafeParser:
+    def test_safe_parser_returns_xml_parser(self) -> None:
+        parser = safe_parser()
+        assert isinstance(parser, etree.XMLParser)
+
+    def test_safe_fromstring_parses_valid_xml(self) -> None:
+        root = safe_fromstring(b"<root><child>text</child></root>")
+        assert root.tag == "root"
+        assert root[0].text == "text"
+
+    def test_xxe_entity_expansion_is_blocked(self) -> None:
+        # With resolve_entities=False, lxml parses the document but does NOT
+        # read the referenced file.  The entity reference is left unexpanded in
+        # the tree so the text content is never populated with file contents.
+        xxe_payload = b"""<?xml version="1.0"?>
+<!DOCTYPE root [
+  <!ENTITY xxe SYSTEM "file:///etc/passwd">
+]>
+<root>&xxe;</root>"""
+        root = safe_fromstring(xxe_payload)
+        # The text of <root> must NOT contain anything from /etc/passwd.
+        # On a typical system the file starts with "root:"; we check for ":"
+        # as a quick signal that the file was not read.
+        text = (root.text or "") + "".join(
+            (c.text or "") + (c.tail or "") for c in root
+        )
+        assert ":" not in text, (
+            "XXE protection failed: entity was expanded and file content leaked"
+        )
+
+    def test_billion_laughs_is_blocked(self) -> None:
+        # With resolve_entities=False entities are NOT expanded so the
+        # billion-laughs tree never materialises — no exception and no DoS.
+        billion_laughs = b"""<?xml version="1.0"?>
+<!DOCTYPE lol [
+  <!ENTITY lol "lol">
+  <!ENTITY lol2 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;">
+  <!ENTITY lol3 "&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;">
+]>
+<root>&lol3;</root>"""
+        root = safe_fromstring(billion_laughs)
+        # Entity unexpanded: text content should NOT be the repeated string.
+        text = root.text or ""
+        assert "lollol" not in text, (
+            "Billion-laughs protection failed: entity was expanded"
+        )
+
+    def test_size_limit_enforced(self) -> None:
+        oversized = b"<r>" + b"x" * (MAX_XML_BYTES + 1) + b"</r>"
+        with pytest.raises(ValueError, match="MB safety limit"):
+            safe_fromstring(oversized)
+
+    def test_malformed_xml_raises(self) -> None:
+        with pytest.raises(etree.XMLSyntaxError):
+            safe_fromstring(b"<unclosed>")
 
 
 class TestFilterEmptyValues:
