@@ -1,0 +1,18 @@
+# mcp-einvoicing-core — gap registry
+#
+# Tracks gaps where country packages carry local workarounds pending a core fix.
+# Only cross-package gaps belong here; core-internal bugs are tracked in roadmap-2026.md.
+#
+# Format:
+#   [gap."<gap-id>"]
+#   description  = "Short description matching the [GAP id=...] marker in the country package"
+#   resolved     = false | true
+#   resolved_in  = ""     # set to the core version that closes this gap
+#
+# To find all active gap markers in country packages:
+#   grep -r "\[GAP id=" . --include="*.py" -n
+
+# No cross-package gap workarounds are currently open.
+# All previously identified gaps (see context-library/audit-history.md) were resolved
+# before the structured gap-marker scheme was introduced and have no [GAP id=...] markers
+# in country package code.

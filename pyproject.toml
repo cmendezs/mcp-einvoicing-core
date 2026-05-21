@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-einvoicing-core"
-version = "1.1.0"
+version = "1.2.0"
 description = "Base package for European electronic invoicing MCP servers"
 readme = "README.md"
 requires-python = ">=3.11"

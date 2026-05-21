@@ -108,6 +108,10 @@ class PartyAddress(BaseModel):
         default=None,
         description="Province / region code. Required by IT (Provincia) and ES (Provincia).",
     )
+    gln: Optional[str] = Field(
+        default=None,
+        description="GS1 Global Location Number (13 digits). Emitted in address blocks when present (e.g. KSeF FA(2)/FA(3) <GLN>).",
+    )
 
     @field_validator("country_code")
     @classmethod

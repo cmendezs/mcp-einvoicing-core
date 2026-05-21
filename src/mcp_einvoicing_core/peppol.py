@@ -5,10 +5,10 @@ protocol for discovering whether a business is registered on the Peppol network
 and determining its AS4 access point endpoint.
 
 Peppol lookup flow:
-  1. Build the participant identifier string: iso6523-actorid-upis::<scheme>:<value>
-  2. Compute SHA-256 of the lowercase identifier → hex digest
-  3. Construct DNS name: B-<hex>.<scheme>.iso6523-actorid-upis.<sml-domain>
-  4. DNS CNAME lookup reveals the SMP hostname (via DNS-over-HTTPS)
+  1. Build the participant identifier string: <scheme>:<value>  (lowercase)
+  2. Compute SHA-256 of the lowercase identifier → Base32 digest (RFC 4648, no padding)
+  3. Construct DNS name: <base32>.iso6523-actorid-upis.<sml-domain>
+  4. DNS U-NAPTR lookup (type 35) reveals the SMP hostname (via DNS-over-HTTPS)
   5. HTTP GET to SMP to fetch the service group (list of supported document types)
   6. HTTP GET to SMP to fetch service metadata for a specific document type,
      extracting the AS4 endpoint URL and transport profile
@@ -17,20 +17,22 @@ Country packages subclass PeppolSMPClient to add country-specific default values
 (SML domain, preferred participant ID scheme, supported document type identifiers).
 
 SML domains:
-  Production: edelivery.tech.ec.europa.eu   [Unverified — confirm against OpenPeppol docs]
-  Test:       acc.edelivery.tech.ec.europa.eu  [Unverified — confirm against OpenPeppol docs]
+  Production: edelivery.tech.ec.europa.eu
+  Test:       acc.edelivery.tech.ec.europa.eu
 
 DNS-over-HTTPS provider: Cloudflare (https://cloudflare-dns.com/dns-query) is used
 as the default.  Override _doh_url in subclasses to use a different resolver.
 
 References:
-  OpenPeppol BDMSL specification: https://docs.peppol.eu/edelivery/sml/
-  OpenPeppol SMP specification:   https://docs.peppol.eu/edelivery/smp/
-  ISO 6523 ICD list:              https://www.iana.org/assignments/edi/edi.xhtml
+  OpenPeppol SMP specification 1.4.0:                https://docs.peppol.eu/edelivery/smp/
+  OpenPeppol SML specification 1.3.0:                https://docs.peppol.eu/edelivery/sml/
+  OpenPeppol Policy for use of Identifiers 4.4.0:    https://docs.peppol.eu/edelivery/
+  ISO 6523 ICD list:                                 https://www.iana.org/assignments/edi/edi.xhtml
 """
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import logging
 import os
@@ -48,8 +50,7 @@ from mcp_einvoicing_core.xml_utils import safe_fromstring
 
 logger = logging.getLogger(__name__)
 
-# SMP XML namespaces
-# [Unverified: confirm against current OpenPeppol SMP spec version]
+# SMP XML namespaces (busdox.org — confirmed unchanged in SMP 1.4.0 and SML 1.3.0)
 _NS_SERVICE_GROUP = "http://busdox.org/serviceMetadata/publishing/1.0/"
 _NS_SERVICE_METADATA = "http://busdox.org/serviceMetadata/publishing/1.0/"
 _NS_ENDPOINT = "http://busdox.org/serviceMetadata/publishing/1.0/"
@@ -59,17 +60,27 @@ _PEPPOL_NSMAP = {
     "ids": "http://busdox.org/transport/identifiers/1.0/",
 }
 
-# OpenPeppol SML production and test domains
-# [Unverified: confirm against https://docs.peppol.eu/edelivery/sml/]
+# OpenPeppol SML production and test domains (confirmed: SML spec 1.3.0 §2.1)
 _SML_PRODUCTION = "edelivery.tech.ec.europa.eu"
 _SML_TEST = "acc.edelivery.tech.ec.europa.eu"
 
-# Participant ID scheme prefix used in DNS and SMP URLs
+# Participant ID meta scheme used in DNS names and SMP URLs (POLICY 5)
 _ACTORID_PREFIX = "iso6523-actorid-upis"
 
-# Validation regexes for PeppolParticipantId.parse() (P1.10)
+# Validation regexes for PeppolParticipantId.parse()
+# Scheme: 4-digit ISO 6523 ICD code (POLICY 3, POLICY 6)
+# Value: per-scheme character rules; the 128-char cap is a library-level guard
+#        (Policy for use of Identifiers 4.4.0 does not state an explicit max length)
 _SCHEME_RE = re.compile(r"^[0-9]{4}$")
 _VALUE_RE = re.compile(r"^[A-Za-z0-9._:\-]{1,128}$")
+
+# U-NAPTR record (DNS type 35) parsing helpers
+# Cloudflare DoH JSON data field format: <order> <pref> "<flags>" "<service>" "<regexp>" <repl>
+_NAPTR_DATA_RE = re.compile(
+    r'^\d+\s+\d+\s+"(?P<flags>[^"]*)"\s+"(?P<service>[^"]*)"\s+"(?P<regexp>[^"]*)"\s+\S+$'
+)
+# Peppol U-NAPTR regexp uses ! delimiters: !<pattern>!<uri>!
+_NAPTR_URI_RE = re.compile(r"!([^!]*)!([^!]+)!")
 
 # Known Peppol SMP hostname suffixes (P1.11).
 # Sources: OpenPeppol AP registry, published SML production participants.
@@ -87,7 +98,6 @@ _SMP_ALLOWLIST_DEFAULT: frozenset[str] = frozenset({
 })
 
 # Peppol BIS Billing 3.0 document type identifier
-# [Unverified: confirm against https://docs.peppol.eu/poacc/billing/3.0/]
 PEPPOL_BIS_BILLING_30 = (
     "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
     "::Invoice"
@@ -152,28 +162,30 @@ class PeppolParticipantId:
         return cls(scheme=scheme, value=value)
 
     def as_iso6523(self) -> str:
-        """Return the full ISO 6523 actor ID string used in DNS and SMP URLs.
+        """Return the full ISO 6523 actor ID string used in SMP URLs.
 
         Format: iso6523-actorid-upis::<scheme>:<value>  (all lowercase)
         """
         return f"{_ACTORID_PREFIX}::{self.scheme}:{self.value}".lower()
 
     def dns_hash(self) -> str:
-        """SHA-256 hex digest of the lowercase ISO 6523 actor ID.
+        """Base32-encoded SHA-256 digest of the lowercased scheme:value identifier.
 
-        Confirmed: the OpenPeppol BDMSL specification (current version, §4.1)
-        requires SHA-256. The legacy BDMSL 1.x used MD5; all current Peppol
-        networks (EU, APAC, Gulf) use SHA-256. The ``B-`` prefix in dns_name()
-        is the canonical signal that SHA-256 is in use.
+        Spec: POLICY 7, Peppol Policy for use of Identifiers v4.4.0 (2025-02-06).
+        Input:     lowercase "<scheme>:<value>", e.g. "0088:7300010000001"
+        Algorithm: SHA-256 of the UTF-8 bytes → Base32 (RFC 4648, no '=' padding)
         """
-        return hashlib.sha256(self.as_iso6523().encode("utf-8")).hexdigest()
+        identifier = f"{self.scheme}:{self.value}".lower()
+        digest = hashlib.sha256(identifier.encode("utf-8")).digest()
+        return base64.b32encode(digest).decode("ascii").rstrip("=")
 
     def dns_name(self, sml_domain: str) -> str:
-        """Construct the DNS CNAME name for the BDMSL lookup.
+        """Construct the DNS U-NAPTR name for the SML lookup.
 
-        Format: B-<sha256hex>.<scheme>.iso6523-actorid-upis.<sml-domain>
+        Format: <base32-hash>.iso6523-actorid-upis.<sml-domain>
+        (POLICY 7, Peppol Policy for use of Identifiers v4.4.0)
         """
-        return f"B-{self.dns_hash()}.{self.scheme}.{_ACTORID_PREFIX}.{sml_domain}"
+        return f"{self.dns_hash()}.{_ACTORID_PREFIX}.{sml_domain}"
 
     def smp_path_segment(self) -> str:
         """URL-encoded ISO 6523 path segment for SMP HTTP requests.
@@ -195,6 +207,9 @@ class PeppolServiceInfo:
     transport_profile: Transport protocol identifier (e.g. "peppol-transport-as4-v2_0").
     process_id:       Process identifier (e.g. the BIS Billing 3.0 process URN).
     certificate:      PEM-encoded signing certificate of the access point (if present).
+    redirect_url:     SMP redirect target URL (set when the SMP returns a <Redirect>
+                      instead of <ServiceInformation>; callers MUST NOT follow more than
+                      one hop — SMP 1.4.0 §3.2).
     """
 
     document_type_id: str
@@ -202,6 +217,7 @@ class PeppolServiceInfo:
     transport_profile: Optional[str] = None
     process_id: Optional[str] = None
     certificate: Optional[str] = None
+    redirect_url: Optional[str] = None
 
 
 @dataclass
@@ -279,7 +295,7 @@ class PeppolSMPClient:
         """Check whether a participant is registered and list their document types.
 
         Performs:
-          1. DNS CNAME lookup (via DoH) to locate the SMP hostname.
+          1. DNS U-NAPTR lookup (via DoH) to locate the SMP hostname.
           2. HTTP GET to the SMP service group endpoint to enumerate capabilities.
 
         Returns a PeppolLookupResult.  Never raises — errors are returned in the
@@ -299,7 +315,7 @@ class PeppolSMPClient:
             return PeppolLookupResult(
                 is_registered=False,
                 participant_id=participant_id,
-                error="Participant not found in Peppol SML (no CNAME record).",
+                error="Participant not found in Peppol SML (no U-NAPTR record).",
             )
 
         smp_base_url = f"https://{smp_hostname}"
@@ -358,20 +374,20 @@ class PeppolSMPClient:
     async def _resolve_smp_hostname(
         self, participant_id: PeppolParticipantId
     ) -> Optional[str]:
-        """Resolve the SMP hostname for a participant via DNS-over-HTTPS CNAME lookup.
+        """Resolve the SMP hostname for a participant via DNS-over-HTTPS U-NAPTR lookup.
 
-        Returns the SMP hostname string, or None if no CNAME record exists
-        (meaning the participant is not registered).
+        Returns the SMP hostname string (netloc of the NAPTR URI), or None if no
+        U-NAPTR record with service Meta:SMP exists (meaning the participant is not
+        registered).
 
-        The DNS name queried is: B-<sha256>.<scheme>.iso6523-actorid-upis.<sml>
-
-        [Unverified: confirm DNS name format and hash algorithm against the current
-         OpenPeppol BDMSL specification before relying on this in production.]
+        The DNS name queried is: <base32>.iso6523-actorid-upis.<sml>
+        (POLICY 7, Peppol Policy for use of Identifiers v4.4.0)
+        Record type: U-NAPTR (DNS type 35, SML specification 1.3.0 §3.2)
         """
         dns_name = participant_id.dns_name(self._sml_domain)
         logger.debug("Peppol DNS lookup: %s", dns_name)
 
-        params = {"name": dns_name, "type": "CNAME"}
+        params = {"name": dns_name, "type": "NAPTR"}
         headers = {"Accept": "application/dns-json"}
 
         async with httpx.AsyncClient(timeout=self._http_timeout) as client:
@@ -384,25 +400,40 @@ class PeppolSMPClient:
             )
 
         data = response.json()
-        # DoH JSON response: {"Status": 0, "Answer": [{"type": 5, "data": "hostname."}]}
-        # Status 0 = NOERROR, type 5 = CNAME
+        # DoH JSON response: {"Status": 0, "Answer": [{"type": 35, "data": "..."}]}
+        # Status 0 = NOERROR, type 35 = NAPTR
         if data.get("Status") != 0:
             return None  # NXDOMAIN or other error → participant not registered
 
         for answer in data.get("Answer", []):
-            if answer.get("type") == 5:  # CNAME
-                cname = answer.get("data", "").rstrip(".")
-                if cname:
-                    if not self._is_allowed_smp_hostname(cname):
-                        raise PlatformError(
-                            status_code=0,
-                            message=(
-                                f"Resolved SMP hostname {cname!r} is not in the Peppol "
-                                "AP allowlist. Set EINVOICING_SMP_ALLOWLIST to override."
-                            ),
-                        )
-                    logger.debug("Peppol SMP hostname resolved: %s", cname)
-                    return cname
+            if answer.get("type") != 35:  # NAPTR
+                continue
+            naptr_data = answer.get("data", "")
+            m = _NAPTR_DATA_RE.match(naptr_data)
+            if not m:
+                continue
+            if m.group("service").upper() != "META:SMP":
+                continue
+            uri_m = _NAPTR_URI_RE.search(m.group("regexp"))
+            if not uri_m:
+                continue
+            smp_url = uri_m.group(2)
+            parsed = urllib.parse.urlparse(smp_url)
+            hostname = parsed.netloc
+            if not hostname:
+                continue
+            if not self._is_allowed_smp_hostname(hostname):
+                raise PlatformError(
+                    status_code=0,
+                    message=(
+                        f"Resolved SMP hostname {hostname!r} is not in the Peppol "
+                        "AP allowlist. Set EINVOICING_SMP_ALLOWLIST to override."
+                    ),
+                )
+            logger.debug(
+                "Peppol SMP hostname resolved: %s (NAPTR URI: %s)", hostname, smp_url
+            )
+            return hostname
 
         return None
 
@@ -432,8 +463,6 @@ class PeppolSMPClient:
 
         The service group XML lists hrefs to individual service metadata resources.
         This method extracts the document type identifier from each href.
-
-        [Unverified: confirm SMP URL path format against the OpenPeppol SMP spec.]
         """
         url = f"{smp_base_url}/{participant_id.smp_path_segment()}/services"
         logger.debug("SMP service group: GET %s", url)
@@ -460,10 +489,9 @@ class PeppolSMPClient:
         URL: GET <smp_base_url>/<participant>/services/<encoded-doc-type>
 
         Returns a PeppolServiceInfo with the AS4 endpoint URL, transport profile,
-        and process identifier.
-
-        [Unverified: confirm URL path format and XML schema against the OpenPeppol
-         SMP spec; schema may differ between SMP v1 and v2.]
+        and process identifier.  If the SMP returns a <Redirect>, the result's
+        redirect_url field is set and endpoint_url is None; callers must not follow
+        more than one redirect hop (SMP 1.4.0 §3.2).
         """
         encoded_doc_type = urllib.parse.quote(document_type_id, safe="")
         url = (
@@ -491,8 +519,6 @@ class PeppolSMPClient:
         type identifier as a URL path segment.
 
         Returns a list of document type identifier strings (URL-decoded).
-
-        [Unverified: exact XML element names may differ between SMP spec versions.]
         """
         try:
             root = safe_fromstring(xml_bytes)
@@ -501,12 +527,10 @@ class PeppolSMPClient:
             return []
 
         doc_types: list[str] = []
-        # Try both the busdox namespace and unprefixed elements
         for ref in root.iter():
             local = etree.QName(ref.tag).localname if "{" in ref.tag else ref.tag
             if local == "ServiceMetadataReference":
                 href = ref.get("href") or ""
-                # Extract document type from URL path: .../services/<encoded-doc-type>
                 if "/services/" in href:
                     encoded = href.split("/services/", 1)[1].split("?")[0]
                     doc_type = urllib.parse.unquote(encoded)
@@ -520,17 +544,20 @@ class PeppolSMPClient:
     ) -> PeppolServiceInfo:
         """Extract endpoint information from an SMP service metadata XML response.
 
-        Looks for <Endpoint> elements containing:
-          - <EndpointURI> — AS4 endpoint URL
-          - <TransportProfile> — transport protocol identifier
-          - <ServiceActivationDate> / <ServiceExpirationDate>
+        Handles both the normal case (<ServiceInformation>) and the redirect case
+        (<Redirect>) per SMP specification 1.4.0.
+
+        For <ServiceInformation>, extracts:
+          - <wsa:EndpointReference><wsa:Address> — AS4 endpoint URL (SMP 1.4.0)
+          - transportProfile XML attribute on <Endpoint> (SMP 1.4.0 / peppol-smp-types-v1.xsd)
+          - <ProcessIdentifier> — process identifier
           - <Certificate> — PEM-encoded signing certificate
+
+        For <Redirect>, sets redirect_url and leaves endpoint_url as None.
+        Callers must not follow more than one redirect hop (SMP 1.4.0 §3.2).
 
         Returns a PeppolServiceInfo.  On parse failure returns a result with
         no endpoint URL so callers can detect the absence cleanly.
-
-        [Unverified: XML element names and namespace handling may differ
-         between SMP spec versions and SMP implementations.]
         """
         try:
             root = safe_fromstring(xml_bytes)
@@ -545,8 +572,33 @@ class PeppolSMPClient:
                     return (el.text or "").strip() or None
             return None
 
-        endpoint_url = find_text(root, "EndpointURI")
-        transport_profile = find_text(root, "TransportProfile")
+        # Detect <Redirect> — the SMP is delegating this document type to another SMP
+        for el in root.iter():
+            local = etree.QName(el.tag).localname if "{" in el.tag else el.tag
+            if local == "Redirect":
+                redirect_url = el.get("href") or None
+                logger.debug(
+                    "SMP returned Redirect for %s: %s", document_type_id, redirect_url
+                )
+                return PeppolServiceInfo(
+                    document_type_id=document_type_id,
+                    redirect_url=redirect_url,
+                )
+
+        # Normal <ServiceInformation> path
+        endpoint_url: Optional[str] = None
+        transport_profile: Optional[str] = None
+
+        for el in root.iter():
+            local = etree.QName(el.tag).localname if "{" in el.tag else el.tag
+            if local == "Endpoint":
+                # transportProfile is an XML attribute on <Endpoint> (SMP 1.4.0 §3.3 /
+                # peppol-smp-types-v1.xsd EndpointType)
+                transport_profile = el.get("transportProfile") or None
+            elif local == "Address":
+                # Endpoint URL lives in wsa:EndpointReference/wsa:Address (SMP 1.4.0 §3.3)
+                endpoint_url = (el.text or "").strip() or None
+
         process_id = find_text(root, "ProcessIdentifier")
         certificate = find_text(root, "Certificate")
 
