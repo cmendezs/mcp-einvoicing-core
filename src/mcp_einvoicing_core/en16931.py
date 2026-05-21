@@ -36,7 +36,7 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
-from typing import Annotated, Optional
+from typing import Annotated, ClassVar, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -276,7 +276,10 @@ class EN16931Invoice(BaseModel):
     # country subclass that uses a typed enum for `profile`.  The model
     # validator below rejects any value not in the set.  Leave as None (the
     # default) to accept any string — appropriate for abstract base use.
-    _allowed_profiles: frozenset[str] | None = None
+    # Must be ClassVar so that subclass assignments remain class variables
+    # and self.__class__._allowed_profiles returns the actual value, not a
+    # ModelPrivateAttr descriptor.
+    _allowed_profiles: ClassVar[frozenset[str] | None] = None
 
     # ── Header fields ────────────────────────────────────────────────────────
 
