@@ -102,6 +102,14 @@ from mcp_einvoicing_core.xml_utils import (
 from mcp_einvoicing_core.base_server import assert_not_read_only, scrub
 from mcp_einvoicing_core.audit_log import AuditAction, AuditLog, get_audit_log
 from mcp_einvoicing_core.confirmation import ConfirmationGate, ConfirmationStore
+from mcp_einvoicing_core.wire_formats import (
+    CII_NSMAP,
+    EN16931CIIParser,
+    EN16931CIISerializer,
+    EN16931UBLParser,
+    EN16931UBLSerializer,
+    UBL_NSMAP,
+)
 
 from mcp_einvoicing_core.audit import (
     DEFAULT_CORE_MODULES,
@@ -119,7 +127,7 @@ from mcp_einvoicing_core.audit import (
     run_check_version_compatibility,
 )
 
-__version__ = "0.6.0"
+__version__ = "1.3.0"
 
 __all__ = [
     # Base classes
@@ -215,6 +223,13 @@ __all__ = [
     # HITL confirmation gate
     "ConfirmationGate",
     "ConfirmationStore",
+    # EN 16931 wire formats (UBL 2.1 and CII)
+    "EN16931UBLSerializer",
+    "EN16931UBLParser",
+    "EN16931CIISerializer",
+    "EN16931CIIParser",
+    "UBL_NSMAP",
+    "CII_NSMAP",
     # QR code generation
     "generate_qr_png_base64",
     # Document signing
