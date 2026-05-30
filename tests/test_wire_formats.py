@@ -22,8 +22,6 @@ from mcp_einvoicing_core.wire_formats import (
     EN16931CIISerializer,
     EN16931UBLParser,
     EN16931UBLSerializer,
-    CII_NSMAP,
-    UBL_NSMAP,
 )
 
 # ---------------------------------------------------------------------------
