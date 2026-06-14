@@ -39,6 +39,18 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 # Primitive building blocks
 # ---------------------------------------------------------------------------
 
+_BR_CPF_WEIGHTS_1 = list(range(10, 1, -1))
+_BR_CPF_WEIGHTS_2 = list(range(11, 1, -1))
+
+_BR_CNPJ_WEIGHTS_1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+_BR_CNPJ_WEIGHTS_2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+
+
+def _br_check_digit(value: str, weights: list[int]) -> int:
+    total = sum((ord(c) - 48) * w for c, w in zip(value, weights, strict=True))
+    remainder = total % 11
+    return 0 if remainder < 2 else 11 - remainder
+
 
 class TaxIdentifier(BaseModel):
     """A tax / VAT identifier tied to a country.
@@ -88,6 +100,71 @@ class TaxIdentifier(BaseModel):
         actual = int(piva[10])
         if expected != actual:
             return False, f"Checksum mismatch: expected {expected}, got {actual}."
+        return True, ""
+
+    @staticmethod
+    def validate_br_cpf(identifier: str) -> tuple[bool, str]:
+        """Validate a Brazilian CPF (11-digit individual taxpayer registry number).
+
+        Applies the standard public-domain two-check-digit modulo-11 algorithm
+        (Receita Federal). ``CPF`` is not schema-constrained beyond ``[0-9]{11}``
+        (``TCpf`` in ``tiposBasico_v4.00.xsd``).
+
+        Args:
+            identifier: Raw CPF string. ``.`` and ``-`` separators are stripped.
+
+        Returns:
+            ``(True, "")`` on success, ``(False, error_message)`` on failure.
+        """
+        digits = "".join(c for c in identifier if c.isdigit())
+        if len(digits) != 11:
+            return False, "CPF must be exactly 11 digits."
+        if len(set(digits)) == 1:
+            return False, "CPF must not consist of a single repeated digit."
+
+        check1 = _br_check_digit(digits[:9], _BR_CPF_WEIGHTS_1)
+        check2 = _br_check_digit(digits[:9] + str(check1), _BR_CPF_WEIGHTS_2)
+        if digits[9:] != f"{check1}{check2}":
+            return False, "CPF check digits do not match."
+        return True, ""
+
+    @staticmethod
+    def validate_br_cnpj(identifier: str) -> tuple[bool, str]:
+        """Validate a Brazilian CNPJ (company taxpayer registry number).
+
+        Accepts both the legacy all-numeric form (``[0-9]{14}``, schema package
+        PL_010c) and the alphanumeric form introduced by PL_010d / NT 2026.004
+        (``[0-9A-Z]{12}[0-9]{2}``, homologation from 2026-06-01, production from
+        2026-07-01, Instrução Normativa RFB nº 2.229/2024).
+
+        ``[Unverified]``: the alphanumeric check-digit algorithm below (mod-11,
+        weighted, with each character converted via ``ord(char) - 48``) is
+        sourced from third-party tax-compliance writeups, not the primary "NT
+        Conjunta DFe 2025.001" (not in the local spec bundle). Re-verify against
+        the primary source before relying on this for production validation. See
+        context-library/countries/br.md "Known gaps and open items".
+
+        Args:
+            identifier: Raw CNPJ string. ``.``, ``/``, and ``-`` separators are
+                stripped.
+
+        Returns:
+            ``(True, "")`` on success, ``(False, error_message)`` on failure.
+        """
+        cleaned = "".join(c for c in identifier if c not in ".-/").upper()
+        if len(cleaned) != 14:
+            return False, "CNPJ must be exactly 14 characters (excluding separators)."
+
+        base, check_digits = cleaned[:12], cleaned[12:]
+        if not check_digits.isdigit():
+            return False, "CNPJ check digits must be numeric."
+        if not all(c.isdigit() or c.isalpha() for c in base):
+            return False, "CNPJ base must be alphanumeric."
+
+        check1 = _br_check_digit(base, _BR_CNPJ_WEIGHTS_1)
+        check2 = _br_check_digit(base + str(check1), _BR_CNPJ_WEIGHTS_2)
+        if check_digits != f"{check1}{check2}":
+            return False, "CNPJ check digits do not match."
         return True, ""
 
 
