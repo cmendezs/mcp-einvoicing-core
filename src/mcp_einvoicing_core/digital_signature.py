@@ -1,4 +1,4 @@
-"""Digital signature ABCs and XAdES-EPES implementation for e-invoicing XML.
+"""Digital signature ABCs and XAdES-EPES / XML-DSig implementations for e-invoicing XML.
 
 Public API
 ----------
@@ -11,9 +11,15 @@ XAdESSignerConfig, XAdESEPESSigner
     Requires the [xml-sign] optional extra:
         pip install 'mcp-einvoicing-core[xml-sign]'
 
+XMLDSigSignerConfig, XMLDSigSigner
+    Plain enveloped XML-DSig implementation (not XAdES) for BR NF-e/NFC-e.
+    Requires the [xml-sign] optional extra.
+
 Used by:
   ES — Facturae 3.2.2 (Orden EHA/962/2007 signature policy)
   ES — TicketBAI (per-province policy OIDs: Álava, Gipuzkoa, Bizkaia)
+  BR — NF-e/NFC-e (enveloped XML-DSig over infNFe, RSA-SHA1 per MOC 7.0
+       Table 4-2; CT-e/NFS-e expected to reuse the same signer)
   [NEED: FR Chorus Pro CAdES attachment path — confirm whether XAdES applies]
 """
 
@@ -54,8 +60,9 @@ class BaseDocumentSigner(ABC):
 
     - ``XAdESEPESSigner`` — XAdES-EPES enveloped XML signature
       (ES Facturae / TicketBAI; ETSI TS 101 903)
+    - ``XMLDSigSigner`` — plain enveloped XML-DSig, no XAdES qualifying
+      properties (BR NF-e/NFC-e; CT-e/NFS-e expected to reuse)
     - [Future] CAdES — CAdES attached/detached for FR Chorus Pro PDF/A-3
-    - [Future] PKCS7Signer — PKCS#7 detached for BR NF-e / CT-e
     - [Future] ZATCASigner — ZATCA cryptographic stamp (HSM-backed, SA Phase 2)
     - [Future] SelloDigitalSigner — MX CFDI Sello Digital (RSA-SHA256 + base64)
 
@@ -133,6 +140,27 @@ _SIGN_ALG = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"
 _DIGEST_ALG = "http://www.w3.org/2001/04/xmlenc#sha256"
 _ENVELOPED_TRANSFORM = "http://www.w3.org/2000/09/xmldsig#enveloped-signature"
 _SIGNED_PROPS_TYPE = "http://uri.etsi.org/01903#SignedProperties"
+
+# Additional algorithm URIs used by XMLDSigSigner (configurable; NF-e
+# historically uses RSA-SHA1, confirmed against MOC 7.0 Table 4-2)
+_RSA_SHA1_SIGN_ALG = "http://www.w3.org/2000/09/xmldsig#rsa-sha1"
+_RSA_SHA256_SIGN_ALG = _SIGN_ALG
+_SHA1_DIGEST_ALG = "http://www.w3.org/2000/09/xmldsig#sha1"
+_SHA256_DIGEST_ALG = _DIGEST_ALG
+
+# Maps a SignatureMethod algorithm URI to the `cryptography` hash-algorithm
+# name expected by _sign_bytes().
+_SIGN_ALG_HASH_NAMES = {
+    _RSA_SHA1_SIGN_ALG: "sha1",
+    _RSA_SHA256_SIGN_ALG: "sha256",
+}
+
+# Maps a DigestMethod algorithm URI to the hashlib algorithm name expected
+# by _digest_b64().
+_DIGEST_ALG_HASH_NAMES = {
+    _SHA1_DIGEST_ALG: "sha1",
+    _SHA256_DIGEST_ALG: "sha256",
+}
 
 
 @dataclass
@@ -247,6 +275,19 @@ def _sha256_b64(data: bytes) -> str:
     return base64.b64encode(hashlib.sha256(data).digest()).decode()
 
 
+def _digest_b64(data: bytes, digest_algorithm: str) -> str:
+    """Return the base64-encoded digest of *data* using *digest_algorithm*.
+
+    Args:
+        data: Bytes to digest.
+        digest_algorithm: A ``ds:DigestMethod`` algorithm URI. Recognised
+            values are SHA-1 and SHA-256; unrecognised URIs fall back to
+            SHA-256.
+    """
+    hash_name = _DIGEST_ALG_HASH_NAMES.get(digest_algorithm, "sha256")
+    return base64.b64encode(hashlib.new(hash_name, data).digest()).decode()
+
+
 def _build_signed_properties(
     sp_id: str,
     signing_time: str,
@@ -355,16 +396,26 @@ def _build_key_info(cert_info: _CertInfo) -> etree._Element:
     return ki
 
 
-def _sign_bytes(private_key: object, data: bytes) -> bytes:
-    """RSA-SHA256 sign *data* with *private_key*."""
+def _sign_bytes(private_key: object, data: bytes, hash_algorithm: str = "sha256") -> bytes:
+    """RSA-sign *data* with *private_key* using PKCS#1 v1.5 padding.
+
+    Args:
+        private_key: An RSA private key object from ``cryptography``.
+        data: Bytes to sign (typically the C14N of a ``ds:SignedInfo``).
+        hash_algorithm: ``"sha1"`` or ``"sha256"``. Defaults to ``"sha256"``
+            for XAdES; ``XMLDSigSigner`` passes the algorithm derived from
+            its configured ``SignatureMethod``.
+    """
     try:
         from cryptography.hazmat.primitives import hashes  # noqa: PLC0415
         from cryptography.hazmat.primitives.asymmetric import padding  # noqa: PLC0415
     except ImportError as exc:
         raise ImportError(
-            "cryptography>=42.0.0 is required for XAdES signing."
+            "cryptography>=42.0.0 is required for XML signing. "
+            "Install: pip install 'mcp-einvoicing-core[xml-sign]'"
         ) from exc
-    return private_key.sign(data, padding.PKCS1v15(), hashes.SHA256())  # type: ignore[union-attr]
+    hash_obj = {"sha1": hashes.SHA1(), "sha256": hashes.SHA256()}[hash_algorithm]
+    return private_key.sign(data, padding.PKCS1v15(), hash_obj)  # type: ignore[union-attr]
 
 
 class XAdESEPESSigner(BaseDocumentSigner):
@@ -499,6 +550,210 @@ class XAdESEPESSigner(BaseDocumentSigner):
         qp.append(sp_elem)
 
         # Step 5: append the signature to the document root
+        root.append(sig_elem)
+
+        return etree.tostring(root, xml_declaration=True, encoding="UTF-8")
+
+
+# ---------------------------------------------------------------------------
+# Plain enveloped XML-DSig (no XAdES) — BR NF-e/NFC-e and friends
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class XMLDSigSignerConfig:
+    """Configuration for plain enveloped XML-DSig signing.
+
+    Unlike :class:`XAdESSignerConfig`, this produces a bare ``ds:Signature``
+    with a single ``ds:Reference`` to a specific element by ``Id`` — no
+    ``xades:QualifyingProperties``. This matches the NF-e/NFC-e signature
+    shape (MOC 7.0): ``ds:Signature`` is a sibling of ``infNFe`` and the
+    ``ds:Reference`` ``URI`` points at ``infNFe``'s ``Id`` attribute
+    (``#NFe<chave_acesso>``).
+
+    Attributes:
+        cert_path: Path to the PKCS#12 (.p12 / .pfx) certificate file.
+        cert_password: Passphrase for the PKCS#12 file, or ``None`` if
+            unprotected.
+        signature_algorithm: ``ds:SignatureMethod`` algorithm URI. Defaults
+            to RSA-SHA1, confirmed against MOC 7.0 Table 4-2 for NF-e/NFC-e.
+            XAdES-based formats hardcode SHA-256; pass the SHA-256 URI here
+            if reusing this signer for a format that requires it.
+        digest_algorithm: ``ds:DigestMethod`` algorithm URI used for the
+            ``ds:Reference`` digest. Defaults to SHA-1, matching
+            ``signature_algorithm``.
+        signed_element_local_name: Local name (any namespace) of the element
+            that carries the ``Id`` attribute referenced by the
+            ``ds:Reference``. Defaults to ``"infNFe"`` for NF-e/NFC-e; CT-e
+            and NFS-e reuse with their own element name.
+        id_attribute: Name of the attribute on *signed_element_local_name*
+            holding the value referenced as ``URI="#<value>"``. Defaults to
+            ``"Id"``.
+    """
+
+    cert_path: str
+    cert_password: Optional[str] = None
+    signature_algorithm: str = _RSA_SHA1_SIGN_ALG
+    digest_algorithm: str = _SHA1_DIGEST_ALG
+    signed_element_local_name: str = "infNFe"
+    id_attribute: str = "Id"
+
+
+def _build_xmldsig_signed_info(
+    reference_uri: str,
+    digest_value: str,
+    signature_algorithm: str,
+    digest_algorithm: str,
+) -> etree._Element:
+    """Build a ``ds:SignedInfo`` with a single enveloped-signature Reference."""
+    nsmap = {_DS_PREFIX: _DS}
+    si = etree.Element(_qn(_DS, "SignedInfo"), nsmap=nsmap)
+
+    cm = etree.SubElement(si, _qn(_DS, "CanonicalizationMethod"))
+    cm.set("Algorithm", _C14N_ALG)
+
+    sm = etree.SubElement(si, _qn(_DS, "SignatureMethod"))
+    sm.set("Algorithm", signature_algorithm)
+
+    ref = etree.SubElement(si, _qn(_DS, "Reference"))
+    ref.set("URI", reference_uri)
+    transforms = etree.SubElement(ref, _qn(_DS, "Transforms"))
+    t = etree.SubElement(transforms, _qn(_DS, "Transform"))
+    t.set("Algorithm", _ENVELOPED_TRANSFORM)
+    dm = etree.SubElement(ref, _qn(_DS, "DigestMethod"))
+    dm.set("Algorithm", digest_algorithm)
+    etree.SubElement(ref, _qn(_DS, "DigestValue")).text = digest_value
+
+    return si
+
+
+class XMLDSigSigner(BaseDocumentSigner):
+    """Apply a plain enveloped XML-DSig signature (no XAdES) to an XML document.
+
+    The signer locates the element identified by
+    ``config.signed_element_local_name`` (default ``infNFe``), reads its
+    ``Id`` attribute, and builds a ``ds:Signature`` whose single
+    ``ds:Reference`` points at that element via ``URI="#<id>"`` with the
+    enveloped-signature transform. The ``ds:Signature`` element is appended
+    as the last child of the document root (sibling of ``infNFe`` inside
+    ``NFe``), matching the placement confirmed against MOC 7.0.
+
+    Example::
+
+        config = XMLDSigSignerConfig(
+            cert_path="/path/to/cert.p12",
+            cert_password="secret",
+        )
+        signer = XMLDSigSigner(config)
+        signed_xml = signer.sign(unsigned_nfe_xml_bytes)
+    """
+
+    def __init__(
+        self,
+        config: XMLDSigSignerConfig,
+        *,
+        _preloaded_cert_info: Optional[_CertInfo] = None,
+    ) -> None:
+        self._config = config
+        self._cert_info: Optional[_CertInfo] = _preloaded_cert_info
+
+    def load_credentials(self) -> None:
+        """Load the PKCS#12 certificate and private key into memory."""
+        self._cert_info = _load_pkcs12(
+            self._config.cert_path, self._config.cert_password
+        )
+
+    def _get_cert_info(self) -> _CertInfo:
+        if self._cert_info is None:
+            self.load_credentials()
+        return self._cert_info  # type: ignore[return-value]
+
+    def verify(self, signed_document: bytes) -> bool:
+        """XML-DSig signature verification is not yet implemented.
+
+        Use an external XML-DSig verifier (e.g. xmlsec, the SEFAZ
+        validation webservice) to validate signatures produced by this
+        signer.
+
+        Raises:
+            NotImplementedError: Always.
+        """
+        raise NotImplementedError(
+            "XML-DSig signature verification is not yet implemented in "
+            "XMLDSigSigner. Use an external verifier (xmlsec, or the SEFAZ "
+            "validation webservice) to validate signatures produced by this "
+            "signer."
+        )
+
+    def cleanup(self) -> None:
+        """Drop references to the private key and certificate material.
+
+        See :meth:`XAdESEPESSigner.cleanup` for the rationale. After
+        ``cleanup()``, the next ``sign()`` call reloads credentials from
+        disk via ``load_credentials()``.
+        """
+        self._cert_info = None
+
+    def sign(self, xml_bytes: bytes) -> bytes:
+        """Return *xml_bytes* with an embedded enveloped XML-DSig signature.
+
+        Args:
+            xml_bytes: Well-formed XML document containing an element named
+                ``config.signed_element_local_name`` with an
+                ``config.id_attribute`` attribute (e.g. ``<infNFe Id="NFe...">``).
+
+        Returns:
+            UTF-8 XML document with ``ds:Signature`` appended as the last
+            child of the document root.
+
+        Raises:
+            ImportError: If ``cryptography`` is not installed.
+            ValueError: If the PKCS#12 file contains no certificate or key,
+                or if the signed element / Id attribute is missing.
+        """
+        cert_info = self._get_cert_info()
+
+        root = safe_fromstring(xml_bytes)
+
+        target = root.find(f".//{{*}}{self._config.signed_element_local_name}")
+        if target is None:
+            raise ValueError(
+                f"No <{self._config.signed_element_local_name}> element found "
+                f"in document"
+            )
+        element_id = target.get(self._config.id_attribute)
+        if not element_id:
+            raise ValueError(
+                f"<{self._config.signed_element_local_name}> has no "
+                f"'{self._config.id_attribute}' attribute to reference"
+            )
+        reference_uri = f"#{element_id}"
+
+        # Digest of the referenced element's C14N (enveloped-signature
+        # transform is a no-op here: no ds:Signature exists yet inside it)
+        element_digest = _digest_b64(_c14n(target), self._config.digest_algorithm)
+
+        si_elem = _build_xmldsig_signed_info(
+            reference_uri,
+            element_digest,
+            self._config.signature_algorithm,
+            self._config.digest_algorithm,
+        )
+        si_c14n = _c14n(si_elem)
+        hash_name = _SIGN_ALG_HASH_NAMES.get(self._config.signature_algorithm, "sha256")
+        sig_value_bytes = _sign_bytes(cert_info.private_key, si_c14n, hash_name)
+        sig_value_b64 = base64.b64encode(sig_value_bytes).decode()
+
+        nsmap = {_DS_PREFIX: _DS}
+        sig_elem = etree.Element(_qn(_DS, "Signature"), nsmap=nsmap)
+        sig_elem.append(si_elem)
+
+        sv = etree.SubElement(sig_elem, _qn(_DS, "SignatureValue"))
+        sv.text = sig_value_b64
+
+        sig_elem.append(_build_key_info(cert_info))
+
+        # Last child of the document root (sibling of infNFe inside NFe)
         root.append(sig_elem)
 
         return etree.tostring(root, xml_declaration=True, encoding="UTF-8")

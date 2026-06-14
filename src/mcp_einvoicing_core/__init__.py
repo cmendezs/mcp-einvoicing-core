@@ -83,6 +83,8 @@ from mcp_einvoicing_core.digital_signature import (
     BaseDocumentSigner,
     XAdESEPESSigner,
     XAdESSignerConfig,
+    XMLDSigSigner,
+    XMLDSigSignerConfig,
 )
 from mcp_einvoicing_core.qr import generate_qr_png_base64
 from decimal import ROUND_HALF_EVEN, ROUND_HALF_UP
@@ -236,6 +238,8 @@ __all__ = [
     "BaseDocumentSigner",
     "XAdESSignerConfig",
     "XAdESEPESSigner",
+    "XMLDSigSignerConfig",
+    "XMLDSigSigner",
     # Audit infrastructure (mcp-einvoicing-core[audit] optional extra)
     "DEFAULT_CORE_MODULES",
     "AuditReport",
