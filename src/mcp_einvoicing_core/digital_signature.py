@@ -605,7 +605,14 @@ def _build_xmldsig_signed_info(
     signature_algorithm: str,
     digest_algorithm: str,
 ) -> etree._Element:
-    """Build a ``ds:SignedInfo`` with a single enveloped-signature Reference."""
+    """Build a ``ds:SignedInfo`` with a single enveloped-signature Reference.
+
+    The ``ds:Reference/ds:Transforms`` element carries two ``ds:Transform``
+    entries — enveloped-signature followed by C14N — per MOC 7.0 (NF-e/NFC-e
+    signature figure, ``[Verified locally]``) and the bundled NF-e
+    ``xmldsig-core-schema_v1.01.xsd``, whose ``TransformsType`` requires
+    exactly two ``Transform`` elements.
+    """
     nsmap = {_DS_PREFIX: _DS}
     si = etree.Element(_qn(_DS, "SignedInfo"), nsmap=nsmap)
 
@@ -618,8 +625,10 @@ def _build_xmldsig_signed_info(
     ref = etree.SubElement(si, _qn(_DS, "Reference"))
     ref.set("URI", reference_uri)
     transforms = etree.SubElement(ref, _qn(_DS, "Transforms"))
-    t = etree.SubElement(transforms, _qn(_DS, "Transform"))
-    t.set("Algorithm", _ENVELOPED_TRANSFORM)
+    t1 = etree.SubElement(transforms, _qn(_DS, "Transform"))
+    t1.set("Algorithm", _ENVELOPED_TRANSFORM)
+    t2 = etree.SubElement(transforms, _qn(_DS, "Transform"))
+    t2.set("Algorithm", _C14N_ALG)
     dm = etree.SubElement(ref, _qn(_DS, "DigestMethod"))
     dm.set("Algorithm", digest_algorithm)
     etree.SubElement(ref, _qn(_DS, "DigestValue")).text = digest_value

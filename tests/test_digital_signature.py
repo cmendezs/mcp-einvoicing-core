@@ -15,7 +15,9 @@ from mcp_einvoicing_core.digital_signature import (
     XAdESSignerConfig,
     XMLDSigSigner,
     XMLDSigSignerConfig,
+    _C14N_ALG,
     _DS,
+    _ENVELOPED_TRANSFORM,
     _RSA_SHA256_SIGN_ALG,
     _SHA256_DIGEST_ALG,
     _XADES,
@@ -265,6 +267,15 @@ class TestXMLDSigSigner:
         sm = root.find(f".//{{{_DS}}}SignatureMethod")
         assert sm is not None
         assert sm.get("Algorithm") == "http://www.w3.org/2000/09/xmldsig#rsa-sha1"
+
+    def test_transforms_contains_enveloped_then_c14n(self, p12_path: Path) -> None:
+        config = XMLDSigSignerConfig(cert_path=str(p12_path), cert_password="test")
+        result = XMLDSigSigner(config).sign(NFE_XML)
+        root = etree.fromstring(result)
+        transforms = root.find(f".//{{{_DS}}}Transforms")
+        assert transforms is not None
+        transform_algs = [t.get("Algorithm") for t in transforms]
+        assert transform_algs == [_ENVELOPED_TRANSFORM, _C14N_ALG]
 
     def test_reference_uri_points_at_infnfe_id(self, p12_path: Path) -> None:
         config = XMLDSigSignerConfig(cert_path=str(p12_path), cert_password="test")
