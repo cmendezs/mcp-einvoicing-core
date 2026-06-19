@@ -35,6 +35,10 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.5.3] - 2026-06-20
+#### Changed
+- `BaseDocumentGenerator` is now `Generic[DocumentT]` (bound to `BaseModel`), eliminating Liskov override violations in country packages
+
 ### [1.5.2] - 2026-06-20
 #### Added
 - PEP 561 `py.typed` marker file for proper type information when installing from PyPI
