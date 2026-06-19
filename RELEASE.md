@@ -35,6 +35,11 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.5.2] - 2026-06-20
+#### Added
+- PEP 561 `py.typed` marker file for proper type information when installing from PyPI
+- Fixes mypy "Class cannot subclass Any" errors in downstream country packages CI
+
 ### [1.5.1] - 2026-06-15
 #### Fixed
 - `XMLDSigSigner._build_xmldsig_signed_info` now emits both required `ds:Transform` elements
