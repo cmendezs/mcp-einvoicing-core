@@ -1,6 +1,6 @@
 # mcp-einvoicing-core
 
-[English](README.md) | [Francais](README.fr.md) | [Deutsch](README.de.md) | [Italiano](README.it.md) | [Espanol](README.es.md) | [Portugues (Brasil)](README.pt-BR.md) | [العربية](README.ar.md)
+[English](README.md) | [Français](README.fr.md) | [Deutsch](README.de.md) | [Italiano](README.it.md) | [Español](README.es.md) | [Português (Brasil)](README.pt-BR.md) | [العربية](README.ar.md)
 
 <!-- mcp-name: io.github.cmendezs/mcp-einvoicing-core -->
 
@@ -10,10 +10,10 @@
 
 **Topics:** `mcp` `mcp-server` `e-invoicing` `electronic-invoicing` `python` `fastmcp` `peppol` `en16931` `ubl` `fatturapa` `xp-z12-013` `nfe` `xml` `base-library`
 
-Basispaket fuer MCP-Server zur elektronischen Rechnungsstellung.
+Basispaket für MCP-Server zur elektronischen Rechnungsstellung.
 
 Stellt abstrakte Basisklassen, gemeinsame Pydantic-Modelle, XML-Hilfsfunktionen und einen HTTP-Client bereit,
-damit laenderspezifische Pakete (`mcp-facture-electronique-fr`, `mcp-fattura-elettronica-it`, `mcp-nfe-br`, ...)
+damit länderspezifische Pakete (`mcp-facture-electronique-fr`, `mcp-fattura-elettronica-it`, `mcp-nfe-br`, ...)
 auf einer gemeinsamen Grundlage aufbauen, ohne Code zu duplizieren.
 
 ---
@@ -22,12 +22,12 @@ auf einer gemeinsamen Grundlage aufbauen, ohne Code zu duplizieren.
 
 | Modul | Inhalt | Verwendet von |
 |-------|--------|---------------|
-| `models.py` | `InvoiceParty`, `InvoiceLineItem`, `VATSummary`, `PaymentTerms`, `InvoiceDocument`, `DocumentValidationResult` | IT (strukturierte Rechnungsgenerierung), zukuenftig BE/PL/DE/ES |
-| `base_server.py` | `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BaseLifecycleManager`, `BasePartyValidator`, `EInvoicingMCPServer` | Alle Laenderadapter |
-| `xml_utils.py` | `format_amount`, `format_quantity`, `validate_date_iso`, `validate_iban`, `xml_element`, `xml_optional`, `format_error`, `filter_empty_values` | IT (woertlich uebernommen), zukuenftige XML-basierte Formate |
-| `http_client.py` | `TokenCache`, `OAuthConfig`, `BaseEInvoicingClient` (OAuth2 + ohne Authentifizierung) | FR (woertlich uebernommen), zukuenftige API-basierte Laender |
-| `exceptions.py` | `EInvoicingError`, `ValidationError`, `PartyValidationError`, `XSDValidationError`, `DocumentGenerationError`, `AuthenticationError`, `PlatformError` | Alle Laenderadapter |
-| `logging_utils.py` | `setup_logging`, `get_logger` | Alle Laenderadapter |
+| `models.py` | `InvoiceParty`, `InvoiceLineItem`, `VATSummary`, `PaymentTerms`, `InvoiceDocument`, `DocumentValidationResult` | IT (strukturierte Rechnungsgenerierung), zukünftig BE/PL/DE/ES |
+| `base_server.py` | `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BaseLifecycleManager`, `BasePartyValidator`, `EInvoicingMCPServer` | Alle Länderadapter |
+| `xml_utils.py` | `format_amount`, `format_quantity`, `validate_date_iso`, `validate_iban`, `xml_element`, `xml_optional`, `format_error`, `filter_empty_values` | IT (wörtlich übernommen), zukünftige XML-basierte Formate |
+| `http_client.py` | `TokenCache`, `OAuthConfig`, `BaseEInvoicingClient` (OAuth2 + ohne Authentifizierung) | FR (wörtlich übernommen), zukünftige API-basierte Länder |
+| `exceptions.py` | `EInvoicingError`, `ValidationError`, `PartyValidationError`, `XSDValidationError`, `DocumentGenerationError`, `AuthenticationError`, `PlatformError` | Alle Länderadapter |
+| `logging_utils.py` | `setup_logging`, `get_logger` | Alle Länderadapter |
 
 ## Installation
 
@@ -35,8 +35,8 @@ auf einer gemeinsamen Grundlage aufbauen, ohne Code zu duplizieren.
 pip install mcp-einvoicing-core
 ```
 
-Dieses Paket hat **keine laenderspezifischen Abhaengigkeiten**. `lxml` (fuer die XSD-Validierung
-in IT und zukuenftigen Laendern erforderlich) wird von jedem Laenderpaket einzeln deklariert.
+Dieses Paket hat **keine länderspezifischen Abhängigkeiten**. `lxml` (für die XSD-Validierung
+in IT und zukünftigen Ländern erforderlich) wird von jedem Länderpaket einzeln deklariert.
 
 ## Architektur
 
@@ -51,13 +51,13 @@ mcp-einvoicing-core           ← dieses Paket
   ├── InvoiceDocument (Pydantic)  ← gemeinsames Datenmodell
   └── EInvoicingMCPServer     ← Plugin-Registry mit FastMCP
 
-mcp-facture-electronique-fr   ← Laenderadapter (FR)
+mcp-facture-electronique-fr   ← Länderadapter (FR)
   ├── PAConfig(OAuthConfig)
   ├── FlowClient(BaseEInvoicingClient)      ← OAuth2, XP Z12-013 Annex A
   ├── DirectoryClient(BaseEInvoicingClient) ← OAuth2, XP Z12-013 Annex B
   └── FrLifecycleManager(BaseLifecycleManager)
 
-mcp-fattura-elettronica-it    ← Laenderadapter (IT)
+mcp-fattura-elettronica-it    ← Länderadapter (IT)
   ├── ItalyPartyValidator(BasePartyValidator)   ← Partita IVA Modulo-10
   ├── FatturaGenerator(BaseDocumentGenerator)   ← FatturaPA XML v1.6.1
   ├── FatturaValidator(BaseDocumentValidator)   ← lxml XSD v1.6.1
@@ -66,17 +66,17 @@ mcp-fattura-elettronica-it    ← Laenderadapter (IT)
 
 ## Plugin-Registrierungsmuster
 
-Laenderpakete registrieren ihre Tools auf einer gemeinsamen oder eigenstaendigen FastMCP-Instanz:
+Länderpakete registrieren ihre Tools auf einer gemeinsamen oder eigenständigen FastMCP-Instanz:
 
 ```python
-# Eigenstaendig (vorhandene server.py, keine Aenderungen erforderlich)
+# Eigenständig (vorhandene server.py, keine Änderungen erforderlich)
 from fastmcp import FastMCP
 mcp = FastMCP(name="mcp-fattura-elettronica-it", instructions="…")
 register_header_tools(mcp)
 register_body_tools(mcp)
 register_global_tools(mcp)
 
-# Multi-Laender (optionaler EInvoicingMCPServer)
+# Multi-Länder (optionaler EInvoicingMCPServer)
 from mcp_einvoicing_core import EInvoicingMCPServer
 server = EInvoicingMCPServer(name="mcp-einvoicing-eu", instructions="…")
 server.register_plugin(register_header_tools, "it-header")
@@ -84,19 +84,19 @@ server.register_plugin(register_flow_tools, "fr-flow")
 server.run()
 ```
 
-## Kompatibilitaet mit Claude Desktop / Cursor / Kiro
+## Kompatibilität mit Claude Desktop / Cursor / Kiro
 
-Bestehende Konfigurationen fuer `mcp-facture-electronique-fr` und `mcp-fattura-elettronica-it`
-erfordern **keine Aenderungen**: Tool-Namen, Signaturen, Umgebungsvariablen und Einstiegspunkte
-(`server:main`) bleiben vollstaendig erhalten.
+Bestehende Konfigurationen für `mcp-facture-electronique-fr` und `mcp-fattura-elettronica-it`
+erfordern **keine Änderungen**: Tool-Namen, Signaturen, Umgebungsvariablen und Einstiegspunkte
+(`server:main`) bleiben vollständig erhalten.
 
-## Roadmap-Kompatibilitaet
+## Roadmap-Kompatibilität
 
-| Land | Status | Standard | Transport | Erbt | Ueberschreibt | Bekannte Luecken |
-|------|--------|----------|-----------|------|----------------|------------------|
+| Land | Status | Standard | Transport | Erbt | Überschreibt | Bekannte Lücken |
+|------|--------|----------|-----------|------|---------------|-----------------|
 | [🇧🇪 BE](https://github.com/cmendezs/mcp-einvoicing-be) | ✅ Fertig | Peppol BIS 3.0 | AS4 / Peppol | Alle Basisklassen | `generate()` → UBL 2.1, `validate()` → Schematron EN16931 | Keine |
 | [🇫🇷 FR](https://github.com/cmendezs/mcp-facture-electronique-fr) | ✅ Fertig | XP Z12-013 | Hybrid / PPF-Hub | `BaseEInvoicingClient`, `BaseLifecycleManager` | `submit_lifecycle_status`, `healthcheck` | Keine |
-| [🇩🇪 DE](https://github.com/cmendezs/mcp-einvoicing-de) | ✅ Fertig | ZUGFeRD / XRechnung | AS4 / Peppol | Alle Basisklassen | `generate()` gibt PDF-Bytes zurueck (base64) | Rueckgabetyp von `generate()`: Mehrdeutigkeit `str` vs `bytes` |
+| [🇩🇪 DE](https://github.com/cmendezs/mcp-einvoicing-de) | ✅ Fertig | ZUGFeRD / XRechnung | AS4 / Peppol | Alle Basisklassen | `generate()` gibt PDF-Bytes zurück (base64) | Rückgabetyp von `generate()`: Mehrdeutigkeit `str` vs `bytes` |
 | [🇮🇹 IT](https://github.com/cmendezs/mcp-fattura-elettronica-it) | ✅ Fertig | FatturaPA v1.6.1 | Direkt / SDI | `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BasePartyValidator` | Alle abstrakten Methoden | `to_invoice_document()` noch nicht implementiert |
 | [🇵🇱 PL](https://github.com/cmendezs/mcp-ksef-pl) | ✅ Fertig | KSeF FA(2) | Direkte API | `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseLifecycleManager` | KSeF-Sitzungsauthentifizierung | `MTLS`-Authentifizierungsmodus noch nicht implementiert |
 | [🇪🇸 ES](https://github.com/cmendezs/mcp-facturacion-electronica-es) | ✅ Fertig | FACeB2B / FacturaE | Direkte API | Alle Basisklassen | mTLS-Authentifizierung | `MTLS`-Authentifizierungsmodus noch nicht implementiert |
@@ -110,21 +110,33 @@ erfordern **keine Aenderungen**: Tool-Namen, Signaturen, Umgebungsvariablen und 
 
 ### Transportschnittstelle
 
-Mit zunehmender Anzahl von Adaptern wird eine `TransportInterface`-Abstraktion im Core Duplizierung ueber Laender hinweg verhindern, die dieselbe Transportschicht nutzen:
+Mit zunehmender Anzahl von Adaptern wird eine `TransportInterface`-Abstraktion im Core Duplizierung über Länder hinweg verhindern, die dieselbe Transportschicht nutzen:
 
-| Transport | Laender |
-|-----------|---------|
+| Transport | Länder |
+|-----------|--------|
 | **Direkte API** (Clearance / Meldung) | FR, RO, GR, HU |
 | **AS4 / Peppol-Netzwerk** | BE, DE, Nordics/NL |
 | **Hybrid / Hub** | FR (PPF/PDP-Dualpfad) |
 
 ### Deutschland: 80 % Wiederverwendung aus FR
 
-Das deutsche Mandat (seit Januar 2025 fuer B2B-Empfang aktiv) bevorzugt stark ZUGFeRD/Factur-X, das gleiche PDF-eingebettete XML-Modell wie das franzoesische Factur-X-Profil. Die XML-Erzeugungs- und Validierungslogik von `mcp-facture-electronique-fr` kann mit minimalen Aenderungen wiederverwendet werden, wodurch DE nach BE der Adapter mit dem geringsten Aufwand ist.
+Das deutsche Mandat (seit Januar 2025 für B2B-Empfang aktiv) bevorzugt stark ZUGFeRD/Factur-X, das gleiche PDF-eingebettete XML-Modell wie das französische Factur-X-Profil. Die XML-Erzeugungs- und Validierungslogik von `mcp-facture-electronique-fr` kann mit minimalen Änderungen wiederverwendet werden, wodurch DE nach BE der Adapter mit dem geringsten Aufwand ist.
 
 ### ViDA / DRR (2030)
 
-Bis Juli 2030 muessen alle nationalen Systeme die EU Digital Reporting Requirement fuer grenzueberschreitende Transaktionen erfuellen. Die Verwendung von **EN 16931** als internes `InvoiceDocument`-Datenmodell in diesem Core-Paket macht das Projekt bereits zukunftssicher: Laenderadapter uebersetzen EN 16931 → lokales Format, nicht umgekehrt.
+Bis Juli 2030 müssen alle nationalen Systeme die EU Digital Reporting Requirement für grenzüberschreitende Transaktionen erfüllen. Die Verwendung von **EN 16931** als internes `InvoiceDocument`-Datenmodell in diesem Core-Paket macht das Projekt bereits zukunftssicher: Länderadapter übersetzen EN 16931 → lokales Format, nicht umgekehrt.
+
+## Weitere MCP-Server für E-Rechnungen
+
+| Land | Server |
+|------|--------|
+| Belgien | [`mcp-einvoicing-be`](https://github.com/cmendezs/mcp-einvoicing-be) |
+| Brasilien | [`mcp-nfe-br`](https://github.com/cmendezs/mcp-nfe-br) |
+| Deutschland | [`mcp-einvoicing-de`](https://github.com/cmendezs/mcp-einvoicing-de) |
+| Frankreich | [`mcp-facture-electronique-fr`](https://github.com/cmendezs/mcp-facture-electronique-fr) |
+| Italien | [`mcp-fattura-elettronica-it`](https://github.com/cmendezs/mcp-fattura-elettronica-it) |
+| Polen | [`mcp-ksef-pl`](https://github.com/cmendezs/mcp-ksef-pl) |
+| Spanien | [`mcp-facturacion-electronica-es`](https://github.com/cmendezs/mcp-facturacion-electronica-es) |
 
 ## Lizenz
 
