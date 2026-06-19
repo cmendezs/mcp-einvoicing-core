@@ -35,6 +35,12 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.7.0] - 2026-06-21
+#### Added
+- `run_check_known_shared_helpers()` and `KNOWN_SHARED_HELPERS` frozenset: AST-based CHECK 6 that blocks country packages from re-implementing core helpers (compliance audit finding 2.3)
+- `load_rates()` and `TaxRate` dataclass: file-driven tax rate loading with citation validation from `specs/rates.toml` (compliance audit finding 4.2)
+- 13 new tests in `test_audit.py`
+
 ### [1.6.0] - 2026-06-20
 #### Added
 - `TaxIdentifier.validate_pl_nip()` and `validate_pl_regon()` (Polish NIP modulo-11, REGON 9/14-digit)
