@@ -31,7 +31,7 @@ import logging
 import os
 import re
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Generic, Optional, TypeVar
 
 from fastmcp import FastMCP
 from pydantic import BaseModel, Field
@@ -51,7 +51,10 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-class BaseDocumentGenerator(ABC):
+DocumentT = TypeVar("DocumentT", bound=BaseModel)
+
+
+class BaseDocumentGenerator(ABC, Generic[DocumentT]):
     """Abstract document generator.
 
     Concrete use — IT:  generate_fattura_xml (assembles FatturaPA XML from structured data)
@@ -62,7 +65,7 @@ class BaseDocumentGenerator(ABC):
     """
 
     @abstractmethod
-    def generate(self, document: InvoiceDocument) -> str:
+    def generate(self, document: DocumentT) -> str:
         """Generate a country-specific document (XML string) from an InvoiceDocument.
 
         Returns:
