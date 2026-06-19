@@ -1,5 +1,7 @@
 # mcp-einvoicing-core
 
+[English](README.md) | [Francais](README.fr.md) | [Deutsch](README.de.md) | [Italiano](README.it.md) | [Espanol](README.es.md) | [Portugues (Brasil)](README.pt-BR.md) | [العربية](README.ar.md)
+
 <!-- mcp-name: io.github.cmendezs/mcp-einvoicing-core -->
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
