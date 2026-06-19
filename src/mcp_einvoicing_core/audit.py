@@ -19,6 +19,7 @@ a minimal ``>=`` / ``<`` parser that is sufficient for the standard
 from __future__ import annotations
 
 import argparse
+import ast
 import importlib
 import importlib.metadata
 import inspect
@@ -689,3 +690,168 @@ def make_report(
         core_version=core_version,
         core_version_compatible=core_compat,
     )
+
+
+# ---------------------------------------------------------------------------
+# CHECK 6 — Known shared helpers (compliance audit 2.3)
+# ---------------------------------------------------------------------------
+
+KNOWN_SHARED_HELPERS: frozenset[str] = frozenset({
+    "format_amount",
+    "format_quantity",
+    "safe_fromstring",
+    "xml_element",
+    "xml_optional",
+    "format_error",
+    "filter_empty_values",
+    "resolve_xml_input",
+    "mark_untrusted",
+    "mark_untrusted_fields",
+    "scrub",
+    "validate_date_iso",
+    "validate_iban",
+    "assert_not_read_only",
+    "xml_escape",
+})
+
+
+def _collect_defined_functions(source_dir: Path) -> list[tuple[str, str, int]]:
+    """Walk *source_dir* for ``def`` statements; return ``[(name, filepath, lineno)]``."""
+    results: list[tuple[str, str, int]] = []
+    if not source_dir.is_dir():
+        return results
+    for py_file in source_dir.rglob("*.py"):
+        try:
+            tree = ast.parse(py_file.read_text(encoding="utf-8"), filename=str(py_file))
+        except SyntaxError:
+            continue
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                results.append((node.name, str(py_file), node.lineno))
+    return results
+
+
+def run_check_known_shared_helpers(
+    *,
+    source_dir: Path,
+    package_label: str,
+    extra_helpers: frozenset[str] | None = None,
+) -> CheckResult:
+    """CHECK 6 — detect re-implementations of core helpers in a country package.
+
+    AST-scans all ``.py`` files under *source_dir* for function definitions
+    whose names match ``KNOWN_SHARED_HELPERS`` (or *extra_helpers*). Any match
+    is BLOCKING: the country package must use the core export instead.
+
+    Args:
+        source_dir: Path to the country package's ``src/`` directory.
+        package_label: Human-readable package name for messages.
+        extra_helpers: Additional function names to flag beyond the default set.
+
+    Returns:
+        CheckResult with id ``"CHECK_6"``.
+    """
+    result = CheckResult(check_id="CHECK_6", name="Known shared helpers")
+    helpers = KNOWN_SHARED_HELPERS | (extra_helpers or frozenset())
+
+    if not source_dir.is_dir():
+        result.skipped = True
+        result.skip_reason = f"Source directory not found: {source_dir}"
+        return result
+
+    defined = _collect_defined_functions(source_dir)
+    seen: set[str] = set()
+
+    for func_name, filepath, lineno in defined:
+        if func_name in helpers and func_name not in seen:
+            seen.add(func_name)
+            result.findings.append(CheckFinding(
+                check_id="CHECK_6",
+                tag="[REIMPLEMENTED]",
+                severity=SEVERITY_BLOCKING,
+                symbol=func_name,
+                message=(
+                    f"{package_label} defines '{func_name}' at {filepath}:{lineno}. "
+                    f"This is a core helper — use the export from mcp_einvoicing_core "
+                    f"instead of re-implementing."
+                ),
+            ))
+
+    if not seen:
+        result.findings.append(CheckFinding(
+            check_id="CHECK_6",
+            tag="[OK]",
+            severity=SEVERITY_OK,
+            symbol="(all)",
+            message=f"No core helpers re-implemented in {package_label}.",
+        ))
+
+    return result
+
+
+# ---------------------------------------------------------------------------
+# load_rates — file-driven tax rate loading (compliance audit 4.2)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class TaxRate:
+    """A single tax rate entry loaded from ``specs/rates.toml``."""
+
+    name: str
+    value: str
+    effective_from: str
+    source: str
+    category: str = ""
+
+
+def load_rates(rates_path: Path) -> list[TaxRate]:
+    """Load and validate tax rates from a ``specs/rates.toml`` file.
+
+    Each entry under ``[rates.<name>]`` must contain ``value``,
+    ``effective_from``, and ``source`` fields. Missing fields raise
+    ``ValueError``.
+
+    Args:
+        rates_path: Path to the ``specs/rates.toml`` file.
+
+    Returns:
+        List of validated ``TaxRate`` entries.
+
+    Raises:
+        FileNotFoundError: If *rates_path* does not exist.
+        ValueError: If any entry is missing required fields.
+    """
+    import tomllib  # noqa: PLC0415
+
+    if not rates_path.exists():
+        raise FileNotFoundError(f"Tax rates file not found: {rates_path}")
+
+    with open(rates_path, "rb") as f:
+        data = tomllib.load(f)
+
+    rates_section = data.get("rates", {})
+    if not rates_section:
+        raise ValueError(f"No [rates] section found in {rates_path}")
+
+    required_fields = {"value", "effective_from", "source"}
+    results: list[TaxRate] = []
+
+    for name, entry in rates_section.items():
+        if not isinstance(entry, dict):
+            raise ValueError(f"rates.{name}: expected a table, got {type(entry).__name__}")
+        missing = required_fields - set(entry.keys())
+        if missing:
+            raise ValueError(
+                f"rates.{name}: missing required fields: {', '.join(sorted(missing))}. "
+                f"Each rate entry must include value, effective_from, and source."
+            )
+        results.append(TaxRate(
+            name=name,
+            value=str(entry["value"]),
+            effective_from=str(entry["effective_from"]),
+            source=str(entry["source"]),
+            category=str(entry.get("category", "")),
+        ))
+
+    return results

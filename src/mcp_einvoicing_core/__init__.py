@@ -115,6 +115,7 @@ from mcp_einvoicing_core.wire_formats import (
 
 from mcp_einvoicing_core.audit import (
     DEFAULT_CORE_MODULES,
+    KNOWN_SHARED_HELPERS,
     AuditReport,
     CheckFinding,
     CheckResult,
@@ -122,14 +123,17 @@ from mcp_einvoicing_core.audit import (
     SEVERITY_OK,
     SEVERITY_SKIP,
     SEVERITY_WARNING,
+    TaxRate,
+    load_rates,
     make_report,
     parse_audit_args,
     render_summary_table,
     run_check_core_coverage,
+    run_check_known_shared_helpers,
     run_check_version_compatibility,
 )
 
-__version__ = "1.6.0"
+__version__ = "1.7.0"
 
 __all__ = [
     # Base classes
@@ -242,6 +246,7 @@ __all__ = [
     "XMLDSigSigner",
     # Audit infrastructure (mcp-einvoicing-core[audit] optional extra)
     "DEFAULT_CORE_MODULES",
+    "KNOWN_SHARED_HELPERS",
     "AuditReport",
     "CheckFinding",
     "CheckResult",
@@ -249,9 +254,12 @@ __all__ = [
     "SEVERITY_OK",
     "SEVERITY_SKIP",
     "SEVERITY_WARNING",
+    "TaxRate",
+    "load_rates",
     "make_report",
     "parse_audit_args",
     "render_summary_table",
     "run_check_core_coverage",
+    "run_check_known_shared_helpers",
     "run_check_version_compatibility",
 ]
