@@ -35,6 +35,16 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.6.0] - 2026-06-20
+#### Added
+- `TaxIdentifier.validate_pl_nip()` and `validate_pl_regon()` (Polish NIP modulo-11, REGON 9/14-digit)
+- `TaxIdentifier.validate_de_vat()` (German USt-IdNr, DIN ISO/IEC 7064)
+- `TaxIdentifier.validate_be_vat()` (Belgian BTW-nummer, modulo-97)
+- `TaxIdentifier.validate_es_nif()`, `validate_es_nie()`, `validate_es_cif()` (Spanish NIF/NIE/CIF)
+- `TaxIdentifier.validate_fr_siren()` and `validate_fr_siret()` (French INSEE, Luhn checksum)
+- `TaxIdentifier.validate_it_codice_fiscale()` (Italian Codice Fiscale, odd/even table + mod-26)
+- `caplog` test verifying PKCS#12 wrong-password does not leak password in logs
+
 ### [1.5.3] - 2026-06-20
 #### Changed
 - `BaseDocumentGenerator` is now `Generic[DocumentT]` (bound to `BaseModel`), eliminating Liskov override violations in country packages
