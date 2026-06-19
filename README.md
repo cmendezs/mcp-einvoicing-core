@@ -6,12 +6,12 @@
 [![PyPI version](https://img.shields.io/pypi/v/mcp-einvoicing-core.svg)](https://pypi.org/project/mcp-einvoicing-core/)
 [![Python](https://img.shields.io/pypi/pyversions/mcp-einvoicing-core.svg)](https://pypi.org/project/mcp-einvoicing-core/)[![mcp-einvoicing-core MCP server](https://glama.ai/mcp/servers/cmendezs/mcp-einvoicing-core/badges/score.svg)](https://glama.ai/mcp/servers/cmendezs/mcp-einvoicing-core)
 
-**Topics:** `mcp` `mcp-server` `e-invoicing` `electronic-invoicing` `european-invoicing` `python` `fastmcp` `peppol` `en16931` `ubl` `fatturapa` `xp-z12-013` `xml` `base-library`
+**Topics:** `mcp` `mcp-server` `e-invoicing` `electronic-invoicing` `python` `fastmcp` `peppol` `en16931` `ubl` `fatturapa` `xp-z12-013` `nfe` `xml` `base-library`
 
-Base package for European electronic invoicing MCP servers.
+Base package for electronic invoicing MCP servers.
 
 Provides abstract base classes, shared Pydantic models, XML utilities, and an HTTP client
-so country-specific packages (`mcp-facture-electronique-fr`, `mcp-fattura-elettronica-it`, …)
+so country-specific packages (`mcp-facture-electronique-fr`, `mcp-fattura-elettronica-it`, `mcp-nfe-br`, …)
 share a common foundation without duplicating code.
 
 ---
@@ -98,6 +98,7 @@ require **no changes**: tool names, signatures, environment variables, and entry
 | [🇮🇹 IT](https://github.com/cmendezs/mcp-fattura-elettronica-it) | ✅ Done | FatturaPA v1.6.1 | Direct / SDI | `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BasePartyValidator` | all abstract methods | `to_invoice_document()` not yet implemented |
 | [🇵🇱 PL](https://github.com/cmendezs/mcp-ksef-pl) | ✅ Done | KSeF FA(2) | Direct API | `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseLifecycleManager` | KSeF session auth flow | `MTLS` auth mode not yet implemented |
 | [🇪🇸 ES](https://github.com/cmendezs/mcp-facturacion-electronica-es) | ✅ Done | FACeB2B / FacturaE | Direct API | all base classes | mTLS auth | `MTLS` auth mode not yet implemented |
+| [🇧🇷 BR](https://github.com/cmendezs/mcp-nfe-br) | 🚧 In progress | NF-e / NFC-e (schema 4.00) | Direct API / SEFAZ | `BasePartyValidator` | CPF/CNPJ validation | NF-e/NFC-e generation and SEFAZ integration planned |
 | 🇷🇴 RO | 📋 Backlog | RO-UBL (EN 16931) | Direct API / clearance | `BaseDocumentGenerator`, `BaseLifecycleManager` | ANAF clearance flow | `BaseSchematronValidator` variant needed |
 | 🇬🇷 GR | 📋 Backlog | myDATA XML | Direct API / reporting | `BaseEInvoicingClient`, `BaseLifecycleManager` | myDATA auth + reporting flow | myDATA API client not yet designed |
 | 🇳🇱🇸🇪🇩🇰🇳🇴 Nordics/NL | 📋 Backlog | Peppol BIS 3.0 / UBL | AS4 / Peppol | all base classes | `generate()` → UBL 2.1, `validate()` → Schematron | Reuses BE AS4 transport layer |
