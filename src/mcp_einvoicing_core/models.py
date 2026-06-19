@@ -46,6 +46,27 @@ _BR_CNPJ_WEIGHTS_1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
 _BR_CNPJ_WEIGHTS_2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
 
 
+_ES_NIF_LETTERS = "TRWAGMYFPDXBNJZSQVHLCKE"
+_ES_CIF_CONTROL_LETTERS = "JABCDEFGHI"
+
+_IT_CF_ODD_MAP: dict[str, int] = {
+    "0": 1, "1": 0, "2": 5, "3": 7, "4": 9, "5": 13, "6": 15, "7": 17,
+    "8": 19, "9": 21,
+    "A": 1, "B": 0, "C": 5, "D": 7, "E": 9, "F": 13, "G": 15, "H": 17,
+    "I": 19, "J": 21, "K": 2, "L": 4, "M": 18, "N": 20, "O": 11, "P": 3,
+    "Q": 6, "R": 8, "S": 12, "T": 14, "U": 16, "V": 10, "W": 22, "X": 25,
+    "Y": 24, "Z": 23,
+}
+_IT_CF_EVEN_MAP: dict[str, int] = {
+    "0": 0, "1": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7,
+    "8": 8, "9": 9,
+    "A": 0, "B": 1, "C": 2, "D": 3, "E": 4, "F": 5, "G": 6, "H": 7,
+    "I": 8, "J": 9, "K": 10, "L": 11, "M": 12, "N": 13, "O": 14, "P": 15,
+    "Q": 16, "R": 17, "S": 18, "T": 19, "U": 20, "V": 21, "W": 22, "X": 23,
+    "Y": 24, "Z": 25,
+}
+
+
 def _br_check_digit(value: str, weights: list[int]) -> int:
     total = sum((ord(c) - 48) * w for c, w in zip(value, weights, strict=True))
     remainder = total % 11
@@ -165,6 +186,347 @@ class TaxIdentifier(BaseModel):
         check2 = _br_check_digit(base + str(check1), _BR_CNPJ_WEIGHTS_2)
         if check_digits != f"{check1}{check2}":
             return False, "CNPJ check digits do not match."
+        return True, ""
+
+    # --- Poland ---
+
+    @staticmethod
+    def validate_pl_nip(identifier: str) -> tuple[bool, str]:
+        """Validate a Polish NIP (Numer Identyfikacji Podatkowej).
+
+        10-digit tax identification number with a weighted modulo-11 check digit.
+        Weights: [6, 5, 7, 2, 3, 4, 5, 6, 7]. If the weighted sum mod 11 equals
+        10, the NIP is invalid (no valid check digit exists for that base).
+
+        Source: Ministerstwo Finansow, https://www.gov.pl/web/finanse
+
+        Args:
+            identifier: Raw NIP string. Dashes and spaces are stripped.
+
+        Returns:
+            ``(True, "")`` on success, ``(False, error_message)`` on failure.
+        """
+        digits = "".join(c for c in identifier if c.isdigit())
+        if len(digits) != 10:
+            return False, "NIP must be exactly 10 digits."
+        weights = [6, 5, 7, 2, 3, 4, 5, 6, 7]
+        total = sum(int(d) * w for d, w in zip(digits[:9], weights))
+        check = total % 11
+        if check == 10:
+            return False, "NIP check digit is invalid (remainder equals 10)."
+        if check != int(digits[9]):
+            return False, f"NIP check digit mismatch: expected {check}, got {digits[9]}."
+        return True, ""
+
+    @staticmethod
+    def validate_pl_regon(identifier: str) -> tuple[bool, str]:
+        """Validate a Polish REGON (Rejestr Gospodarki Narodowej).
+
+        9-digit (single entity) or 14-digit (local unit) national business
+        register number with a weighted modulo-11 check digit. If the remainder
+        equals 10, the check digit is 0.
+
+        Source: GUS (Glowny Urzad Statystyczny)
+
+        Args:
+            identifier: Raw REGON string. Spaces are stripped.
+
+        Returns:
+            ``(True, "")`` on success, ``(False, error_message)`` on failure.
+        """
+        digits = "".join(c for c in identifier if c.isdigit())
+        if len(digits) not in (9, 14):
+            return False, "REGON must be exactly 9 or 14 digits."
+        if len(digits) == 9:
+            weights = [8, 9, 2, 3, 4, 5, 6, 7]
+        else:
+            weights = [2, 4, 8, 5, 0, 9, 7, 3, 6, 1, 2, 4, 8]
+        total = sum(int(d) * w for d, w in zip(digits[: len(weights)], weights))
+        check = total % 11
+        if check == 10:
+            check = 0
+        if check != int(digits[len(weights)]):
+            return False, (
+                f"REGON check digit mismatch: expected {check}, got {digits[len(weights)]}."
+            )
+        return True, ""
+
+    # --- Germany ---
+
+    @staticmethod
+    def validate_de_vat(identifier: str) -> tuple[bool, str]:
+        """Validate a German USt-IdNr (Umsatzsteuer-Identifikationsnummer).
+
+        Format: ``DE`` prefix + 9 digits. The check digit at position 11 is
+        computed using the iterative algorithm specified in DIN ISO/IEC 7064
+        (two-digit pure system, modulus 11, radix 2), commonly referenced as
+        the "DIN 4774" method by the Bundeszentralamt fur Steuern.
+
+        Source: Bundeszentralamt fur Steuern, https://www.bzst.de
+
+        Args:
+            identifier: Raw USt-IdNr string. Whitespace stripped; ``DE`` prefix
+                is optional (accepted with or without).
+
+        Returns:
+            ``(True, "")`` on success, ``(False, error_message)`` on failure.
+        """
+        cleaned = identifier.strip().upper()
+        if cleaned.startswith("DE"):
+            cleaned = cleaned[2:]
+        if not re.match(r"^\d{9}$", cleaned):
+            return False, "USt-IdNr must be 'DE' + exactly 9 digits."
+        product = 10
+        for digit_char in cleaned[:8]:
+            total = (int(digit_char) + product) % 10
+            if total == 0:
+                total = 10
+            product = (total * 2) % 11
+        check = 11 - product
+        if check == 10:
+            check = 0
+        if check != int(cleaned[8]):
+            return False, f"USt-IdNr check digit mismatch: expected {check}, got {cleaned[8]}."
+        return True, ""
+
+    # --- Belgium ---
+
+    @staticmethod
+    def validate_be_vat(identifier: str) -> tuple[bool, str]:
+        """Validate a Belgian BTW-nummer / numero de TVA.
+
+        Format: optional ``BE`` prefix + 10 decimal digits. The first digit is
+        ``0`` or ``1``. The last 2 digits equal ``97 - (first_8_digits mod 97)``.
+
+        Source: SPF Finances / FOD Financien, https://finances.belgium.be
+
+        Args:
+            identifier: Raw VAT string. Dots, spaces, and ``BE`` prefix stripped.
+
+        Returns:
+            ``(True, "")`` on success, ``(False, error_message)`` on failure.
+        """
+        cleaned = identifier.strip().upper().replace(".", "").replace(" ", "")
+        if cleaned.startswith("BE"):
+            cleaned = cleaned[2:]
+        if not re.match(r"^\d{10}$", cleaned):
+            return False, "Belgian VAT number must be exactly 10 digits (after removing BE prefix)."
+        if cleaned[0] not in ("0", "1"):
+            return False, f"Belgian VAT first digit must be 0 or 1, got '{cleaned[0]}'."
+        base = int(cleaned[:8])
+        expected = 97 - (base % 97)
+        actual = int(cleaned[8:10])
+        if expected != actual:
+            return False, (
+                f"Belgian VAT check digits mismatch: expected {expected:02d}, got {actual:02d}."
+            )
+        return True, ""
+
+    # --- Spain ---
+
+
+    @staticmethod
+    def validate_es_nif(identifier: str) -> tuple[bool, str]:
+        """Validate a Spanish NIF (Numero de Identificacion Fiscal) for individuals.
+
+        Format: 8 digits + 1 check letter. The letter is looked up from a fixed
+        23-character table at position ``(number mod 23)``.
+
+        Source: AEAT, https://www.agenciatributaria.es
+
+        Args:
+            identifier: Raw NIF string. Whitespace stripped.
+
+        Returns:
+            ``(True, "")`` on success, ``(False, error_message)`` on failure.
+        """
+        cleaned = identifier.strip().upper()
+        if not re.match(r"^\d{8}[A-Z]$", cleaned):
+            return False, "NIF must be 8 digits followed by 1 letter."
+        number = int(cleaned[:8])
+        expected = _ES_NIF_LETTERS[number % 23]
+        actual = cleaned[8]
+        if expected != actual:
+            return False, f"NIF check letter mismatch: expected '{expected}', got '{actual}'."
+        return True, ""
+
+    @staticmethod
+    def validate_es_nie(identifier: str) -> tuple[bool, str]:
+        """Validate a Spanish NIE (Numero de Identidad de Extranjero).
+
+        Format: ``X``, ``Y``, or ``Z`` + 7 digits + 1 check letter.
+        The prefix letter is replaced with 0, 1, or 2 respectively, then
+        the standard NIF check letter algorithm is applied.
+
+        Source: AEAT
+
+        Args:
+            identifier: Raw NIE string. Whitespace stripped.
+
+        Returns:
+            ``(True, "")`` on success, ``(False, error_message)`` on failure.
+        """
+        cleaned = identifier.strip().upper()
+        if not re.match(r"^[XYZ]\d{7}[A-Z]$", cleaned):
+            return False, "NIE must be X/Y/Z + 7 digits + 1 letter."
+        prefix_map = {"X": "0", "Y": "1", "Z": "2"}
+        number = int(prefix_map[cleaned[0]] + cleaned[1:8])
+        expected = _ES_NIF_LETTERS[number % 23]
+        actual = cleaned[8]
+        if expected != actual:
+            return False, f"NIE check letter mismatch: expected '{expected}', got '{actual}'."
+        return True, ""
+
+    @staticmethod
+    def validate_es_cif(identifier: str) -> tuple[bool, str]:
+        """Validate a Spanish CIF (Codigo de Identificacion Fiscal) for companies.
+
+        Format: 1 org-type letter + 7 digits + 1 control character.
+        The control character is a digit for some org types (A, B, E, H) and
+        a letter for others (K, P, Q, S); the remaining types (C, D, F, G, J,
+        N, R, U, V, W) accept either.
+
+        Source: AEAT
+
+        Args:
+            identifier: Raw CIF string. Whitespace stripped.
+
+        Returns:
+            ``(True, "")`` on success, ``(False, error_message)`` on failure.
+        """
+        cleaned = identifier.strip().upper()
+        if not re.match(r"^[ABCDEFGHJNPQRSUVW]\d{7}[0-9A-J]$", cleaned):
+            return False, "CIF must be 1 org letter + 7 digits + 1 control character (digit or A-J)."
+        org_letter = cleaned[0]
+        digits_part = cleaned[1:8]
+        control = cleaned[8]
+
+        even_sum = sum(int(digits_part[i]) for i in range(1, 7, 2))
+        odd_sum = 0
+        for i in range(0, 7, 2):
+            doubled = int(digits_part[i]) * 2
+            odd_sum += doubled // 10 + doubled % 10
+        total = even_sum + odd_sum
+        check_digit = (10 - (total % 10)) % 10
+
+        digit_only = {"A", "B", "E", "H"}
+        letter_only = {"K", "P", "Q", "S"}
+
+        if org_letter in digit_only:
+            if control != str(check_digit):
+                return False, (
+                    f"CIF control digit mismatch: expected '{check_digit}', got '{control}'."
+                )
+        elif org_letter in letter_only:
+            expected_letter = _ES_CIF_CONTROL_LETTERS[check_digit]
+            if control != expected_letter:
+                return False, (
+                    f"CIF control letter mismatch: expected '{expected_letter}', got '{control}'."
+                )
+        else:
+            expected_letter = _ES_CIF_CONTROL_LETTERS[check_digit]
+            if control != str(check_digit) and control != expected_letter:
+                return False, (
+                    f"CIF control mismatch: expected '{check_digit}' or "
+                    f"'{expected_letter}', got '{control}'."
+                )
+        return True, ""
+
+    # --- France ---
+
+    @staticmethod
+    def _luhn_checksum(digits: str) -> int:
+        total = 0
+        for i, ch in enumerate(reversed(digits)):
+            d = int(ch)
+            if i % 2 == 1:
+                d *= 2
+                if d > 9:
+                    d -= 9
+            total += d
+        return total % 10
+
+    @staticmethod
+    def validate_fr_siren(identifier: str) -> tuple[bool, str]:
+        """Validate a French SIREN (9-digit company identifier).
+
+        The 9th digit is a Luhn check digit.
+
+        Source: INSEE, https://www.insee.fr
+
+        Args:
+            identifier: Raw SIREN string. Spaces stripped.
+
+        Returns:
+            ``(True, "")`` on success, ``(False, error_message)`` on failure.
+        """
+        digits = "".join(c for c in identifier if c.isdigit())
+        if len(digits) != 9:
+            return False, "SIREN must be exactly 9 digits."
+        if TaxIdentifier._luhn_checksum(digits) != 0:
+            return False, "SIREN Luhn checksum failed."
+        return True, ""
+
+    @staticmethod
+    def validate_fr_siret(identifier: str) -> tuple[bool, str]:
+        """Validate a French SIRET (14-digit establishment identifier).
+
+        SIRET = SIREN (9 digits) + NIC (5 digits). The 14th digit is a Luhn
+        check digit applied over all 14 digits.
+
+        Source: INSEE, https://www.insee.fr/fr/information/1972216
+
+        Args:
+            identifier: Raw SIRET string. Spaces stripped.
+
+        Returns:
+            ``(True, "")`` on success, ``(False, error_message)`` on failure.
+        """
+        digits = "".join(c for c in identifier if c.isdigit())
+        if len(digits) != 14:
+            return False, "SIRET must be exactly 14 digits."
+        if TaxIdentifier._luhn_checksum(digits) != 0:
+            return False, "SIRET Luhn checksum failed."
+        return True, ""
+
+    # --- Italy ---
+
+    @staticmethod
+    def validate_it_codice_fiscale(identifier: str) -> tuple[bool, str]:
+        """Validate an Italian Codice Fiscale (16-character individual tax code).
+
+        Format: 6 letters (surname+given) + 2 digits (year) + 1 letter (month)
+        + 2 digits (day+gender) + 4 alphanumeric (municipality) + 1 check letter.
+        The check letter is computed by summing odd-position and even-position
+        characters (1-indexed) through separate lookup tables, then taking
+        ``sum mod 26`` mapped to A-Z.
+
+        Source: Agenzia delle Entrate, DM 12/03/1974
+
+        Args:
+            identifier: Raw Codice Fiscale string. Whitespace stripped.
+
+        Returns:
+            ``(True, "")`` on success, ``(False, error_message)`` on failure.
+        """
+        cleaned = identifier.strip().upper()
+        if not re.match(r"^[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z0-9]{4}[A-Z]$", cleaned):
+            return False, (
+                "Codice Fiscale must be 16 characters: "
+                "6 letters + 2 digits + 1 letter + 2 digits + 4 alphanumeric + 1 check letter."
+            )
+        total = 0
+        for i, ch in enumerate(cleaned[:15]):
+            if (i + 1) % 2 == 1:
+                total += _IT_CF_ODD_MAP[ch]
+            else:
+                total += _IT_CF_EVEN_MAP[ch]
+        expected = chr(ord("A") + (total % 26))
+        actual = cleaned[15]
+        if expected != actual:
+            return False, (
+                f"Codice Fiscale check letter mismatch: expected '{expected}', got '{actual}'."
+            )
         return True, ""
 
 

@@ -114,6 +114,18 @@ class TestBuildMtlsSslContext:
         with pytest.raises(Exception):
             _build_mtls_ssl_context(str(p12_path), "wrong-password")
 
+    def test_wrong_password_does_not_leak_password(
+        self, p12_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        secret = "S3cret-P@ssw0rd!!"
+        with caplog.at_level("DEBUG"):
+            with pytest.raises(Exception):
+                _build_mtls_ssl_context(str(p12_path), secret)
+        for record in caplog.records:
+            assert secret not in record.getMessage(), (
+                f"Password leaked in log record: {record.getMessage()}"
+            )
+
     def test_missing_file_raises(self) -> None:
         with pytest.raises(FileNotFoundError):
             _build_mtls_ssl_context("/nonexistent/cert.p12", None)

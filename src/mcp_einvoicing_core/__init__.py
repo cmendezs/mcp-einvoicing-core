@@ -129,7 +129,7 @@ from mcp_einvoicing_core.audit import (
     run_check_version_compatibility,
 )
 
-__version__ = "1.3.0"
+__version__ = "1.6.0"
 
 __all__ = [
     # Base classes
