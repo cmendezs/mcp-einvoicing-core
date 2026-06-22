@@ -87,39 +87,42 @@ server.run()
 
 ## خريطة التوافق
 
-| البلد | الحالة | المعيار | النقل | يرث | يعيد تعريف | الثغرات المعروفة |
-|---------|--------|----------|-----------|----------|-----------|------------|
-| [🇧🇪 BE](https://github.com/cmendezs/mcp-einvoicing-be) | ✅ مكتمل | Peppol BIS 3.0 | AS4 / Peppol | جميع الفئات الأساسية | `generate()` → UBL 2.1, `validate()` → Schematron EN16931 | لا يوجد |
-| [🇫🇷 FR](https://github.com/cmendezs/mcp-facture-electronique-fr) | ✅ مكتمل | XP Z12-013 | هجين / PPF hub | `BaseEInvoicingClient`, `BaseLifecycleManager` | `submit_lifecycle_status`, `healthcheck` | لا يوجد |
-| [🇩🇪 DE](https://github.com/cmendezs/mcp-einvoicing-de) | ✅ مكتمل | ZUGFeRD / XRechnung | AS4 / Peppol | جميع الفئات الأساسية | `generate()` يعيد بايتات PDF (base64) | غموض نوع إرجاع `generate()`: `str` مقابل `bytes` |
-| [🇮🇹 IT](https://github.com/cmendezs/mcp-fattura-elettronica-it) | ✅ مكتمل | FatturaPA v1.6.1 | مباشر / SDI | `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BasePartyValidator` | جميع الدوال المجردة | `to_invoice_document()` لم يتم تنفيذها بعد |
-| [🇵🇱 PL](https://github.com/cmendezs/mcp-ksef-pl) | ✅ مكتمل | KSeF FA(2) | API مباشر | `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseLifecycleManager` | تدفق مصادقة جلسة KSeF | وضع مصادقة `MTLS` لم يتم تنفيذه بعد |
-| [🇪🇸 ES](https://github.com/cmendezs/mcp-facturacion-electronica-es) | ✅ مكتمل | FACeB2B / FacturaE | API مباشر | جميع الفئات الأساسية | مصادقة mTLS | وضع مصادقة `MTLS` لم يتم تنفيذه بعد |
-| [🇧🇷 BR](https://github.com/cmendezs/mcp-nfe-br) | 🚧 قيد التطوير | NF-e / NFC-e (schema 4.00) | API مباشر / SEFAZ | `BasePartyValidator` | التحقق من CPF/CNPJ | إنشاء NF-e/NFC-e وتكامل SEFAZ مخطط لهما |
-| 🇷🇴 RO | 📋 قائمة الانتظار | RO-UBL (EN 16931) | API مباشر / تصفية | `BaseDocumentGenerator`, `BaseLifecycleManager` | تدفق تصفية ANAF | مطلوب متغير `BaseSchematronValidator` |
-| 🇬🇷 GR | 📋 قائمة الانتظار | myDATA XML | API مباشر / إبلاغ | `BaseEInvoicingClient`, `BaseLifecycleManager` | مصادقة myDATA + تدفق الإبلاغ | عميل myDATA API لم يتم تصميمه بعد |
-| 🇳🇱🇸🇪🇩🇰🇳🇴 الشمال/NL | 📋 قائمة الانتظار | Peppol BIS 3.0 / UBL | AS4 / Peppol | جميع الفئات الأساسية | `generate()` → UBL 2.1, `validate()` → Schematron | يعيد استخدام طبقة نقل AS4 من BE |
-| 🇵🇹 PT | 📋 قائمة الانتظار | CIUS-PT + QR Code | توقيع / مباشر | `BaseDocumentGenerator`, `BaseDocumentValidator` | توقيع مؤهل + حقن QR | تكامل التوقيع المؤهل لم يتم تصميمه بعد |
+التراكم المفتوح والتخطيط لكل بلد موجودان في [`context-library/roadmap-2026.md`](../context-library/roadmap-2026.md). يعكس الجدول أدناه الفصل القانوني بين أشجار الفواتير وفق EN 16931 وتلك التي ليست وفق EN 16931 (انظر `CLAUDE.md`).
+
+| البلد | الإصدار | المعيار | شجرة الفاتورة | النقل |
+|-------|---------|---------|---------------|-------|
+| [🇧🇪 BE](https://github.com/cmendezs/mcp-einvoicing-be) | v0.2.0 منشور | Peppol BIS 3.0 / PINT-BE | `BEInvoice(EN16931Invoice)` | شبكة Peppol (AS4) |
+| [🇫🇷 FR](https://github.com/cmendezs/mcp-facture-electronique-fr) | v0.4.0 منشور | NF XP Z12-012 / NF XP Z12-013 / Factur-X / UBL 2.1 / CII | `EN16931Invoice` (الهدف — انظر FR-SC-1) | هجين / PPF + PDP |
+| [🇩🇪 DE](https://github.com/cmendezs/mcp-einvoicing-de) | v0.3.1 منشور | ZUGFeRD 2.x / XRechnung 3.x | `ZUGFeRDInvoice(EN16931Invoice)` | مباشر + lookup للمشارك في Peppol |
+| [🇮🇹 IT](https://github.com/cmendezs/mcp-fattura-elettronica-it) | v0.2.5 منشور | FatturaPA v1.2.x | EN 16931 (CIUS الإيطالي) | مباشر / SdI |
+| [🇵🇱 PL](https://github.com/cmendezs/mcp-ksef-pl) | v0.2.2 منشور | KSeF FA(3) / FA(2) / Peppol BIS 3.0 | `KSeFInvoice(EN16931Invoice)` | API مباشر + Peppol |
+| [🇪🇸 ES](https://github.com/cmendezs/mcp-facturacion-electronica-es) | v0.2.0 منشور | Factura-e / VeriFactu / SII / FACe | مزدوج: `EN16931Invoice` (Factura-e) + `InvoiceDocument` (VeriFactu, SII) | API مباشر (mTLS / OAuth2) |
+| [🇧🇷 BR](https://github.com/cmendezs/mcp-nfe-br) | v0.5.2 منشور | NF-e / NFC-e (modelo 55/65, schema 4.00); NFS-e Nacional v1.01 | `BRInvoice(InvoiceDocument)` + `NFSeDocument(InvoiceDocument)` | mTLS مباشر / SEFAZ + Gov.br OAuth2 / ADN |
+
+البلدان على رادار التخطيط (لم يتم scaffold لها بعد — انظر قسم "New country packages" في [`roadmap-2026.md`](../context-library/roadmap-2026.md)): IN, MX, RO, CO, CL, PE, VN, EG, HU, GR, KR, ID, EC, UY (الفئة 1 — تصفية تعمل بالكامل)؛ SG, MY, SA, NG, IL, PY, PH (الفئة 2 — قيد النشر في 2026)؛ UAE, OM, SK, PT, DK, ZA (الفئة 3 — مرحلة انتقالية أو أواخر 2026/2027). تخضع الولايات القضائية الطوعية في UE/APAC/NA للفئة 4.
 
 ## ملاحظات معمارية
 
 ### واجهة النقل
 
-مع تزايد عدد المحولات، سيمنع تجريد `TransportInterface` في الحزمة الأساسية التكرار عبر البلدان التي تتشارك طبقة النقل نفسها:
+مع تزايد عدد المحولات، سيمنع تجريد `TransportInterface` في الحزمة الأساسية التكرار عبر البلدان التي تتشارك طبقة النقل نفسها. التغطية الحالية للمحولات:
 
 | النقل | البلدان |
-|-----------|-----------|
-| **API مباشر** (تصفية / إبلاغ) | FR, RO, GR, HU |
-| **AS4 / شبكة Peppol** | BE, DE, الشمال/NL |
-| **هجين / محور** | FR (مسار PPF/PDP المزدوج) |
+|-------|---------|
+| **API مباشر** (تصفية / إبلاغ / B2G) | FR (Chorus Pro + PDP/PPF), ES (AEAT + FACe), PL (KSeF), IT (SdI مخطط) |
+| **mTLS إلى خدمة ويب حكومية** | BR (SEFAZ), ES (VeriFactu, SII) |
+| **شبكة Peppol (AS4)** | BE, DE (مخطط عبر DE-PEPPOL-1, v0.5.0) |
+| **OAuth2 إلى محور حكومي** | BR (Gov.br ADN لـ NFS-e Nacional) |
 
-### ألمانيا: إعادة استخدام بنسبة 80% من FR
+تتم متابعة `TransportInterface` المخصصة كعمل معماري؛ اليوم يقوم كل محول بلد بتوسيع `BaseEInvoicingClient` مباشرة بوضع المصادقة الذي يحتاجه (`AuthMode.OAUTH2_CLIENT_CREDENTIALS`, `AuthMode.MTLS`, `AuthMode.BEARER_TOKEN`, `AuthMode.NONE`).
 
-يفضل التفويض الألماني (الساري منذ يناير 2025 لاستقبال B2B) بشكل كبير صيغة ZUGFeRD/Factur-X، وهي نفس نموذج XML المضمن في PDF المستخدم في ملف Factur-X الفرنسي. يمكن إعادة استخدام منطق إنشاء والتحقق من صحة XML في `mcp-facture-electronique-fr` مع تغييرات طفيفة، مما يجعل DE المحول الأقل جهدا بعد BE.
+### تنسيقات wire الخاصة بـ EN 16931
+
+توفر الحزمة الأساسية `EN16931UBLSerializer`/`EN16931UBLParser` و`EN16931CIISerializer`/`EN16931CIIParser` (منذ v1.3.0) حتى لا يعيد محولات البلدان الأوروبية تنفيذ تسلسل UBL 2.1 أو CII D16B. يجب على حزم البلدان الأوروبية الجديدة توسيع هذه الفئات بدلا من كتابة مكدس XML مواز.
 
 ### ViDA / DRR (2030)
 
-بحلول يوليو 2030، يجب أن تتوافق جميع الأنظمة الوطنية مع متطلبات الإبلاغ الرقمي للاتحاد الأوروبي للمعاملات العابرة للحدود. إن استخدام **EN 16931** كنموذج بيانات `InvoiceDocument` الداخلي في هذه الحزمة الأساسية يجعل المشروع جاهزا للمستقبل: تترجم محولات البلدان من EN 16931 إلى الصيغة المحلية، وليس العكس.
+بحلول يوليو 2030، يجب أن تتوافق جميع الأنظمة الوطنية مع متطلبات الإبلاغ الرقمي (DRR) للاتحاد الأوروبي للمعاملات العابرة للحدود. إن استخدام **EN 16931** كجذر قانوني لفاتورة الاتحاد الأوروبي (`EN16931Invoice`) يجعل جانب غلاف الفاتورة جاهزا للمستقبل: تترجم محولات البلدان `EN16931Invoice` إلى تنسيق wire المحلي، وليس العكس. أما دورة حياة الإرسال الخاصة بـ DRR ذاتها (الإرسال في الوقت الفعلي لبيانات معاملات منظمة إلى سجل مركزي للاتحاد الأوروبي، إصدار معرّفات معاملات، تسوية 4-corner عابرة للحدود) فهي غير مصاغة في الحزمة الأساسية اليوم ويتم تتبعها كمسار عمل منفصل في [`roadmap-2026.md`](../context-library/roadmap-2026.md)؛ يجب عدم مساواة "يدعم EN 16931 / Peppol" بـ "يدعم ViDA DRR".
 
 ## الرخصة
 

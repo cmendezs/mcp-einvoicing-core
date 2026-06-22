@@ -92,39 +92,42 @@ Las configuraciones existentes para `mcp-facture-electronique-fr` y `mcp-fattura
 
 ## Compatibilidad con la hoja de ruta
 
-| País | Estado | Estándar | Transporte | Hereda | Sobreescribe | Gaps conocidos |
-|------|--------|----------|------------|--------|--------------|----------------|
-| [🇧🇪 BE](https://github.com/cmendezs/mcp-einvoicing-be) | ✅ Listo | Peppol BIS 3.0 | AS4 / Peppol | todas las clases base | `generate()` → UBL 2.1, `validate()` → Schematron EN16931 | Ninguno |
-| [🇫🇷 FR](https://github.com/cmendezs/mcp-facture-electronique-fr) | ✅ Listo | XP Z12-013 | Híbrido / hub PPF | `BaseEInvoicingClient`, `BaseLifecycleManager` | `submit_lifecycle_status`, `healthcheck` | Ninguno |
-| [🇩🇪 DE](https://github.com/cmendezs/mcp-einvoicing-de) | ✅ Listo | ZUGFeRD / XRechnung | AS4 / Peppol | todas las clases base | `generate()` devuelve bytes PDF (base64) | Ambigüedad en tipo de retorno de `generate()`: `str` vs `bytes` |
-| [🇮🇹 IT](https://github.com/cmendezs/mcp-fattura-elettronica-it) | ✅ Listo | FatturaPA v1.6.1 | Directo / SDI | `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BasePartyValidator` | todos los métodos abstractos | `to_invoice_document()` aún no implementado |
-| [🇵🇱 PL](https://github.com/cmendezs/mcp-ksef-pl) | ✅ Listo | KSeF FA(2) | API directa | `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseLifecycleManager` | Flujo de autenticación de sesión KSeF | Modo de autenticación `MTLS` aún no implementado |
-| [🇪🇸 ES](https://github.com/cmendezs/mcp-facturacion-electronica-es) | ✅ Listo | FACeB2B / FacturaE | API directa | todas las clases base | Autenticación mTLS | Modo de autenticación `MTLS` aún no implementado |
-| [🇧🇷 BR](https://github.com/cmendezs/mcp-nfe-br) | 🚧 En progreso | NF-e / NFC-e (schema 4.00) | API directa / SEFAZ | `BasePartyValidator` | Validación CPF/CNPJ | Generación NF-e/NFC-e e integración SEFAZ planificadas |
-| 🇷🇴 RO | 📋 Pendiente | RO-UBL (EN 16931) | API directa / clearance | `BaseDocumentGenerator`, `BaseLifecycleManager` | Flujo de clearance ANAF | Se necesita variante de `BaseSchematronValidator` |
-| 🇬🇷 GR | 📋 Pendiente | myDATA XML | API directa / reporting | `BaseEInvoicingClient`, `BaseLifecycleManager` | Flujo de autenticación y reporting myDATA | Cliente API myDATA aún no diseñado |
-| 🇳🇱🇸🇪🇩🇰🇳🇴 Nórdicos/NL | 📋 Pendiente | Peppol BIS 3.0 / UBL | AS4 / Peppol | todas las clases base | `generate()` → UBL 2.1, `validate()` → Schematron | Reutiliza la capa de transporte AS4 de BE |
-| 🇵🇹 PT | 📋 Pendiente | CIUS-PT + QR Code | Firma / directo | `BaseDocumentGenerator`, `BaseDocumentValidator` | Firma cualificada + inyección QR | Integración de firma cualificada no diseñada |
+El backlog abierto y la planificación de sprints por país están en [`context-library/roadmap-2026.md`](../context-library/roadmap-2026.md). La tabla siguiente refleja la separación canónica de árboles de factura EN 16931 frente a no EN 16931 (ver `CLAUDE.md`).
+
+| País | Versión | Estándar | Árbol de factura | Transporte |
+|------|---------|----------|------------------|------------|
+| [🇧🇪 BE](https://github.com/cmendezs/mcp-einvoicing-be) | v0.2.0 publicado | Peppol BIS 3.0 / PINT-BE | `BEInvoice(EN16931Invoice)` | Red Peppol (AS4) |
+| [🇫🇷 FR](https://github.com/cmendezs/mcp-facture-electronique-fr) | v0.4.0 publicado | NF XP Z12-012 / NF XP Z12-013 / Factur-X / UBL 2.1 / CII | `EN16931Invoice` (objetivo — ver FR-SC-1) | Híbrido / PPF + PDP |
+| [🇩🇪 DE](https://github.com/cmendezs/mcp-einvoicing-de) | v0.3.1 publicado | ZUGFeRD 2.x / XRechnung 3.x | `ZUGFeRDInvoice(EN16931Invoice)` | Directo + lookup de participante Peppol |
+| [🇮🇹 IT](https://github.com/cmendezs/mcp-fattura-elettronica-it) | v0.2.5 publicado | FatturaPA v1.2.x | EN 16931 (CIUS italiano) | Directo / SdI |
+| [🇵🇱 PL](https://github.com/cmendezs/mcp-ksef-pl) | v0.2.2 publicado | KSeF FA(3) / FA(2) / Peppol BIS 3.0 | `KSeFInvoice(EN16931Invoice)` | API directa + Peppol |
+| [🇪🇸 ES](https://github.com/cmendezs/mcp-facturacion-electronica-es) | v0.2.0 publicado | Factura-e / VeriFactu / SII / FACe | Dual: `EN16931Invoice` (Factura-e) + `InvoiceDocument` (VeriFactu, SII) | API directa (mTLS / OAuth2) |
+| [🇧🇷 BR](https://github.com/cmendezs/mcp-nfe-br) | v0.5.2 publicado | NF-e / NFC-e (modelo 55/65, schema 4.00); NFS-e Nacional v1.01 | `BRInvoice(InvoiceDocument)` + `NFSeDocument(InvoiceDocument)` | mTLS directo / SEFAZ + Gov.br OAuth2 / ADN |
+
+Países en el radar de planificación (aún sin scaffolding — ver la sección "New country packages" en [`roadmap-2026.md`](../context-library/roadmap-2026.md)): IN, MX, RO, CO, CL, PE, VN, EG, HU, GR, KR, ID, EC, UY (categoría 1 — clearance plenamente en producción); SG, MY, SA, NG, IL, PY, PH (categoría 2 — despliegue en 2026); UAE, OM, SK, PT, DK, ZA (categoría 3 — transición o final de 2026/2027). Las jurisdicciones UE/APAC/NA voluntarias son de categoría 4.
 
 ## Notas de arquitectura
 
 ### Interfaz de transporte
 
-A medida que crece el número de adaptadores, una abstracción `TransportInterface` en core evitará la duplicación entre países que comparten la misma capa de transporte:
+A medida que crece el número de adaptadores, una abstracción `TransportInterface` en core evitará la duplicación entre países que comparten la misma capa de transporte. Cobertura actual de adaptadores:
 
 | Transporte | Países |
 |------------|--------|
-| **API directa** (clearance / reporting) | FR, RO, GR, HU |
-| **AS4 / red Peppol** | BE, DE, Nórdicos/NL |
-| **Híbrido / hub** | FR (ruta dual PPF/PDP) |
+| **API directa** (clearance / reporting / B2G) | FR (Chorus Pro + PDP/PPF), ES (AEAT + FACe), PL (KSeF), IT (SdI planificado) |
+| **mTLS hacia webservice gubernamental** | BR (SEFAZ), ES (VeriFactu, SII) |
+| **Red Peppol (AS4)** | BE, DE (planificado vía DE-PEPPOL-1, v0.5.0) |
+| **OAuth2 hacia hub gubernamental** | BR (Gov.br ADN para NFS-e Nacional) |
 
-### Alemania: 80% de reutilización desde FR
+Una `TransportInterface` dedicada se rastrea como trabajo arquitectónico; hoy cada adaptador de país extiende directamente `BaseEInvoicingClient` con el modo de autenticación que necesita (`AuthMode.OAUTH2_CLIENT_CREDENTIALS`, `AuthMode.MTLS`, `AuthMode.BEARER_TOKEN`, `AuthMode.NONE`).
 
-El mandato de Alemania (activo desde enero de 2025 para recepción B2B) favorece ampliamente ZUGFeRD/Factur-X, el mismo modelo de XML incrustado en PDF que el perfil francés Factur-X. La lógica de generación y validación XML de `mcp-facture-electronique-fr` se puede reutilizar con cambios mínimos, lo que convierte a DE en el siguiente adaptador de menor esfuerzo después de BE.
+### Formatos wire EN 16931
+
+El paquete core entrega `EN16931UBLSerializer`/`EN16931UBLParser` y `EN16931CIISerializer`/`EN16931CIIParser` (desde la v1.3.0) para que los adaptadores de países UE no reimplementen la serialización UBL 2.1 ni CII D16B. Los nuevos paquetes de país UE deben extender estas clases en lugar de escribir una pila XML paralela.
 
 ### ViDA / DRR (2030)
 
-Para julio de 2030, todos los sistemas nacionales deberán alinearse con el Requisito de Reporte Digital de la UE para transacciones transfronterizas. Utilizar **EN 16931** como modelo de datos interno `InvoiceDocument` en este paquete base ya prepara el proyecto para el futuro: los adaptadores de país traducen EN 16931 → formato local, no al revés.
+Para julio de 2030, todos los sistemas nacionales deberán alinearse con los Digital Reporting Requirements (DRR) de la UE para transacciones transfronterizas. Utilizar **EN 16931** como raíz canónica de factura UE (`EN16931Invoice`) ya prepara el lado del envelope de factura para el futuro: los adaptadores de país traducen `EN16931Invoice` al formato wire local, no al revés. El ciclo de vida de envío de DRR en sí (envío en tiempo real de datos de transacción estructurados a un registro central de la UE, emisión de IDs de transacción, reconciliación 4-corner transfronteriza) no está modelado en core hoy y se rastrea como flujo de trabajo separado en [`roadmap-2026.md`](../context-library/roadmap-2026.md); no equiparar "soporta EN 16931 / Peppol" con "soporta ViDA DRR".
 
 ## Otros servidores MCP de facturación electrónica
 
