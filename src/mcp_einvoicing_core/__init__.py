@@ -104,6 +104,14 @@ from mcp_einvoicing_core.xml_utils import (
 from mcp_einvoicing_core.base_server import assert_not_read_only, scrub
 from mcp_einvoicing_core.audit_log import AuditAction, AuditLog, get_audit_log
 from mcp_einvoicing_core.confirmation import ConfirmationGate, ConfirmationStore
+from mcp_einvoicing_core.convert import Syntax, convert_wire_format
+from mcp_einvoicing_core.credit_note import BillingReference, EN16931CreditNote
+from mcp_einvoicing_core.endpoints import (
+    BaseEnvironmentEndpoints,
+    EndpointEnvironment,
+    EndpointSet,
+)
+from mcp_einvoicing_core.routing import RoutingIdentifier, RoutingIdValidationResult
 from mcp_einvoicing_core.wire_formats import (
     CII_NSMAP,
     EN16931CIIParser,
@@ -133,7 +141,7 @@ from mcp_einvoicing_core.audit import (
     run_check_version_compatibility,
 )
 
-__version__ = "1.7.0"
+__version__ = "1.8.0"
 
 __all__ = [
     # Base classes
@@ -229,6 +237,19 @@ __all__ = [
     # HITL confirmation gate
     "ConfirmationGate",
     "ConfirmationStore",
+    # Wire format conversion
+    "Syntax",
+    "convert_wire_format",
+    # EN 16931 credit note
+    "BillingReference",
+    "EN16931CreditNote",
+    # Endpoint routing
+    "BaseEnvironmentEndpoints",
+    "EndpointEnvironment",
+    "EndpointSet",
+    # Routing identifier validators
+    "RoutingIdentifier",
+    "RoutingIdValidationResult",
     # EN 16931 wire formats (UBL 2.1 and CII)
     "EN16931UBLSerializer",
     "EN16931UBLParser",
