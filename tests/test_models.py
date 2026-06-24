@@ -245,6 +245,49 @@ class TestValidateFrSiret:
         assert "Luhn" in error
 
 
+class TestValidateFrTvaIntra:
+    def test_valid_tva(self) -> None:
+        ok, error = TaxIdentifier.validate_fr_tva_intra("FR44732829320")
+        assert ok is True
+        assert error == ""
+
+    def test_valid_with_spaces(self) -> None:
+        ok, error = TaxIdentifier.validate_fr_tva_intra("FR 44 732 829 320")
+        assert ok is True
+        assert error == ""
+
+    def test_valid_lowercase_prefix(self) -> None:
+        ok, error = TaxIdentifier.validate_fr_tva_intra("fr44732829320")
+        assert ok is True
+        assert error == ""
+
+    def test_wrong_length(self) -> None:
+        ok, error = TaxIdentifier.validate_fr_tva_intra("FR4773282")
+        assert ok is False
+        assert "11 characters" in error
+
+    def test_invalid_check_key(self) -> None:
+        ok, error = TaxIdentifier.validate_fr_tva_intra("FR00732829320")
+        assert ok is False
+        assert "check key mismatch" in error
+
+    def test_invalid_siren(self) -> None:
+        # Valid check key format but wrong SIREN yields wrong check
+        ok, error = TaxIdentifier.validate_fr_tva_intra("FR47000000001")
+        assert ok is False
+        assert "check key mismatch" in error
+
+    def test_empty(self) -> None:
+        ok, error = TaxIdentifier.validate_fr_tva_intra("")
+        assert ok is False
+        assert "11 characters" in error
+
+    def test_non_digit_after_prefix(self) -> None:
+        ok, error = TaxIdentifier.validate_fr_tva_intra("FRABCDEFGHIJK")
+        assert ok is False
+        assert "only digits" in error
+
+
 class TestValidateItCodiceFiscale:
     def test_valid_codice_fiscale(self) -> None:
         ok, error = TaxIdentifier.validate_it_codice_fiscale("RSSMRA85M01H501Q")

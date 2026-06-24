@@ -489,6 +489,36 @@ class TaxIdentifier(BaseModel):
             return False, "SIRET Luhn checksum failed."
         return True, ""
 
+    @staticmethod
+    def validate_fr_tva_intra(identifier: str) -> tuple[bool, str]:
+        """Validate a French TVA intracommunautaire number.
+
+        Format: ``FR`` + 2 check digits + 9-digit SIREN. The check key is
+        computed as ``(12 + 3 * (SIREN mod 97)) mod 97``.
+
+        Source: Direction Generale des Finances Publiques (DGFiP),
+        Article 286 ter du Code general des impots.
+
+        Args:
+            identifier: Raw TVA number. Spaces stripped, case-insensitive.
+
+        Returns:
+            ``(True, "")`` on success, ``(False, error_message)`` on failure.
+        """
+        cleaned = identifier.replace(" ", "").upper()
+        if cleaned.startswith("FR"):
+            cleaned = cleaned[2:]
+        if len(cleaned) != 11:
+            return False, "TVA intracommunautaire must be 11 characters after FR prefix (2 check digits + 9-digit SIREN)."
+        if not cleaned.isdigit():
+            return False, "TVA intracommunautaire must contain only digits after FR prefix."
+        check_digits = int(cleaned[:2])
+        siren = int(cleaned[2:])
+        expected = (12 + 3 * (siren % 97)) % 97
+        if check_digits != expected:
+            return False, f"TVA check key mismatch: expected {expected:02d}, got {check_digits:02d}."
+        return True, ""
+
     # --- Italy ---
 
     @staticmethod
