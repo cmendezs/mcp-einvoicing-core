@@ -35,6 +35,11 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.9.0] - 2026-06-24
+#### Added
+- `TaxIdentifier.validate_fr_tva_intra()`: French TVA intracommunautaire number validator (FR-INV-2). Check key algorithm: `(12 + 3 * (SIREN mod 97)) mod 97`
+- 8 new tests in `test_models.py`
+
 ### [1.8.0] - 2026-06-24
 #### Added
 - `BaseEnvironmentEndpoints`, `EndpointSet`, `EndpointEnvironment`: sandbox/production URL routing abstraction for country packages (CORE-URL-1)
