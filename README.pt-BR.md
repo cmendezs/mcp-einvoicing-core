@@ -8,77 +8,103 @@
 [![PyPI version](https://img.shields.io/pypi/v/mcp-einvoicing-core.svg)](https://pypi.org/project/mcp-einvoicing-core/)
 [![Python](https://img.shields.io/pypi/pyversions/mcp-einvoicing-core.svg)](https://pypi.org/project/mcp-einvoicing-core/)[![mcp-einvoicing-core MCP server](https://glama.ai/mcp/servers/cmendezs/mcp-einvoicing-core/badges/score.svg)](https://glama.ai/mcp/servers/cmendezs/mcp-einvoicing-core)
 
-**Tópicos:** `mcp` `mcp-server` `e-invoicing` `electronic-invoicing` `python` `fastmcp` `peppol` `en16931` `ubl` `fatturapa` `xp-z12-013` `nfe` `xml` `base-library`
+**Topicos:** `mcp` `mcp-server` `e-invoicing` `electronic-invoicing` `python` `fastmcp` `peppol` `en16931` `ubl` `fatturapa` `xp-z12-013` `nfe` `xml` `base-library`
 
-Pacote base para servidores MCP de faturamento eletrônico.
+Pacote base para servidores MCP de faturamento eletronico.
 
-Fornece classes base abstratas, modelos Pydantic compartilhados, utilitários XML e um cliente HTTP
-para que os pacotes específicos por país (`mcp-facture-electronique-fr`, `mcp-fattura-elettronica-it`, `mcp-nfe-br`, ...)
-compartilhem uma base comum sem duplicar código.
+Fornece modelos Pydantic compartilhados, uma arvore de fatura EN 16931, serializadores UBL/CII,
+um cliente HTTP OAuth2, lookup SMP Peppol, primitivas de assinatura digital e um framework de
+auditoria de conformidade para que os pacotes por pais compartilhem uma base comum sem duplicar codigo.
 
 ---
 
 ## O que este pacote oferece
 
-| Módulo | Conteúdo | Usado por |
-|--------|----------|-----------|
-| `models.py` | `InvoiceParty`, `InvoiceLineItem`, `VATSummary`, `PaymentTerms`, `InvoiceDocument`, `DocumentValidationResult` | IT (geração estruturada de faturas), futuro BE/PL/DE/ES |
-| `base_server.py` | `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BaseLifecycleManager`, `BasePartyValidator`, `EInvoicingMCPServer` | Todos os adaptadores de país |
-| `xml_utils.py` | `format_amount`, `format_quantity`, `validate_date_iso`, `validate_iban`, `xml_element`, `xml_optional`, `format_error`, `filter_empty_values` | IT (extraído literalmente), futuros formatos baseados em XML |
-| `http_client.py` | `TokenCache`, `OAuthConfig`, `BaseEInvoicingClient` (OAuth2 + sem autenticação) | FR (extraído literalmente), futuros países baseados em API |
-| `exceptions.py` | `EInvoicingError`, `ValidationError`, `PartyValidationError`, `XSDValidationError`, `DocumentGenerationError`, `AuthenticationError`, `PlatformError` | Todos os adaptadores de país |
-| `logging_utils.py` | `setup_logging`, `get_logger` | Todos os adaptadores de país |
+| Modulo | Conteudo |
+|--------|----------|
+| `models` | `InvoiceDocument`, `InvoiceParty`, `InvoiceLineItem`, `PartyAddress`, `VATSummary`, `PaymentTerms`, `DocumentValidationResult`, `TaxIdentifier` (validadores de IDs fiscais por pais: IT, FR, DE, BE, ES, PL, BR), `TaxIdValidationResult` |
+| `en16931` | `EN16931Invoice`, `EN16931Party`, `EN16931LineItem`, `EN16931Address`, `EN16931Tax`, `EN16931AllowanceCharge`, `EN16931PaymentMeans` |
+| `credit_note` | `EN16931CreditNote` (codigos tipo 381/383/384/385), `BillingReference` |
+| `wire_formats` | `EN16931UBLSerializer`, `EN16931UBLParser`, `EN16931CIISerializer`, `EN16931CIIParser`, `UBL_NSMAP`, `CII_NSMAP` |
+| `convert` | `Syntax` (UBL, CII), `convert_wire_format` (deteccao automatica da origem, serializacao para o destino) |
+| `base_server` | `EInvoicingMCPServer`, `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BaseLifecycleManager`, `BasePartyValidator`, `SubmitResult`, `assert_not_read_only`, `scrub` |
+| `http_client` | `BaseEInvoicingClient` (OAuth2, mTLS, bearer, API key, nenhum), `OAuthConfig`, `OAuthValues`, `TokenCache`, `AuthMode` |
+| `peppol` | `PeppolSMPClient`, `PeppolParticipantId`, `PeppolServiceInfo`, `PeppolLookupResult`, `PeppolEnvironment`, `PEPPOL_BIS_BILLING_30` |
+| `schematron` | `SchematronValidator`, `BaseStructuredValidator`, `BaseXSDValidator`, `BaseJSONValidator`, `ValidationMessage`, `ValidationResult` |
+| `digital_signature` | `BaseDocumentSigner`, `XAdESEPESSigner`, `XAdESSignerConfig`, `XMLDSigSigner`, `XMLDSigSignerConfig` |
+| `endpoints` | `BaseEnvironmentEndpoints`, `EndpointSet`, `EndpointEnvironment` (roteamento de URL sandbox/producao) |
+| `routing` | `RoutingIdentifier` (validadores estaticos: `validate_de_leitweg`), `RoutingIdValidationResult` |
+| `profile_registry` | `ProfileEntry`, `ProfileRegistry`, `profile_registry`, `set_profile_registry` |
+| `pdf` | `PDFEmbedder` (incorporacao XML em PDF/A-3) |
+| `qr` | `generate_qr_png_base64` |
+| `xml_utils` | `format_amount`, `format_quantity`, `xml_element`, `xml_optional`, `validate_date_iso`, `validate_iban`, `resolve_xml_input`, `mark_untrusted`, `mark_untrusted_fields`, `filter_empty_values`, `format_error` |
+| `download_rules` | `DownloadSpec`, `download_artefacts` |
+| `testing` | `InvoiceFixtureFactory` (fixtures pytest compartilhadas) |
+| `audit_log` | `AuditLog`, `AuditAction`, `get_audit_log` |
+| `confirmation` | `ConfirmationGate`, `ConfirmationStore` (gate de validacao humana) |
+| `exceptions` | `EInvoicingError`, `ValidationError`, `PartyValidationError`, `XSDValidationError`, `SchematronValidationError`, `DocumentGenerationError`, `AuthenticationError`, `PlatformError` |
+| `logging_utils` | `setup_logging`, `get_logger` |
+| `audit` | Framework de auditoria de conformidade: `AuditReport`, `CheckResult`, `CheckFinding`, constantes de severidade, `make_report`, `render_summary_table`, `parse_audit_args`, `run_check_core_coverage`, `run_check_version_compatibility`, `run_check_known_shared_helpers`, `TaxRate`, `load_rates` (extra opcional `[audit]`) |
 
-## Instalação
+## Instalacao
 
 ```bash
 pip install mcp-einvoicing-core
 ```
 
-Este pacote **não possui dependências específicas de país**. `lxml` (necessário para validação XSD
-na IT e futuros países) é declarado por cada pacote de país individualmente.
+Para o framework de auditoria de conformidade (utilizado pela CI dos pacotes por pais):
+
+```bash
+pip install mcp-einvoicing-core[audit]
+```
 
 ## Arquitetura
 
+Os pacotes por pais herdam das abstracoes do core e registram suas ferramentas em um servidor MCP compartilhado ou independente:
+
 ```
-mcp-einvoicing-core           ← este pacote
-  ├── BaseDocumentGenerator   ← abstrato: generate(InvoiceDocument) → str
-  ├── BaseDocumentValidator   ← abstrato: validate(xml) → DocumentValidationResult
-  ├── BaseDocumentParser      ← abstrato: parse(xml) → dict
-  ├── BaseLifecycleManager    ← abstrato: submit/search/get_status (HTTP assíncrono)
-  ├── BasePartyValidator      ← abstrato: validate_seller/buyer/tax_id
-  ├── BaseEInvoicingClient    ← concreto: HTTP assíncrono + OAuth2/sem autenticação/token
-  ├── InvoiceDocument (Pydantic)  ← modelo de dados compartilhado
-  └── EInvoicingMCPServer     ← registro de plugins sobre FastMCP
-
-mcp-facture-electronique-fr   ← adaptador de país (FR)
-  ├── PAConfig(OAuthConfig)
-  ├── FlowClient(BaseEInvoicingClient)      ← OAuth2, XP Z12-013 Anexo A
-  ├── DirectoryClient(BaseEInvoicingClient) ← OAuth2, XP Z12-013 Anexo B
-  └── FrLifecycleManager(BaseLifecycleManager)
-
-mcp-fattura-elettronica-it    ← adaptador de país (IT)
-  ├── ItalyPartyValidator(BasePartyValidator)   ← Partita IVA módulo 10
-  ├── FatturaGenerator(BaseDocumentGenerator)   ← FatturaPA XML v1.6.1
-  ├── FatturaValidator(BaseDocumentValidator)   ← lxml XSD v1.6.1
-  └── FatturaParser(BaseDocumentParser)         ← lxml xpath
+mcp-einvoicing-core
+  ├── EN16931Invoice / InvoiceDocument  ← modelos de fatura canonicos
+  ├── EN16931CreditNote                 ← nota de credito (codigos tipo 381/383/384/385)
+  ├── EN16931UBL/CII Serializer/Parser  ← ida e volta de formato wire
+  ├── convert_wire_format               ← conversao CII ↔ UBL
+  ├── BaseDocumentGenerator/Validator/Parser/LifecycleManager
+  ├── BaseEInvoicingClient              ← HTTP assincrono (OAuth2/mTLS/bearer/API key)
+  ├── PeppolSMPClient                   ← lookup de participante via SMP/SML
+  ├── BaseDocumentSigner                ← XAdES-EPES / XMLDSig
+  ├── BaseEnvironmentEndpoints          ← roteamento de URL sandbox/producao
+  ├── RoutingIdentifier                 ← validacao de IDs de roteamento por pais
+  ├── EInvoicingMCPServer               ← registro de plugins sobre FastMCP
+  └── Framework de auditoria            ← verificacoes de conformidade por pacote
 ```
 
-## Padrão de registro de plugins
+## Pacotes por pais
 
-Os pacotes de país registram suas ferramentas em uma instância FastMCP compartilhada ou independente:
+| Pais | Pacote | Padrao |
+|------|--------|--------|
+| Franca | [`mcp-facture-electronique-fr`](https://github.com/cmendezs/mcp-facture-electronique-fr) | NF XP Z12-012 / NF XP Z12-013 / Factur-X / UBL 2.1 / CII |
+| Alemanha | [`mcp-einvoicing-de`](https://github.com/cmendezs/mcp-einvoicing-de) | ZUGFeRD 2.x / XRechnung 3.x |
+| Belgica | [`mcp-einvoicing-be`](https://github.com/cmendezs/mcp-einvoicing-be) | Peppol BIS 3.0 / PINT-BE |
+| Italia | [`mcp-fattura-elettronica-it`](https://github.com/cmendezs/mcp-fattura-elettronica-it) | FatturaPA / SDI |
+| Polonia | [`mcp-ksef-pl`](https://github.com/cmendezs/mcp-ksef-pl) | KSeF FA(3) / FA(2) / Peppol BIS 3.0 |
+| Espanha | [`mcp-facturacion-electronica-es`](https://github.com/cmendezs/mcp-facturacion-electronica-es) | Factura-e / VeriFactu / SII / FACe |
+| Brasil | [`mcp-nfe-br`](https://github.com/cmendezs/mcp-nfe-br) | NF-e / NFC-e (modelo 55/65, schema 4.00) / NFS-e Nacional |
+
+## Padrao de registro de plugins
+
+Os pacotes por pais registram suas ferramentas em uma instancia FastMCP compartilhada ou independente:
 
 ```python
-# Independente (server.py existente, sem alterações necessárias)
+# Independente
 from fastmcp import FastMCP
-mcp = FastMCP(name="mcp-fattura-elettronica-it", instructions="…")
+mcp = FastMCP(name="mcp-fattura-elettronica-it", instructions="...")
 register_header_tools(mcp)
 register_body_tools(mcp)
 register_global_tools(mcp)
 
-# Multi-país (EInvoicingMCPServer opcional)
+# Multi-pais (EInvoicingMCPServer opcional)
 from mcp_einvoicing_core import EInvoicingMCPServer
-server = EInvoicingMCPServer(name="mcp-einvoicing-eu", instructions="…")
+server = EInvoicingMCPServer(name="mcp-einvoicing-eu", instructions="...")
 server.register_plugin(register_header_tools, "it-header")
 server.register_plugin(register_flow_tools, "fr-flow")
 server.run()
@@ -86,49 +112,10 @@ server.run()
 
 ## Compatibilidade com Claude Desktop / Cursor / Kiro
 
-As configurações existentes para `mcp-facture-electronique-fr` e `mcp-fattura-elettronica-it`
-**não requerem alterações**: nomes de ferramentas, assinaturas, variáveis de ambiente e pontos de entrada
+As configuracoes existentes para os pacotes por pais **nao requerem alteracoes**:
+nomes de ferramentas, assinaturas, variaveis de ambiente e pontos de entrada
 (`server:main`) foram totalmente preservados.
 
-## Compatibilidade com o roadmap
-
-O backlog aberto e o planejamento de sprints por país estão em [`context-library/roadmap-2026.md`](../context-library/roadmap-2026.md). A tabela abaixo reflete a separação canônica de árvores de fatura EN 16931 e não-EN 16931 (ver `CLAUDE.md`).
-
-| País | Versão | Padrão | Árvore de fatura | Transporte |
-|------|--------|--------|------------------|------------|
-| [🇧🇪 BE](https://github.com/cmendezs/mcp-einvoicing-be) | v0.2.0 publicado | Peppol BIS 3.0 / PINT-BE | `BEInvoice(EN16931Invoice)` | Rede Peppol (AS4) |
-| [🇫🇷 FR](https://github.com/cmendezs/mcp-facture-electronique-fr) | v0.4.0 publicado | NF XP Z12-012 / NF XP Z12-013 / Factur-X / UBL 2.1 / CII | `EN16931Invoice` (alvo — ver FR-SC-1) | Híbrido / PPF + PDP |
-| [🇩🇪 DE](https://github.com/cmendezs/mcp-einvoicing-de) | v0.3.1 publicado | ZUGFeRD 2.x / XRechnung 3.x | `ZUGFeRDInvoice(EN16931Invoice)` | Direto + lookup de participante Peppol |
-| [🇮🇹 IT](https://github.com/cmendezs/mcp-fattura-elettronica-it) | v0.2.5 publicado | FatturaPA v1.2.x | EN 16931 (CIUS italiano) | Direto / SdI |
-| [🇵🇱 PL](https://github.com/cmendezs/mcp-ksef-pl) | v0.2.2 publicado | KSeF FA(3) / FA(2) / Peppol BIS 3.0 | `KSeFInvoice(EN16931Invoice)` | API direta + Peppol |
-| [🇪🇸 ES](https://github.com/cmendezs/mcp-facturacion-electronica-es) | v0.2.0 publicado | Factura-e / VeriFactu / SII / FACe | Dupla: `EN16931Invoice` (Factura-e) + `InvoiceDocument` (VeriFactu, SII) | API direta (mTLS / OAuth2) |
-| [🇧🇷 BR](https://github.com/cmendezs/mcp-nfe-br) | v0.5.2 publicado | NF-e / NFC-e (modelo 55/65, schema 4.00); NFS-e Nacional v1.01 | `BRInvoice(InvoiceDocument)` + `NFSeDocument(InvoiceDocument)` | mTLS direto / SEFAZ + Gov.br OAuth2 / ADN |
-
-Países no radar de planejamento (ainda não scaffoldados — ver a seção "New country packages" em [`roadmap-2026.md`](../context-library/roadmap-2026.md)): IN, MX, RO, CO, CL, PE, VN, EG, HU, GR, KR, ID, EC, UY (categoria 1 — clearance totalmente em produção); SG, MY, SA, NG, IL, PY, PH (categoria 2 — rollout em 2026); UAE, OM, SK, PT, DK, ZA (categoria 3 — transição ou final de 2026/2027). As jurisdições UE/APAC/AN voluntárias são da categoria 4.
-
-## Notas de arquitetura
-
-### Interface de transporte
-
-Conforme o número de adaptadores cresce, uma abstração `TransportInterface` no core evitará duplicação entre países que compartilham a mesma camada de transporte. Cobertura atual dos adaptadores:
-
-| Transporte | Países |
-|------------|--------|
-| **API direta** (clearance / reporting / B2G) | FR (Chorus Pro + PDP/PPF), ES (AEAT + FACe), PL (KSeF), IT (SdI planejado) |
-| **mTLS para webservice governamental** | BR (SEFAZ), ES (VeriFactu, SII) |
-| **Rede Peppol (AS4)** | BE, DE (planejado via DE-PEPPOL-1, v0.5.0) |
-| **OAuth2 para hub governamental** | BR (Gov.br ADN para NFS-e Nacional) |
-
-Uma `TransportInterface` dedicada é rastreada como trabalho arquitetural; hoje cada adaptador de país estende diretamente `BaseEInvoicingClient` com o modo de autenticação de que precisa (`AuthMode.OAUTH2_CLIENT_CREDENTIALS`, `AuthMode.MTLS`, `AuthMode.BEARER_TOKEN`, `AuthMode.NONE`).
-
-### Formatos wire EN 16931
-
-O pacote core fornece `EN16931UBLSerializer`/`EN16931UBLParser` e `EN16931CIISerializer`/`EN16931CIIParser` (desde a v1.3.0) para que os adaptadores de países da UE não reimplementem a serialização UBL 2.1 ou CII D16B. Os novos pacotes de país da UE devem estender essas classes em vez de escrever uma pilha XML paralela.
-
-### ViDA / DRR (2030)
-
-Até julho de 2030, todos os sistemas nacionais devem se alinhar aos Digital Reporting Requirements (DRR) da UE para transações transfronteiriças. Utilizar **EN 16931** como raiz canônica de fatura da UE (`EN16931Invoice`) já prepara o lado do envelope de fatura para o futuro: os adaptadores de país traduzem `EN16931Invoice` para o formato wire local, e não o contrário. O próprio ciclo de vida de envio de DRR (envio em tempo real de dados de transação estruturados para um registro central da UE, emissão de IDs de transação, reconciliação 4-corner transfronteiriça) não está modelado no core hoje e é rastreado como workstream separado em [`roadmap-2026.md`](../context-library/roadmap-2026.md); não equiparar "suporta EN 16931 / Peppol" com "suporta ViDA DRR".
-
-## Licença
+## Licenca
 
 Apache 2.0, consulte [LICENSE](LICENSE).

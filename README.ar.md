@@ -10,22 +10,41 @@
 
 **المواضيع:** `mcp` `mcp-server` `e-invoicing` `electronic-invoicing` `python` `fastmcp` `peppol` `en16931` `ubl` `fatturapa` `xp-z12-013` `nfe` `xml` `base-library`
 
-الحزمة الأساسية لخوادم MCP الخاصة بالفوترة الإلكترونية.
+الحزمة الاساسية لخوادم MCP الخاصة بالفوترة الالكترونية.
 
-توفر هذه الحزمة الفئات الأساسية المجردة، ونماذج Pydantic المشتركة، وأدوات XML المساعدة، وعميل HTTP، بحيث تتشارك الحزم الخاصة بكل بلد (`mcp-facture-electronique-fr`، `mcp-fattura-elettronica-it`، `mcp-nfe-br`، ...) أساسا موحدا دون تكرار الكود.
+توفر نماذج Pydantic مشتركة، وشجرة فواتير EN 16931، ومسلسلات UBL/CII،
+وعميل HTTP يدعم OAuth2، وبحث SMP في Peppol، وبدائيات توقيع رقمي، واطار عمل
+تدقيق امتثال، بحيث تتشارك الحزم الخاصة بكل بلد اساسا موحدا دون تكرار الكود.
 
 ---
 
 ## ما توفره هذه الحزمة
 
-| الوحدة | المحتويات | تستخدمها |
-|--------|----------|---------|
-| `models.py` | `InvoiceParty`, `InvoiceLineItem`, `VATSummary`, `PaymentTerms`, `InvoiceDocument`, `DocumentValidationResult` | IT (إنشاء فواتير منظمة)، مستقبلا BE/PL/DE/ES |
-| `base_server.py` | `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BaseLifecycleManager`, `BasePartyValidator`, `EInvoicingMCPServer` | جميع محولات البلدان |
-| `xml_utils.py` | `format_amount`, `format_quantity`, `validate_date_iso`, `validate_iban`, `xml_element`, `xml_optional`, `format_error`, `filter_empty_values` | IT (مستخرجة حرفيا)، الصيغ المستقبلية المبنية على XML |
-| `http_client.py` | `TokenCache`, `OAuthConfig`, `BaseEInvoicingClient` (OAuth2 + بدون مصادقة) | FR (مستخرجة حرفيا)، البلدان المستقبلية المعتمدة على API |
-| `exceptions.py` | `EInvoicingError`, `ValidationError`, `PartyValidationError`, `XSDValidationError`, `DocumentGenerationError`, `AuthenticationError`, `PlatformError` | جميع محولات البلدان |
-| `logging_utils.py` | `setup_logging`, `get_logger` | جميع محولات البلدان |
+| الوحدة | المحتويات |
+|--------|----------|
+| `models` | `InvoiceDocument`, `InvoiceParty`, `InvoiceLineItem`, `PartyAddress`, `VATSummary`, `PaymentTerms`, `DocumentValidationResult`, `TaxIdentifier` (مدققات ارقام ضريبية حسب البلد: IT, FR, DE, BE, ES, PL, BR), `TaxIdValidationResult` |
+| `en16931` | `EN16931Invoice`, `EN16931Party`, `EN16931LineItem`, `EN16931Address`, `EN16931Tax`, `EN16931AllowanceCharge`, `EN16931PaymentMeans` |
+| `credit_note` | `EN16931CreditNote` (رموز النوع 381/383/384/385), `BillingReference` |
+| `wire_formats` | `EN16931UBLSerializer`, `EN16931UBLParser`, `EN16931CIISerializer`, `EN16931CIIParser`, `UBL_NSMAP`, `CII_NSMAP` |
+| `convert` | `Syntax` (UBL, CII), `convert_wire_format` (كشف تلقائي للمصدر، تسلسل الى الهدف) |
+| `base_server` | `EInvoicingMCPServer`, `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BaseLifecycleManager`, `BasePartyValidator`, `SubmitResult`, `assert_not_read_only`, `scrub` |
+| `http_client` | `BaseEInvoicingClient` (OAuth2, mTLS, bearer, مفتاح API, بدون), `OAuthConfig`, `OAuthValues`, `TokenCache`, `AuthMode` |
+| `peppol` | `PeppolSMPClient`, `PeppolParticipantId`, `PeppolServiceInfo`, `PeppolLookupResult`, `PeppolEnvironment`, `PEPPOL_BIS_BILLING_30` |
+| `schematron` | `SchematronValidator`, `BaseStructuredValidator`, `BaseXSDValidator`, `BaseJSONValidator`, `ValidationMessage`, `ValidationResult` |
+| `digital_signature` | `BaseDocumentSigner`, `XAdESEPESSigner`, `XAdESSignerConfig`, `XMLDSigSigner`, `XMLDSigSignerConfig` |
+| `endpoints` | `BaseEnvironmentEndpoints`, `EndpointSet`, `EndpointEnvironment` (توجيه عناوين URL للتجربة/الانتاج) |
+| `routing` | `RoutingIdentifier` (مدققات ثابتة: `validate_de_leitweg`), `RoutingIdValidationResult` |
+| `profile_registry` | `ProfileEntry`, `ProfileRegistry`, `profile_registry`, `set_profile_registry` |
+| `pdf` | `PDFEmbedder` (تضمين XML في PDF/A-3) |
+| `qr` | `generate_qr_png_base64` |
+| `xml_utils` | `format_amount`, `format_quantity`, `xml_element`, `xml_optional`, `validate_date_iso`, `validate_iban`, `resolve_xml_input`, `mark_untrusted`, `mark_untrusted_fields`, `filter_empty_values`, `format_error` |
+| `download_rules` | `DownloadSpec`, `download_artefacts` |
+| `testing` | `InvoiceFixtureFactory` (تجهيزات pytest مشتركة) |
+| `audit_log` | `AuditLog`, `AuditAction`, `get_audit_log` |
+| `confirmation` | `ConfirmationGate`, `ConfirmationStore` (بوابة تحقق بشري) |
+| `exceptions` | `EInvoicingError`, `ValidationError`, `PartyValidationError`, `XSDValidationError`, `SchematronValidationError`, `DocumentGenerationError`, `AuthenticationError`, `PlatformError` |
+| `logging_utils` | `setup_logging`, `get_logger` |
+| `audit` | اطار عمل تدقيق الامتثال: `AuditReport`, `CheckResult`, `CheckFinding`, ثوابت الشدة, `make_report`, `render_summary_table`, `parse_audit_args`, `run_check_core_coverage`, `run_check_version_compatibility`, `run_check_known_shared_helpers`, `TaxRate`, `load_rates` (اضافة اختيارية `[audit]`) |
 
 ## التثبيت
 
@@ -33,49 +52,59 @@
 pip install mcp-einvoicing-core
 ```
 
-لا تحتوي هذه الحزمة على **أي تبعيات خاصة ببلد معين**. يتم الإعلان عن `lxml` (المطلوبة للتحقق من صحة XSD في IT والبلدان المستقبلية) بواسطة كل حزمة بلد على حدة.
+لاطار عمل تدقيق الامتثال (يستخدمه CI لحزم البلدان):
+
+```bash
+pip install mcp-einvoicing-core[audit]
+```
 
 ## البنية المعمارية
 
+ترث حزم البلدان من تجريدات الحزمة الاساسية وتسجل ادواتها على خادم MCP مشترك او مستقل:
+
 ```
-mcp-einvoicing-core           ← هذه الحزمة
-  ├── BaseDocumentGenerator   ← مجرد: generate(InvoiceDocument) → str
-  ├── BaseDocumentValidator   ← مجرد: validate(xml) → DocumentValidationResult
-  ├── BaseDocumentParser      ← مجرد: parse(xml) → dict
-  ├── BaseLifecycleManager    ← مجرد: submit/search/get_status (HTTP غير متزامن)
-  ├── BasePartyValidator      ← مجرد: validate_seller/buyer/tax_id
-  ├── BaseEInvoicingClient    ← ملموس: HTTP غير متزامن + OAuth2/بدون مصادقة/رمز
-  ├── InvoiceDocument (Pydantic)  ← نموذج بيانات مشترك
-  └── EInvoicingMCPServer     ← سجل إضافات يغلف FastMCP
-
-mcp-facture-electronique-fr   ← محول بلد (FR)
-  ├── PAConfig(OAuthConfig)
-  ├── FlowClient(BaseEInvoicingClient)      ← OAuth2, XP Z12-013 الملحق A
-  ├── DirectoryClient(BaseEInvoicingClient) ← OAuth2, XP Z12-013 الملحق B
-  └── FrLifecycleManager(BaseLifecycleManager)
-
-mcp-fattura-elettronica-it    ← محول بلد (IT)
-  ├── ItalyPartyValidator(BasePartyValidator)   ← Partita IVA modulo-10
-  ├── FatturaGenerator(BaseDocumentGenerator)   ← FatturaPA XML v1.6.1
-  ├── FatturaValidator(BaseDocumentValidator)   ← lxml XSD v1.6.1
-  └── FatturaParser(BaseDocumentParser)         ← lxml xpath
+mcp-einvoicing-core
+  ├── EN16931Invoice / InvoiceDocument  ← نماذج الفاتورة القياسية
+  ├── EN16931CreditNote                 ← اشعار دائن (رموز النوع 381/383/384/385)
+  ├── EN16931UBL/CII Serializer/Parser  ← ذهاب وعودة لصيغة الاسلاك
+  ├── convert_wire_format               ← تحويل CII ↔ UBL
+  ├── BaseDocumentGenerator/Validator/Parser/LifecycleManager
+  ├── BaseEInvoicingClient              ← HTTP غير متزامن (OAuth2/mTLS/bearer/مفتاح API)
+  ├── PeppolSMPClient                   ← بحث عن مشارك عبر SMP/SML
+  ├── BaseDocumentSigner                ← XAdES-EPES / XMLDSig
+  ├── BaseEnvironmentEndpoints          ← توجيه عناوين URL للتجربة/الانتاج
+  ├── RoutingIdentifier                 ← التحقق من معرفات التوجيه حسب البلد
+  ├── EInvoicingMCPServer               ← سجل اضافات يغلف FastMCP
+  └── اطار عمل التدقيق                  ← فحوصات امتثال لكل حزمة
 ```
 
-## نمط تسجيل الإضافات
+## حزم البلدان
 
-تسجل حزم البلدان أدواتها على مثيل FastMCP مشترك أو مستقل:
+| البلد | الحزمة | المعيار |
+|-------|--------|---------|
+| فرنسا | [`mcp-facture-electronique-fr`](https://github.com/cmendezs/mcp-facture-electronique-fr) | NF XP Z12-012 / NF XP Z12-013 / Factur-X / UBL 2.1 / CII |
+| المانيا | [`mcp-einvoicing-de`](https://github.com/cmendezs/mcp-einvoicing-de) | ZUGFeRD 2.x / XRechnung 3.x |
+| بلجيكا | [`mcp-einvoicing-be`](https://github.com/cmendezs/mcp-einvoicing-be) | Peppol BIS 3.0 / PINT-BE |
+| ايطاليا | [`mcp-fattura-elettronica-it`](https://github.com/cmendezs/mcp-fattura-elettronica-it) | FatturaPA / SDI |
+| بولندا | [`mcp-ksef-pl`](https://github.com/cmendezs/mcp-ksef-pl) | KSeF FA(3) / FA(2) / Peppol BIS 3.0 |
+| اسبانيا | [`mcp-facturacion-electronica-es`](https://github.com/cmendezs/mcp-facturacion-electronica-es) | Factura-e / VeriFactu / SII / FACe |
+| البرازيل | [`mcp-nfe-br`](https://github.com/cmendezs/mcp-nfe-br) | NF-e / NFC-e (modelo 55/65, schema 4.00) / NFS-e Nacional |
+
+## نمط تسجيل الاضافات
+
+تسجل حزم البلدان ادواتها على نسخة FastMCP مشتركة او مستقلة:
 
 ```python
-# مستقل (server.py الحالي، لا يتطلب تغييرات)
+# مستقل
 from fastmcp import FastMCP
-mcp = FastMCP(name="mcp-fattura-elettronica-it", instructions="…")
+mcp = FastMCP(name="mcp-fattura-elettronica-it", instructions="...")
 register_header_tools(mcp)
 register_body_tools(mcp)
 register_global_tools(mcp)
 
 # متعدد البلدان (EInvoicingMCPServer اختياري)
 from mcp_einvoicing_core import EInvoicingMCPServer
-server = EInvoicingMCPServer(name="mcp-einvoicing-eu", instructions="…")
+server = EInvoicingMCPServer(name="mcp-einvoicing-eu", instructions="...")
 server.register_plugin(register_header_tools, "it-header")
 server.register_plugin(register_flow_tools, "fr-flow")
 server.run()
@@ -83,46 +112,8 @@ server.run()
 
 ## التوافق مع Claude Desktop / Cursor / Kiro
 
-لا تتطلب الإعدادات الحالية لـ `mcp-facture-electronique-fr` و `mcp-fattura-elettronica-it` **أي تغييرات**: أسماء الأدوات، والتوقيعات، ومتغيرات البيئة، ونقاط الدخول (`server:main`) محفوظة بالكامل.
-
-## خريطة التوافق
-
-التراكم المفتوح والتخطيط لكل بلد موجودان في [`context-library/roadmap-2026.md`](../context-library/roadmap-2026.md). يعكس الجدول أدناه الفصل القانوني بين أشجار الفواتير وفق EN 16931 وتلك التي ليست وفق EN 16931 (انظر `CLAUDE.md`).
-
-| البلد | الإصدار | المعيار | شجرة الفاتورة | النقل |
-|-------|---------|---------|---------------|-------|
-| [🇧🇪 BE](https://github.com/cmendezs/mcp-einvoicing-be) | v0.2.0 منشور | Peppol BIS 3.0 / PINT-BE | `BEInvoice(EN16931Invoice)` | شبكة Peppol (AS4) |
-| [🇫🇷 FR](https://github.com/cmendezs/mcp-facture-electronique-fr) | v0.4.0 منشور | NF XP Z12-012 / NF XP Z12-013 / Factur-X / UBL 2.1 / CII | `EN16931Invoice` (الهدف — انظر FR-SC-1) | هجين / PPF + PDP |
-| [🇩🇪 DE](https://github.com/cmendezs/mcp-einvoicing-de) | v0.3.1 منشور | ZUGFeRD 2.x / XRechnung 3.x | `ZUGFeRDInvoice(EN16931Invoice)` | مباشر + lookup للمشارك في Peppol |
-| [🇮🇹 IT](https://github.com/cmendezs/mcp-fattura-elettronica-it) | v0.2.5 منشور | FatturaPA v1.2.x | EN 16931 (CIUS الإيطالي) | مباشر / SdI |
-| [🇵🇱 PL](https://github.com/cmendezs/mcp-ksef-pl) | v0.2.2 منشور | KSeF FA(3) / FA(2) / Peppol BIS 3.0 | `KSeFInvoice(EN16931Invoice)` | API مباشر + Peppol |
-| [🇪🇸 ES](https://github.com/cmendezs/mcp-facturacion-electronica-es) | v0.2.0 منشور | Factura-e / VeriFactu / SII / FACe | مزدوج: `EN16931Invoice` (Factura-e) + `InvoiceDocument` (VeriFactu, SII) | API مباشر (mTLS / OAuth2) |
-| [🇧🇷 BR](https://github.com/cmendezs/mcp-nfe-br) | v0.5.2 منشور | NF-e / NFC-e (modelo 55/65, schema 4.00); NFS-e Nacional v1.01 | `BRInvoice(InvoiceDocument)` + `NFSeDocument(InvoiceDocument)` | mTLS مباشر / SEFAZ + Gov.br OAuth2 / ADN |
-
-البلدان على رادار التخطيط (لم يتم scaffold لها بعد — انظر قسم "New country packages" في [`roadmap-2026.md`](../context-library/roadmap-2026.md)): IN, MX, RO, CO, CL, PE, VN, EG, HU, GR, KR, ID, EC, UY (الفئة 1 — تصفية تعمل بالكامل)؛ SG, MY, SA, NG, IL, PY, PH (الفئة 2 — قيد النشر في 2026)؛ UAE, OM, SK, PT, DK, ZA (الفئة 3 — مرحلة انتقالية أو أواخر 2026/2027). تخضع الولايات القضائية الطوعية في UE/APAC/NA للفئة 4.
-
-## ملاحظات معمارية
-
-### واجهة النقل
-
-مع تزايد عدد المحولات، سيمنع تجريد `TransportInterface` في الحزمة الأساسية التكرار عبر البلدان التي تتشارك طبقة النقل نفسها. التغطية الحالية للمحولات:
-
-| النقل | البلدان |
-|-------|---------|
-| **API مباشر** (تصفية / إبلاغ / B2G) | FR (Chorus Pro + PDP/PPF), ES (AEAT + FACe), PL (KSeF), IT (SdI مخطط) |
-| **mTLS إلى خدمة ويب حكومية** | BR (SEFAZ), ES (VeriFactu, SII) |
-| **شبكة Peppol (AS4)** | BE, DE (مخطط عبر DE-PEPPOL-1, v0.5.0) |
-| **OAuth2 إلى محور حكومي** | BR (Gov.br ADN لـ NFS-e Nacional) |
-
-تتم متابعة `TransportInterface` المخصصة كعمل معماري؛ اليوم يقوم كل محول بلد بتوسيع `BaseEInvoicingClient` مباشرة بوضع المصادقة الذي يحتاجه (`AuthMode.OAUTH2_CLIENT_CREDENTIALS`, `AuthMode.MTLS`, `AuthMode.BEARER_TOKEN`, `AuthMode.NONE`).
-
-### تنسيقات wire الخاصة بـ EN 16931
-
-توفر الحزمة الأساسية `EN16931UBLSerializer`/`EN16931UBLParser` و`EN16931CIISerializer`/`EN16931CIIParser` (منذ v1.3.0) حتى لا يعيد محولات البلدان الأوروبية تنفيذ تسلسل UBL 2.1 أو CII D16B. يجب على حزم البلدان الأوروبية الجديدة توسيع هذه الفئات بدلا من كتابة مكدس XML مواز.
-
-### ViDA / DRR (2030)
-
-بحلول يوليو 2030، يجب أن تتوافق جميع الأنظمة الوطنية مع متطلبات الإبلاغ الرقمي (DRR) للاتحاد الأوروبي للمعاملات العابرة للحدود. إن استخدام **EN 16931** كجذر قانوني لفاتورة الاتحاد الأوروبي (`EN16931Invoice`) يجعل جانب غلاف الفاتورة جاهزا للمستقبل: تترجم محولات البلدان `EN16931Invoice` إلى تنسيق wire المحلي، وليس العكس. أما دورة حياة الإرسال الخاصة بـ DRR ذاتها (الإرسال في الوقت الفعلي لبيانات معاملات منظمة إلى سجل مركزي للاتحاد الأوروبي، إصدار معرّفات معاملات، تسوية 4-corner عابرة للحدود) فهي غير مصاغة في الحزمة الأساسية اليوم ويتم تتبعها كمسار عمل منفصل في [`roadmap-2026.md`](../context-library/roadmap-2026.md)؛ يجب عدم مساواة "يدعم EN 16931 / Peppol" بـ "يدعم ViDA DRR".
+لا تتطلب الاعدادات الحالية لحزم البلدان **اي تغييرات**:
+اسماء الادوات، والتوقيعات، ومتغيرات البيئة، ونقاط الدخول (`server:main`) محفوظة بالكامل.
 
 ## الرخصة
 
