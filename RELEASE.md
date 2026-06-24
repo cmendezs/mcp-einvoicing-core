@@ -35,6 +35,14 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.8.0] - 2026-06-24
+#### Added
+- `BaseEnvironmentEndpoints`, `EndpointSet`, `EndpointEnvironment`: sandbox/production URL routing abstraction for country packages (CORE-URL-1)
+- `EN16931CreditNote`, `BillingReference`: credit note model for type codes 381/383/384/385 with UBL and CII round-trip support (CORE-CN-1)
+- `RoutingIdentifier.validate_de_leitweg`, `RoutingIdValidationResult`: Leitweg-ID format and ISO 7064 MOD 97-10 check digit validation promoted from DE (CORE-LWID-1)
+- `convert_wire_format`, `Syntax`: CII/UBL wire format conversion composing the four EN16931 serializer/parser primitives (CORE-CONV-1)
+- 26 new tests across 4 test files
+
 ### [1.7.0] - 2026-06-21
 #### Added
 - `run_check_known_shared_helpers()` and `KNOWN_SHARED_HELPERS` frozenset: AST-based CHECK 6 that blocks country packages from re-implementing core helpers (compliance audit finding 2.3)
