@@ -30,6 +30,7 @@ audit framework so country-specific packages share a common foundation without d
 | `base_server` | `EInvoicingMCPServer`, `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BaseLifecycleManager`, `BasePartyValidator`, `SubmitResult`, `assert_not_read_only`, `scrub` |
 | `http_client` | `BaseEInvoicingClient` (OAuth2, mTLS, bearer, API key, none), `OAuthConfig`, `OAuthValues`, `TokenCache`, `AuthMode` |
 | `peppol` | `PeppolSMPClient`, `PeppolParticipantId`, `PeppolServiceInfo`, `PeppolLookupResult`, `PeppolEnvironment`, `PEPPOL_BIS_BILLING_30` |
+| `peppol.transport` | `AS4MessageEnvelope`, `AS4TransportClient`, `AS4ReceiptHandler`, `PeppolTransmitter`, `AS4Receipt`, `AS4Credentials` (Peppol AS4 outbound transmission) |
 | `schematron` | `SchematronValidator`, `BaseStructuredValidator`, `BaseXSDValidator`, `BaseJSONValidator`, `ValidationMessage`, `ValidationResult` |
 | `digital_signature` | `BaseDocumentSigner`, `XAdESEPESSigner`, `XAdESSignerConfig`, `XMLDSigSigner`, `XMLDSigSignerConfig` |
 | `endpoints` | `BaseEnvironmentEndpoints`, `EndpointSet`, `EndpointEnvironment` (sandbox/production URL routing) |
@@ -71,6 +72,7 @@ mcp-einvoicing-core
   ├── BaseDocumentGenerator/Validator/Parser/LifecycleManager
   ├── BaseEInvoicingClient              ← async HTTP (OAuth2/mTLS/bearer/API key)
   ├── PeppolSMPClient                   ← participant lookup via SMP/SML
+  ├── PeppolTransmitter                 ← AS4 outbound transmission
   ├── BaseDocumentSigner                ← XAdES-EPES / XMLDSig
   ├── BaseEnvironmentEndpoints          ← sandbox/production URL routing
   ├── RoutingIdentifier                 ← country-specific routing ID validation

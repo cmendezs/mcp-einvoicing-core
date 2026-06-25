@@ -30,6 +30,7 @@ auditoria de conformidade para que os pacotes por pais compartilhem uma base com
 | `base_server` | `EInvoicingMCPServer`, `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BaseLifecycleManager`, `BasePartyValidator`, `SubmitResult`, `assert_not_read_only`, `scrub` |
 | `http_client` | `BaseEInvoicingClient` (OAuth2, mTLS, bearer, API key, nenhum), `OAuthConfig`, `OAuthValues`, `TokenCache`, `AuthMode` |
 | `peppol` | `PeppolSMPClient`, `PeppolParticipantId`, `PeppolServiceInfo`, `PeppolLookupResult`, `PeppolEnvironment`, `PEPPOL_BIS_BILLING_30` |
+| `peppol.transport` | `AS4MessageEnvelope`, `AS4TransportClient`, `AS4ReceiptHandler`, `PeppolTransmitter`, `AS4Receipt`, `AS4Credentials` (transmissao Peppol AS4 de saida) |
 | `schematron` | `SchematronValidator`, `BaseStructuredValidator`, `BaseXSDValidator`, `BaseJSONValidator`, `ValidationMessage`, `ValidationResult` |
 | `digital_signature` | `BaseDocumentSigner`, `XAdESEPESSigner`, `XAdESSignerConfig`, `XMLDSigSigner`, `XMLDSigSignerConfig` |
 | `endpoints` | `BaseEnvironmentEndpoints`, `EndpointSet`, `EndpointEnvironment` (roteamento de URL sandbox/producao) |
@@ -71,6 +72,7 @@ mcp-einvoicing-core
   ├── BaseDocumentGenerator/Validator/Parser/LifecycleManager
   ├── BaseEInvoicingClient              ← HTTP assincrono (OAuth2/mTLS/bearer/API key)
   ├── PeppolSMPClient                   ← lookup de participante via SMP/SML
+  ├── PeppolTransmitter                 ← transmissao AS4 de saida
   ├── BaseDocumentSigner                ← XAdES-EPES / XMLDSig
   ├── BaseEnvironmentEndpoints          ← roteamento de URL sandbox/producao
   ├── RoutingIdentifier                 ← validacao de IDs de roteamento por pais

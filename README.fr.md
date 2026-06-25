@@ -31,6 +31,7 @@ dupliquer le code.
 | `base_server` | `EInvoicingMCPServer`, `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BaseLifecycleManager`, `BasePartyValidator`, `SubmitResult`, `assert_not_read_only`, `scrub` |
 | `http_client` | `BaseEInvoicingClient` (OAuth2, mTLS, bearer, cle API, aucun), `OAuthConfig`, `OAuthValues`, `TokenCache`, `AuthMode` |
 | `peppol` | `PeppolSMPClient`, `PeppolParticipantId`, `PeppolServiceInfo`, `PeppolLookupResult`, `PeppolEnvironment`, `PEPPOL_BIS_BILLING_30` |
+| `peppol.transport` | `AS4MessageEnvelope`, `AS4TransportClient`, `AS4ReceiptHandler`, `PeppolTransmitter`, `AS4Receipt`, `AS4Credentials` (transmission sortante Peppol AS4) |
 | `schematron` | `SchematronValidator`, `BaseStructuredValidator`, `BaseXSDValidator`, `BaseJSONValidator`, `ValidationMessage`, `ValidationResult` |
 | `digital_signature` | `BaseDocumentSigner`, `XAdESEPESSigner`, `XAdESSignerConfig`, `XMLDSigSigner`, `XMLDSigSignerConfig` |
 | `endpoints` | `BaseEnvironmentEndpoints`, `EndpointSet`, `EndpointEnvironment` (routage d'URL sandbox/production) |
@@ -72,6 +73,7 @@ mcp-einvoicing-core
   ├── BaseDocumentGenerator/Validator/Parser/LifecycleManager
   ├── BaseEInvoicingClient              ← HTTP asynchrone (OAuth2/mTLS/bearer/cle API)
   ├── PeppolSMPClient                   ← recherche de participant via SMP/SML
+  ├── PeppolTransmitter                 ← transmission sortante AS4
   ├── BaseDocumentSigner                ← XAdES-EPES / XMLDSig
   ├── BaseEnvironmentEndpoints          ← routage d'URL sandbox/production
   ├── RoutingIdentifier                 ← validation d'identifiants de routage par pays
