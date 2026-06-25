@@ -35,6 +35,17 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.10.0] - 2026-06-25
+#### Added
+- `mcp_einvoicing_core.peppol.transport` subpackage: Peppol AS4 outbound transmission primitives (CORE-AS4-1)
+- `AS4MessageEnvelope`: ebMS3/AS4 SOAP envelope construction for invoice payloads
+- `AS4TransportClient`: HTTP POST client with MIME multipart and X.509 message-level signing
+- `AS4ReceiptHandler`: synchronous AS4 receipt signal message parser
+- `PeppolTransmitter`: convenience wrapper combining SMP lookup, envelope, send, and receipt
+- `AS4Receipt`, `AS4Credentials`: Pydantic models for receipt data and signing credentials
+- Converted `peppol.py` to `peppol/` package (existing import paths unchanged)
+- 10 unit tests for envelope structure, receipt parsing, and credential loading
+
 ### [1.9.0] - 2026-06-24
 #### Added
 - `TaxIdentifier.validate_fr_tva_intra()`: French TVA intracommunautaire number validator (FR-INV-2). Check key algorithm: `(12 + 3 * (SIREN mod 97)) mod 97`
