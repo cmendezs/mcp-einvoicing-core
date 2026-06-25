@@ -45,6 +45,14 @@ from mcp_einvoicing_core.peppol import (
     PeppolServiceInfo,
     PeppolSMPClient,
 )
+from mcp_einvoicing_core.peppol.transport import (
+    AS4Credentials,
+    AS4MessageEnvelope,
+    AS4Receipt,
+    AS4ReceiptHandler,
+    AS4TransportClient,
+    PeppolTransmitter,
+)
 from mcp_einvoicing_core.schematron import (
     BaseJSONValidator,
     BaseStructuredValidator,
@@ -199,6 +207,13 @@ __all__ = [
     "PeppolLookupResult",
     "PeppolSMPClient",
     "PEPPOL_BIS_BILLING_30",
+    # Peppol AS4 transport
+    "AS4Credentials",
+    "AS4MessageEnvelope",
+    "AS4Receipt",
+    "AS4ReceiptHandler",
+    "AS4TransportClient",
+    "PeppolTransmitter",
     # Profile registry
     "ProfileEntry",
     "ProfileRegistry",
