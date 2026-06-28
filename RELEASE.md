@@ -35,6 +35,10 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.11.0] - 2026-06-28
+#### Added
+- Peppol BIS 3.0 schematron rules bundled under `specs/peppol/`: `CEN-EN16931-UBL-3.0.20.sch` and `PEPPOL-EN16931-UBL-3.0.20.sch` (from OpenPeppol tag v3.0.20)
+
 ### [1.10.0] - 2026-06-25
 #### Added
 - `mcp_einvoicing_core.peppol.transport` subpackage: Peppol AS4 outbound transmission primitives (CORE-AS4-1)
