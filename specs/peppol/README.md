@@ -28,7 +28,10 @@ All files sourced from the OpenPeppol AISBL publications portal (`https://docs.p
 | `PEPPOL-EN16931-UBL-3.0.20.sch` | Peppol BIS Billing 3.0 UBL validation rules (Peppol-layer business rules on top of CEN EN 16931) | 3.0.20 | 2026-06-27 |
 | `CEN-EN16931-UBL-3.0.20.sch` | CEN EN 16931 UBL validation rules (core business rules) | 3.0.20 | 2026-06-27 |
 
-Source: `https://github.com/OpenPeppol/peppol-bis-invoice-3/tree/v3.0.20/rules/sch`
+| `stylesheet-ubl.xslt` | XSLT stylesheet for rendering UBL 2.1 invoices to human-readable HTML | 3.0.20 | 2026-06-28 |
+| `BIS-Billing3-Examples.zip` | Official OpenPeppol BIS Billing 3.0 example UBL invoices (golden XML test vectors) | 3.0.20 | 2026-06-28 |
+
+Source: `https://docs.peppol.eu/poacc/billing/3.0/` and `https://github.com/OpenPeppol/peppol-bis-invoice-3/tree/v3.0.20/rules/sch`
 
 The BIS Billing 3.0 specification itself is published as a web document at `https://docs.peppol.eu/poacc/billing/3.0/bis/` (no standalone PDF available).
 
