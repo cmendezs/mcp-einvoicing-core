@@ -21,6 +21,17 @@ All files sourced from the OpenPeppol AISBL publications portal (`https://docs.p
 | `Peppol-EDN-Policy-for-use-of-identifiers-4.4.0-2025-02-06.pdf` | Identifier policy — POLICY 7 DNS hash algorithm (Base32-SHA256), participant ID format, document type and process ID schemes | 4.4.0 | 2026-05-21 |
 | `Peppol-EDN-Business-Message-Envelope-2.0.1-2023-08-17.pdf` | BME 2.0.1 spec — AS4 envelope structure (reference only; BME is out of scope for this library) | 2.0.1 | 2026-05-21 |
 
+## Peppol BIS Billing 3.0 schematron rules
+
+| File | Description | Version | Retrieved |
+|---|---|---|---|
+| `PEPPOL-EN16931-UBL-3.0.20.sch` | Peppol BIS Billing 3.0 UBL validation rules (Peppol-layer business rules on top of CEN EN 16931) | 3.0.20 | 2026-06-27 |
+| `CEN-EN16931-UBL-3.0.20.sch` | CEN EN 16931 UBL validation rules (core business rules) | 3.0.20 | 2026-06-27 |
+
+Source: `https://github.com/OpenPeppol/peppol-bis-invoice-3/tree/v3.0.20/rules/sch`
+
+The BIS Billing 3.0 specification itself is published as a web document at `https://docs.peppol.eu/poacc/billing/3.0/bis/` (no standalone PDF available).
+
 ## Key namespaces
 
 | Prefix | Namespace URI | Used in |
