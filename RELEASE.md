@@ -35,6 +35,13 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.12.0] - 2026-06-29
+#### Added
+- `CAdESSigner` and `CAdESSignerConfig`: CMS/PKCS#7 attached signature (CAdES-BES) for IT FatturaPA .xml.p7m and FR Chorus Pro
+- `BaseArchiveProvider` ABC and `ArchiveMetadata` model in new `mcp_einvoicing_core.archive` module
+- Signer microservice: `algorithm` parameter on `sign` RPC method (xades / cades-bes)
+- `SignerClient.sign()`: `algorithm` keyword argument for CAdES support
+
 ### [1.11.0] - 2026-06-28
 #### Added
 - Peppol BIS 3.0 schematron rules bundled under `specs/peppol/`: `CEN-EN16931-UBL-3.0.20.sch` and `PEPPOL-EN16931-UBL-3.0.20.sch` (from OpenPeppol tag v3.0.20)
