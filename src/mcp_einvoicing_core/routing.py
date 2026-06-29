@@ -6,13 +6,12 @@ value, and error message.
 
 Currently contains:
 - ``validate_de_leitweg``: German Leitweg-ID (BT-10 for XRechnung B2G)
-
-Future additions (when second-package implementations arrive):
-- BE OGM/VCS (gated on [BE-TL-4])
+- ``validate_be_ogm``: Belgian OGM/VCS structured payment reference
 
 Authority references:
 - Leitweg-ID: KoSIT, https://www.xoev.de/publikationen-2316
 - Check-digit algorithm: ISO 7064 MOD 97-10
+- OGM/VCS: Belgian banking standard, modulo-97 check digit
 
 [Inference: mod-97 algorithm matches ISO 7064 MOD 97-10; strip hyphens,
 expand letters, verify numeric_value mod 97 == 1.]
@@ -82,5 +81,44 @@ class RoutingIdentifier:
         return RoutingIdValidationResult(
             valid=True,
             normalized_value=value,
+            error="",
+        )
+
+    @staticmethod
+    def validate_be_ogm(value: str) -> RoutingIdValidationResult:
+        """Validate a Belgian OGM/VCS structured payment reference.
+
+        Accepts both the formatted form (+++xxx/xxxx/xxxcc+++) and bare 12-digit
+        form. The last two digits are the modulo-97 check digits: remainder of
+        the first 10 digits divided by 97, or 97 when the remainder is 0.
+
+        Returns the normalised +++xxx/xxxx/xxxcc+++ form on success.
+        """
+        digits = re.sub(r"[+/\s.\-]", "", value)
+        if not re.fullmatch(r"\d{12}", digits):
+            return RoutingIdValidationResult(
+                valid=False,
+                normalized_value=value,
+                error=(
+                    f"Invalid OGM/VCS reference: {value!r}. Expected 12 digits "
+                    "(with optional +++xxx/xxxx/xxxcc+++ formatting)."
+                ),
+            )
+        base = int(digits[:10])
+        check = int(digits[10:])
+        expected = base % 97 or 97
+        if check != expected:
+            return RoutingIdValidationResult(
+                valid=False,
+                normalized_value=value,
+                error=(
+                    f"Invalid OGM/VCS check digit in {value!r}: "
+                    f"expected {expected:02d}, got {check:02d}."
+                ),
+            )
+        normalized = f"+++{digits[:3]}/{digits[3:7]}/{digits[7:12]}+++"
+        return RoutingIdValidationResult(
+            valid=True,
+            normalized_value=normalized,
             error="",
         )
