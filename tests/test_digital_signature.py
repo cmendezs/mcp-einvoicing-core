@@ -11,6 +11,8 @@ import pytest
 from lxml import etree
 
 from mcp_einvoicing_core.digital_signature import (
+    CAdESSigner,
+    CAdESSignerConfig,
     XAdESEPESSigner,
     XAdESSignerConfig,
     XMLDSigSigner,
@@ -337,3 +339,64 @@ class TestXMLDSigSigner:
         signer = XMLDSigSigner(config)
         with pytest.raises(NotImplementedError):
             signer.verify(NFE_XML)
+
+
+FATTURA_XML = b"""<?xml version="1.0" encoding="UTF-8"?>
+<p:FatturaElettronica xmlns:p="http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2"
+    versione="FPR12">
+  <FatturaElettronicaHeader/>
+  <FatturaElettronicaBody/>
+</p:FatturaElettronica>
+"""
+
+
+class TestCAdESSigner:
+    def test_returns_bytes(self, p12_path: Path) -> None:
+        config = CAdESSignerConfig(cert_path=str(p12_path), cert_password="test")
+        result = CAdESSigner(config).sign(FATTURA_XML)
+        assert isinstance(result, bytes)
+        assert len(result) > len(FATTURA_XML)
+
+    def test_output_is_valid_pkcs7_der(self, p12_path: Path) -> None:
+        from cryptography.hazmat.primitives.serialization import pkcs7
+
+        config = CAdESSignerConfig(cert_path=str(p12_path), cert_password="test")
+        result = CAdESSigner(config).sign(FATTURA_XML)
+        certs = pkcs7.load_der_pkcs7_certificates(result)
+        assert len(certs) >= 1
+
+    def test_signed_output_wraps_original_document(self, p12_path: Path) -> None:
+        config = CAdESSignerConfig(cert_path=str(p12_path), cert_password="test")
+        result = CAdESSigner(config).sign(FATTURA_XML)
+        assert FATTURA_XML in result or b"FatturaElettronica" in result
+
+    def test_no_password_cert(self, p12_path_no_password: Path) -> None:
+        config = CAdESSignerConfig(
+            cert_path=str(p12_path_no_password), cert_password=None
+        )
+        result = CAdESSigner(config).sign(FATTURA_XML)
+        assert isinstance(result, bytes)
+        assert len(result) > 0
+
+    def test_verify_not_implemented(self, p12_path: Path) -> None:
+        config = CAdESSignerConfig(cert_path=str(p12_path), cert_password="test")
+        signer = CAdESSigner(config)
+        with pytest.raises(NotImplementedError, match="CAdES"):
+            signer.verify(b"dummy")
+
+    def test_cleanup_forces_reload(self, p12_path: Path) -> None:
+        config = CAdESSignerConfig(cert_path=str(p12_path), cert_password="test")
+        signer = CAdESSigner(config)
+        signer.sign(FATTURA_XML)
+        assert signer._cert_info is not None
+        signer.cleanup()
+        assert signer._cert_info is None
+        result = signer.sign(FATTURA_XML)
+        assert len(result) > 0
+
+    def test_sign_is_not_mutating(self, p12_path: Path) -> None:
+        config = CAdESSignerConfig(cert_path=str(p12_path), cert_password="test")
+        signer = CAdESSigner(config)
+        original = FATTURA_XML[:]
+        signer.sign(FATTURA_XML)
+        assert FATTURA_XML == original

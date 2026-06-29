@@ -1,10 +1,10 @@
-"""Digital signature ABCs and XAdES-EPES / XML-DSig implementations for e-invoicing XML.
+"""Digital signature ABCs and concrete implementations for e-invoicing XML.
 
 Public API
 ----------
 BaseDocumentSigner
     Abstract base class for all document-level signers. Extend this for any
-    new signing standard (CAdES, PKCS#7, ZATCA stamp, Sello Digital …).
+    new signing standard (ZATCA stamp, Sello Digital, etc.).
 
 XAdESSignerConfig, XAdESEPESSigner
     Concrete XAdES-EPES implementation for ES Facturae and TicketBAI.
@@ -15,11 +15,16 @@ XMLDSigSignerConfig, XMLDSigSigner
     Plain enveloped XML-DSig implementation (not XAdES) for BR NF-e/NFC-e.
     Requires the [xml-sign] optional extra.
 
+CAdESSignerConfig, CAdESSigner
+    CAdES-BES (CMS/PKCS#7) attached signature for IT FatturaPA (.xml.p7m)
+    and FR Chorus Pro. Requires the [xml-sign] optional extra.
+
 Used by:
   ES — Facturae 3.2.2 (Orden EHA/962/2007 signature policy)
   ES — TicketBAI (per-province policy OIDs: Álava, Gipuzkoa, Bizkaia)
   BR — NF-e/NFC-e (enveloped XML-DSig over infNFe, RSA-SHA1 per MOC 7.0
        Table 4-2; CT-e/NFS-e expected to reuse the same signer)
+  IT — FatturaPA (CAdES-BES .xml.p7m or XAdES-BES .xml, per SDI spec v1.8.4 s2.1)
   [NEED: FR Chorus Pro CAdES attachment path — confirm whether XAdES applies]
 """
 
@@ -62,7 +67,8 @@ class BaseDocumentSigner(ABC):
       (ES Facturae / TicketBAI; ETSI TS 101 903)
     - ``XMLDSigSigner`` — plain enveloped XML-DSig, no XAdES qualifying
       properties (BR NF-e/NFC-e; CT-e/NFS-e expected to reuse)
-    - [Future] CAdES — CAdES attached/detached for FR Chorus Pro PDF/A-3
+    - ``CAdESSigner`` — CAdES-BES attached CMS/PKCS#7 signature
+      (IT FatturaPA .xml.p7m; FR Chorus Pro PDF/A-3)
     - [Future] ZATCASigner — ZATCA cryptographic stamp (HSM-backed, SA Phase 2)
     - [Future] SelloDigitalSigner — MX CFDI Sello Digital (RSA-SHA256 + base64)
 
@@ -766,3 +772,127 @@ class XMLDSigSigner(BaseDocumentSigner):
         root.append(sig_elem)
 
         return etree.tostring(root, xml_declaration=True, encoding="UTF-8")
+
+
+# ---------------------------------------------------------------------------
+# CAdES-BES (CMS/PKCS#7 attached signature) — IT FatturaPA and friends
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class CAdESSignerConfig:
+    """Configuration for CAdES-BES (CMS/PKCS#7) signing.
+
+    Produces an attached PKCS#7 SignedData envelope (DER-encoded) that wraps
+    the original document. The output file is conventionally named ``.xml.p7m``
+    for FatturaPA submissions to SDI.
+
+    Attributes:
+        cert_path: Path to the PKCS#12 (.p12 / .pfx) certificate file.
+        cert_password: Passphrase for the PKCS#12 file, or ``None`` if
+            unprotected.
+    """
+
+    cert_path: str
+    cert_password: Optional[str] = None
+
+
+class CAdESSigner(BaseDocumentSigner):
+    """Apply a CAdES-BES attached CMS/PKCS#7 signature to a document.
+
+    The signer wraps the original document bytes inside a PKCS#7 SignedData
+    structure (DER-encoded). SDI accepts this format with the ``.xml.p7m``
+    extension (Specifiche tecniche SDI v1.8.4, section 2.1).
+
+    Example::
+
+        config = CAdESSignerConfig(
+            cert_path="/path/to/cert.p12",
+            cert_password="secret",
+        )
+        signer = CAdESSigner(config)
+        p7m_bytes = signer.sign(xml_bytes)
+        Path("invoice.xml.p7m").write_bytes(p7m_bytes)
+
+    Requires ``cryptography>=42.0.0`` (the ``[xml-sign]`` optional extra).
+    """
+
+    def __init__(
+        self,
+        config: CAdESSignerConfig,
+        *,
+        _preloaded_cert_info: Optional[_CertInfo] = None,
+    ) -> None:
+        self._config = config
+        self._cert_info: Optional[_CertInfo] = _preloaded_cert_info
+
+    def load_credentials(self) -> None:
+        """Load the PKCS#12 certificate and private key into memory."""
+        self._cert_info = _load_pkcs12(
+            self._config.cert_path, self._config.cert_password
+        )
+
+    def _get_cert_info(self) -> _CertInfo:
+        if self._cert_info is None:
+            self.load_credentials()
+        return self._cert_info  # type: ignore[return-value]
+
+    def verify(self, signed_document: bytes) -> bool:
+        """CAdES signature verification is not yet implemented.
+
+        Use an external CMS/PKCS#7 verifier (e.g. OpenSSL, BouncyCastle)
+        to validate signatures produced by this signer.
+
+        Raises:
+            NotImplementedError: Always.
+        """
+        raise NotImplementedError(
+            "CAdES signature verification is not yet implemented in CAdESSigner. "
+            "Use an external CMS verifier (OpenSSL cms -verify, BouncyCastle) to "
+            "validate signatures produced by this signer."
+        )
+
+    def cleanup(self) -> None:
+        """Drop references to the private key and certificate material.
+
+        See :meth:`XAdESEPESSigner.cleanup` for the rationale.
+        """
+        self._cert_info = None
+
+    def sign(self, document: bytes) -> bytes:
+        """Return *document* wrapped in a DER-encoded PKCS#7 SignedData envelope.
+
+        Args:
+            document: Raw document bytes (typically FatturaPA XML) to sign.
+
+        Returns:
+            DER-encoded PKCS#7 SignedData bytes (the ``.p7m`` file content).
+
+        Raises:
+            ImportError: If ``cryptography`` is not installed.
+            ValueError: If the PKCS#12 file contains no certificate or key.
+        """
+        cert_info = self._get_cert_info()
+
+        try:
+            from cryptography.hazmat.primitives import hashes  # noqa: PLC0415
+            from cryptography.hazmat.primitives.serialization import (  # noqa: PLC0415
+                Encoding,
+                pkcs7,
+            )
+            from cryptography.x509 import load_der_x509_certificate  # noqa: PLC0415
+        except ImportError as exc:
+            raise ImportError(
+                "cryptography>=42.0.0 is required for CAdES signing. "
+                "Install: pip install 'mcp-einvoicing-core[xml-sign]'"
+            ) from exc
+
+        cert = load_der_x509_certificate(cert_info.cert_der)
+
+        builder = (
+            pkcs7.PKCS7SignatureBuilder()
+            .set_data(document)
+            .add_signer(cert, cert_info.private_key, hashes.SHA256())  # type: ignore[arg-type]
+        )
+
+        return builder.sign(Encoding.DER, [pkcs7.PKCS7Options.Binary])

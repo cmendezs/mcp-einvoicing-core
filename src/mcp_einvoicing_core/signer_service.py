@@ -28,12 +28,13 @@ Methods
 sign
     params:
         document_b64          Base64-encoded XML bytes to sign.
+        algorithm             (optional) "xades" (default) or "cades-bes".
         signature_policy_id   (optional) XAdES-EPES policy URI.
         signature_policy_hash (optional) Base64-SHA256 of policy doc.
         signature_policy_hash_alg (optional)
         claimed_role          (optional)
     result:
-        signed_b64  Base64-encoded signed XML bytes.
+        signed_b64  Base64-encoded signed bytes (XML for XAdES, DER for CAdES).
 
 mtls_submit
     params:
@@ -147,28 +148,44 @@ class _SignerService:
         except Exception as exc:
             return {"error": f"invalid document_b64: {exc}"}
 
-        from mcp_einvoicing_core.digital_signature import (  # noqa: PLC0415
-            XAdESEPESSigner,
-            XAdESSignerConfig,
-        )
+        algorithm = params.get("algorithm", "xades")
 
-        config = XAdESSignerConfig(
-            cert_path="",  # not used — _preloaded_cert_info bypasses file load
-            cert_password=None,
-            signature_policy_id=params.get("signature_policy_id"),
-            signature_policy_hash=params.get("signature_policy_hash"),
-            signature_policy_hash_alg=params.get(
-                "signature_policy_hash_alg",
-                "http://www.w3.org/2001/04/xmlenc#sha256",
-            ),
-            claimed_role=params.get("claimed_role"),
-        )
-        signer = XAdESEPESSigner(config, _preloaded_cert_info=self._cert_info)
+        if algorithm == "cades-bes":
+            from mcp_einvoicing_core.digital_signature import (  # noqa: PLC0415
+                CAdESSigner,
+                CAdESSignerConfig,
+            )
+
+            config = CAdESSignerConfig(
+                cert_path="",
+                cert_password=None,
+            )
+            signer = CAdESSigner(config, _preloaded_cert_info=self._cert_info)
+            label = "CAdES-BES"
+        else:
+            from mcp_einvoicing_core.digital_signature import (  # noqa: PLC0415
+                XAdESEPESSigner,
+                XAdESSignerConfig,
+            )
+
+            config = XAdESSignerConfig(
+                cert_path="",
+                cert_password=None,
+                signature_policy_id=params.get("signature_policy_id"),
+                signature_policy_hash=params.get("signature_policy_hash"),
+                signature_policy_hash_alg=params.get(
+                    "signature_policy_hash_alg",
+                    "http://www.w3.org/2001/04/xmlenc#sha256",
+                ),
+                claimed_role=params.get("claimed_role"),
+            )
+            signer = XAdESEPESSigner(config, _preloaded_cert_info=self._cert_info)
+            label = "XAdES-EPES"
 
         try:
             signed_bytes = signer.sign(document_bytes)
         except Exception as exc:
-            logger.exception("XAdES signing failed")
+            logger.exception("%s signing failed", label)
             return {"error": f"signing failed: {exc}"}
 
         return {"result": {"signed_b64": base64.b64encode(signed_bytes).decode()}}

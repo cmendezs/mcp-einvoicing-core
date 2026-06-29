@@ -101,22 +101,29 @@ class SignerClient:
         self,
         document_bytes: bytes,
         *,
+        algorithm: str = "xades",
         signature_policy_id: Optional[str] = None,
         signature_policy_hash: Optional[str] = None,
         signature_policy_hash_alg: Optional[str] = None,
         claimed_role: Optional[str] = None,
     ) -> bytes:
-        """Ask the signer process to apply an XAdES-EPES signature.
+        """Ask the signer process to apply a digital signature.
 
         Args:
-            document_bytes: Well-formed XML to sign.
+            document_bytes: Document bytes to sign (XML for XAdES, any for CAdES).
+            algorithm: ``"xades"`` (default) for XAdES-EPES enveloped XML
+                signature, or ``"cades-bes"`` for CAdES-BES CMS/PKCS#7
+                attached signature (.p7m).
             signature_policy_id: XAdES-EPES policy URI (ETSI TS 101 733).
+                Ignored for CAdES.
             signature_policy_hash: Base64-SHA256 of the policy document.
+                Ignored for CAdES.
             signature_policy_hash_alg: Algorithm URI for the policy hash.
-            claimed_role: Optional signer role string.
+                Ignored for CAdES.
+            claimed_role: Optional signer role string. Ignored for CAdES.
 
         Returns:
-            Signed XML bytes.
+            Signed bytes (UTF-8 XML for XAdES, DER-encoded PKCS#7 for CAdES).
 
         Raises:
             SignerError: On connection failure or service-reported error.
@@ -124,6 +131,8 @@ class SignerClient:
         params: dict[str, Any] = {
             "document_b64": base64.b64encode(document_bytes).decode(),
         }
+        if algorithm != "xades":
+            params["algorithm"] = algorithm
         if signature_policy_id:
             params["signature_policy_id"] = signature_policy_id
         if signature_policy_hash:

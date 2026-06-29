@@ -8,6 +8,7 @@ without modifying the base server.
 Country packages import from here and register via EInvoicingMCPServer.register_plugin().
 """
 
+from mcp_einvoicing_core.archive import ArchiveMetadata, BaseArchiveProvider
 from mcp_einvoicing_core.base_server import (
     BaseDocumentGenerator,
     BaseDocumentParser,
@@ -89,6 +90,8 @@ from mcp_einvoicing_core.profile_registry import (
 from mcp_einvoicing_core.testing import InvoiceFixtureFactory
 from mcp_einvoicing_core.digital_signature import (
     BaseDocumentSigner,
+    CAdESSigner,
+    CAdESSignerConfig,
     XAdESEPESSigner,
     XAdESSignerConfig,
     XMLDSigSigner,
@@ -149,9 +152,12 @@ from mcp_einvoicing_core.audit import (
     run_check_version_compatibility,
 )
 
-__version__ = "1.10.0"
+__version__ = "1.12.0"
 
 __all__ = [
+    # Archive provider
+    "ArchiveMetadata",
+    "BaseArchiveProvider",
     # Base classes
     "BaseDocumentGenerator",
     "BaseDocumentParser",
@@ -276,6 +282,8 @@ __all__ = [
     "generate_qr_png_base64",
     # Document signing
     "BaseDocumentSigner",
+    "CAdESSignerConfig",
+    "CAdESSigner",
     "XAdESSignerConfig",
     "XAdESEPESSigner",
     "XMLDSigSignerConfig",
