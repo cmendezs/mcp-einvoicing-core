@@ -61,6 +61,23 @@ class TestValidateBrCnpj:
         assert ok is False
         assert "alphanumeric" in error
 
+    def test_all_equal_digits_rejected(self) -> None:
+        # "00000000000000" passes the standard checksum (DV 00) but must
+        # still be rejected as a pathological all-equal value.
+        ok, error = TaxIdentifier.validate_br_cnpj("00000000000000")
+        assert ok is False
+        assert "repeated character" in error
+
+    def test_all_equal_alphanumeric_base_rejected(self) -> None:
+        base = "AAAAAAAAAAAA"
+        check1 = _br_check_digit(base, _BR_CNPJ_WEIGHTS_1)
+        check2 = _br_check_digit(base + str(check1), _BR_CNPJ_WEIGHTS_2)
+        candidate = f"{base}{check1}{check2}"
+
+        ok, error = TaxIdentifier.validate_br_cnpj(candidate)
+        assert ok is False
+        assert "repeated character" in error
+
 
 class TestValidatePlNip:
     def test_valid_nip(self) -> None:

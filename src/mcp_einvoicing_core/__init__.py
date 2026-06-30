@@ -152,7 +152,7 @@ from mcp_einvoicing_core.audit import (
     run_check_version_compatibility,
 )
 
-__version__ = "1.12.0"
+__version__ = "1.13.1"
 
 __all__ = [
     # Archive provider

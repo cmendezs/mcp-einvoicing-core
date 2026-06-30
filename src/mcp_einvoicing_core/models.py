@@ -181,6 +181,8 @@ class TaxIdentifier(BaseModel):
             return False, "CNPJ check digits must be numeric."
         if not all(c.isdigit() or c.isalpha() for c in base):
             return False, "CNPJ base must be alphanumeric."
+        if len(set(base)) == 1:
+            return False, "CNPJ must not consist of a single repeated character."
 
         check1 = _br_check_digit(base, _BR_CNPJ_WEIGHTS_1)
         check2 = _br_check_digit(base + str(check1), _BR_CNPJ_WEIGHTS_2)
