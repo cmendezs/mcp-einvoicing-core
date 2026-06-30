@@ -35,6 +35,10 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.13.1] - 2026-06-30
+#### Fixed
+- `TaxIdentifier.validate_br_cnpj`: reject an all-equal-character base (root+branch, positions 0-11), mirroring the existing `validate_br_cpf` check (BR-TL-5). Closes the pathological gap where `"00000000000000"` passed the standard mod-11 checksum.
+
 ### [1.12.0] - 2026-06-29
 #### Added
 - `CAdESSigner` and `CAdESSignerConfig`: CMS/PKCS#7 attached signature (CAdES-BES) for IT FatturaPA .xml.p7m and FR Chorus Pro
