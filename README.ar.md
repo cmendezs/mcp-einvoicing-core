@@ -31,7 +31,7 @@
 | `http_client` | `BaseEInvoicingClient` (OAuth2, mTLS, bearer, مفتاح API, بدون), `OAuthConfig`, `OAuthValues`, `TokenCache`, `AuthMode` |
 | `peppol` | `PeppolSMPClient`, `PeppolParticipantId`, `PeppolServiceInfo`, `PeppolLookupResult`, `PeppolEnvironment`, `PEPPOL_BIS_BILLING_30` |
 | `peppol.transport` | `AS4MessageEnvelope`, `AS4TransportClient`, `AS4ReceiptHandler`, `PeppolTransmitter`, `AS4Receipt`, `AS4Credentials` (ارسال صادر عبر Peppol AS4) |
-| `schematron` | `SchematronValidator`, `BaseStructuredValidator`, `BaseXSDValidator`, `BaseJSONValidator`, `ValidationMessage`, `ValidationResult` |
+| `schematron` | `SchematronValidator` (XSLT 1.0), `SaxonSchematronValidator` (XSLT 2.0/3.0، اضافة اختيارية `[xslt2]`)، `load_schematron_validator` (اختيار تلقائي للمحرك)، `get_xslt_version`، `BaseStructuredValidator`، `BaseXSDValidator`، `BaseJSONValidator`، `ValidationMessage`، `ValidationResult` |
 | `digital_signature` | `BaseDocumentSigner`, `XAdESEPESSigner`, `XAdESSignerConfig`, `XMLDSigSigner`, `XMLDSigSignerConfig` |
 | `endpoints` | `BaseEnvironmentEndpoints`, `EndpointSet`, `EndpointEnvironment` (توجيه عناوين URL للتجربة/الانتاج) |
 | `routing` | `RoutingIdentifier` (مدققات ثابتة: `validate_de_leitweg`), `RoutingIdValidationResult` |
@@ -57,6 +57,12 @@ pip install mcp-einvoicing-core
 
 ```bash
 pip install mcp-einvoicing-core[audit]
+```
+
+للتحقق من Schematron باستخدام XSLT 2.0/3.0 (`SaxonSchematronValidator` — ضروري لمجموعات قواعد Schematron التي تستخدم بنى XPath 2.0+، مثل FNFE-MPE Factur-X 1.08 / ZUGFeRD):
+
+```bash
+pip install mcp-einvoicing-core[xslt2]
 ```
 
 ## البنية المعمارية

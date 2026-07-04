@@ -32,7 +32,7 @@ dupliquer le code.
 | `http_client` | `BaseEInvoicingClient` (OAuth2, mTLS, bearer, cle API, aucun), `OAuthConfig`, `OAuthValues`, `TokenCache`, `AuthMode` |
 | `peppol` | `PeppolSMPClient`, `PeppolParticipantId`, `PeppolServiceInfo`, `PeppolLookupResult`, `PeppolEnvironment`, `PEPPOL_BIS_BILLING_30` |
 | `peppol.transport` | `AS4MessageEnvelope`, `AS4TransportClient`, `AS4ReceiptHandler`, `PeppolTransmitter`, `AS4Receipt`, `AS4Credentials` (transmission sortante Peppol AS4) |
-| `schematron` | `SchematronValidator`, `BaseStructuredValidator`, `BaseXSDValidator`, `BaseJSONValidator`, `ValidationMessage`, `ValidationResult` |
+| `schematron` | `SchematronValidator` (XSLT 1.0), `SaxonSchematronValidator` (XSLT 2.0/3.0, extra optionnel `[xslt2]`), `load_schematron_validator` (factory de selection automatique), `get_xslt_version`, `BaseStructuredValidator`, `BaseXSDValidator`, `BaseJSONValidator`, `ValidationMessage`, `ValidationResult` |
 | `digital_signature` | `BaseDocumentSigner`, `XAdESEPESSigner`, `XAdESSignerConfig`, `XMLDSigSigner`, `XMLDSigSignerConfig` |
 | `endpoints` | `BaseEnvironmentEndpoints`, `EndpointSet`, `EndpointEnvironment` (routage d'URL sandbox/production) |
 | `routing` | `RoutingIdentifier` (validateurs statiques : `validate_de_leitweg`), `RoutingIdValidationResult` |
@@ -58,6 +58,12 @@ Pour le framework d'audit de conformite (utilise par la CI des paquets pays) :
 
 ```bash
 pip install mcp-einvoicing-core[audit]
+```
+
+Pour la validation Schematron XSLT 2.0/3.0 (`SaxonSchematronValidator` — necessaire pour les jeux de regles Schematron utilisant des constructions XPath 2.0+, ex. FNFE-MPE Factur-X 1.08 / ZUGFeRD) :
+
+```bash
+pip install mcp-einvoicing-core[xslt2]
 ```
 
 ## Architecture

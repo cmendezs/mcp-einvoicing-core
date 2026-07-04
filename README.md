@@ -31,7 +31,7 @@ audit framework so country-specific packages share a common foundation without d
 | `http_client` | `BaseEInvoicingClient` (OAuth2, mTLS, bearer, API key, none), `OAuthConfig`, `OAuthValues`, `TokenCache`, `AuthMode` |
 | `peppol` | `PeppolSMPClient`, `PeppolParticipantId`, `PeppolServiceInfo`, `PeppolLookupResult`, `PeppolEnvironment`, `PEPPOL_BIS_BILLING_30` |
 | `peppol.transport` | `AS4MessageEnvelope`, `AS4TransportClient`, `AS4ReceiptHandler`, `PeppolTransmitter`, `AS4Receipt`, `AS4Credentials` (Peppol AS4 outbound transmission) |
-| `schematron` | `SchematronValidator`, `BaseStructuredValidator`, `BaseXSDValidator`, `BaseJSONValidator`, `ValidationMessage`, `ValidationResult` |
+| `schematron` | `SchematronValidator` (XSLT 1.0), `SaxonSchematronValidator` (XSLT 2.0/3.0, optional `[xslt2]` extra), `load_schematron_validator` (auto-dispatch factory), `get_xslt_version`, `BaseStructuredValidator`, `BaseXSDValidator`, `BaseJSONValidator`, `ValidationMessage`, `ValidationResult` |
 | `digital_signature` | `BaseDocumentSigner`, `XAdESEPESSigner`, `XAdESSignerConfig`, `XMLDSigSigner`, `XMLDSigSignerConfig` |
 | `endpoints` | `BaseEnvironmentEndpoints`, `EndpointSet`, `EndpointEnvironment` (sandbox/production URL routing) |
 | `routing` | `RoutingIdentifier` (static validators: `validate_de_leitweg`), `RoutingIdValidationResult` |
@@ -57,6 +57,13 @@ For the compliance audit framework (used by country package CI):
 
 ```bash
 pip install mcp-einvoicing-core[audit]
+```
+
+For XSLT 2.0/3.0 Schematron validation (`SaxonSchematronValidator` — needed for Schematron
+rule sets using XPath 2.0+ constructs, e.g. FNFE-MPE Factur-X 1.08 / ZUGFeRD):
+
+```bash
+pip install mcp-einvoicing-core[xslt2]
 ```
 
 ## Architecture
