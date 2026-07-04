@@ -58,9 +58,12 @@ from mcp_einvoicing_core.schematron import (
     BaseJSONValidator,
     BaseStructuredValidator,
     BaseXSDValidator,
+    SaxonSchematronValidator,
     SchematronValidator,
     ValidationMessage,
     ValidationResult,
+    get_xslt_version,
+    load_schematron_validator,
 )
 from mcp_einvoicing_core.http_client import (
     AuthMode,
@@ -206,6 +209,9 @@ __all__ = [
     "ValidationMessage",
     "ValidationResult",
     "SchematronValidator",
+    "SaxonSchematronValidator",
+    "get_xslt_version",
+    "load_schematron_validator",
     # Peppol SMP client
     "PeppolEnvironment",
     "PeppolParticipantId",

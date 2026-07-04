@@ -15,6 +15,22 @@ SchematronValidator
     Concrete XSLT 1.0 / SVRL implementation for EN 16931, Peppol, XRechnung.
     Country packages subclass it and supply their own stylesheet path.
 
+SaxonSchematronValidator
+    Concrete XSLT 2.0/3.0 / SVRL implementation backed by Saxon-HE (``saxonche``,
+    optional extra: ``mcp-einvoicing-core[xslt2]``). Some Schematron-derived
+    stylesheets (notably the FNFE-MPE Factur-X 1.08 / ZUGFeRD rules) use XPath
+    2.0 constructs (``every ... satisfies``, ``string-join``, ``cast as``) that
+    ``lxml``/``libxslt`` (XSLT 1.0 only) cannot compile — this is the gap
+    tracked as DE-XSLT2-1 / FR-XSLT2-1 in context-library/audit-history.md.
+
+get_xslt_version, load_schematron_validator
+    ``get_xslt_version()`` reads the ``version`` attribute off a stylesheet's
+    root element. ``load_schematron_validator()`` uses it to auto-dispatch to
+    ``SchematronValidator`` (1.x) or ``SaxonSchematronValidator`` (2.x/3.x+).
+    Country packages keep their own stylesheet-key → path map and call this
+    factory with the resolved path — core does not know about country-specific
+    keys.
+
 Usage in a country package:
 
     from mcp_einvoicing_core.schematron import SchematronValidator, ValidationResult
@@ -30,6 +46,14 @@ Usage in a country package:
             if path is None:
                 raise ValueError(f"Unknown stylesheet key: {stylesheet_key!r}")
             super().__init__(path)
+
+Auto-dispatch usage (XSLT 1.0 and 2.0+ stylesheets in the same map):
+
+    from mcp_einvoicing_core.schematron import load_schematron_validator
+
+    def get_validator(stylesheet_key: str) -> BaseStructuredValidator:
+        path = _STYLESHEET_MAP[stylesheet_key]
+        return load_schematron_validator(path)
 
 SVRL namespace: http://purl.oclc.org/dsdl/svrl
 Skeleton Schematron: https://github.com/Schematron/schematron
@@ -113,6 +137,8 @@ class BaseStructuredValidator(ABC):
 
     - ``SchematronValidator`` — XSLT 1.0 Schematron / SVRL
       (EN 16931, Peppol BIS 3.0, XRechnung, PINT-*)
+    - ``SaxonSchematronValidator`` — XSLT 2.0/3.0 Schematron / SVRL, via Saxon-HE
+      (FNFE-MPE Factur-X 1.08 / ZUGFeRD; optional ``[xslt2]`` extra)
     - [Future] XSDValidator — XML Schema Definition
       (DE ZUGFeRD, IT FatturaPA, PL KSeF FA(3))
     - [Future] JSONSchemaValidator — JSON Schema Draft 2020-12
@@ -245,25 +271,182 @@ class SchematronValidator(BaseStructuredValidator):
         Override in subclasses to handle non-standard SVRL extensions or
         additional element types (e.g. <svrl:successful-report>).
         """
-        errors: list[ValidationMessage] = []
-        warnings: list[ValidationMessage] = []
+        return _extract_svrl_findings(svrl_doc)
 
-        for failed in svrl_doc.xpath("//svrl:failed-assert", namespaces=_SVRL_NSMAP):
-            flag = (failed.get("flag") or "error").lower()
-            rule_id = failed.get("id") or ""
-            location = failed.get("location") or ""
-            text_el = failed.find(f"{{{_SVRL_NS}}}text")
-            text = (text_el.text or "").strip() if text_el is not None else ""
 
-            msg = ValidationMessage(
-                severity=flag, rule_id=rule_id, location=location, text=text
+def _extract_svrl_findings(svrl_root: etree._Element) -> ValidationResult:
+    """Shared SVRL-to-ValidationResult logic used by every XSLT backend.
+
+    Iterates <svrl:failed-assert> elements. The flag attribute determines
+    severity: "fatal" and "error" → errors list; everything else → warnings.
+    """
+    errors: list[ValidationMessage] = []
+    warnings: list[ValidationMessage] = []
+
+    for failed in svrl_root.xpath("//svrl:failed-assert", namespaces=_SVRL_NSMAP):
+        flag = (failed.get("flag") or "error").lower()
+        rule_id = failed.get("id") or ""
+        location = failed.get("location") or ""
+        text_el = failed.find(f"{{{_SVRL_NS}}}text")
+        text = (text_el.text or "").strip() if text_el is not None else ""
+
+        msg = ValidationMessage(severity=flag, rule_id=rule_id, location=location, text=text)
+        if flag in ("error", "fatal"):
+            errors.append(msg)
+        else:
+            warnings.append(msg)
+
+    return ValidationResult(is_valid=len(errors) == 0, errors=errors, warnings=warnings)
+
+
+def _parse_svrl_text(svrl_text: str) -> ValidationResult:
+    """Parse SVRL XML text (as returned by a string-based XSLT engine) into a ValidationResult."""
+    if not svrl_text.strip():
+        return ValidationResult(is_valid=True)
+
+    try:
+        svrl_root = etree.fromstring(svrl_text.encode("utf-8"), safe_parser())
+    except etree.XMLSyntaxError as exc:
+        return ValidationResult(
+            is_valid=False,
+            errors=[ValidationMessage(severity="error", rule_id="SVRL-PARSE", location="/", text=str(exc))],
+        )
+
+    return _extract_svrl_findings(svrl_root)
+
+
+# ---------------------------------------------------------------------------
+# XSLT 2.0/3.0 backend (Saxon-HE via saxonche) — DE-XSLT2-1 / FR-XSLT2-1
+# ---------------------------------------------------------------------------
+
+
+def get_xslt_version(stylesheet_path: Path | str) -> str:
+    """Return the ``version`` attribute on an XSLT stylesheet's root element.
+
+    Defaults to ``"1.0"`` when the file cannot be read or the attribute is
+    absent, matching XSLT's own default-version behaviour.
+    """
+    try:
+        root = etree.parse(str(stylesheet_path), safe_parser()).getroot()
+    except (OSError, etree.XMLSyntaxError) as exc:
+        logger.warning("Could not read XSLT version from %s: %s", stylesheet_path, exc)
+        return "1.0"
+    return root.get("version") or "1.0"
+
+
+class SaxonSchematronValidator(BaseStructuredValidator):
+    """XSLT 2.0/3.0 Schematron validator backed by Saxon-HE via ``saxonche``.
+
+    Use this for Schematron-derived stylesheets that use XPath 2.0+ constructs
+    (``every ... satisfies``, ``string-join``, ``cast as``) which ``lxml``/
+    ``libxslt`` (XSLT 1.0 only) cannot compile — e.g. the FNFE-MPE Factur-X
+    1.08 / ZUGFeRD rule sets (DE-XSLT2-1, FR-XSLT2-1).
+
+    Requires the optional ``saxonche`` extra:
+        pip install mcp-einvoicing-core[xslt2]
+
+    The import is deferred to construction so that packages which never need
+    XSLT 2.0 validation do not need ``saxonche`` installed.
+    """
+
+    def __init__(self, stylesheet_path: Path | str) -> None:
+        """Load and compile an XSLT 2.0/3.0 Schematron stylesheet.
+
+        Args:
+            stylesheet_path: Path to the pre-compiled XSLT stylesheet file.
+
+        Raises:
+            FileNotFoundError: If the file does not exist.
+            ImportError: If ``saxonche`` is not installed.
+            ValueError: If Saxon cannot compile the stylesheet.
+        """
+        path = Path(stylesheet_path)
+        if not path.exists():
+            raise FileNotFoundError(f"Schematron stylesheet not found: {path}.")
+
+        try:
+            from saxonche import PySaxonProcessor  # type: ignore[import-not-found]
+        except ImportError as exc:
+            raise ImportError(
+                f"Stylesheet {path.name} requires XSLT 2.0/3.0 support (Saxon-HE). "
+                "Install the optional extra with: pip install mcp-einvoicing-core[xslt2]"
+            ) from exc
+
+        # PySaxonProcessor is created once per validator; it holds the compiled
+        # XSLT executable, which is reused across validate() calls.
+        self._proc = PySaxonProcessor(license=False)
+        xslt_processor = self._proc.new_xslt30_processor()
+        try:
+            self._executable = xslt_processor.compile_stylesheet(stylesheet_file=str(path))
+        except Exception as exc:
+            raise ValueError(f"Failed to compile XSLT stylesheet {path}: {exc}") from exc
+        if self._executable is None:
+            raise ValueError(f"Saxon returned no compiled executable for stylesheet {path}.")
+        self._stylesheet_path = path
+
+    def validate(self, document: bytes, *, profile: str = "", syntax: str = "") -> ValidationResult:
+        """Validate document bytes against the compiled XSLT 2.0/3.0 stylesheet.
+
+        Never raises — XML parse errors and Saxon transform errors are
+        captured as error-severity ValidationMessages.
+        """
+        try:
+            # utf-8-sig strips a leading UTF-8 BOM if present (several real-world
+            # Factur-X/ZUGFeRD samples carry one); it is a no-op otherwise. A raw
+            # "utf-8" decode leaves the BOM character in the string, which Saxon's
+            # parse_xml(xml_text=...) rejects as "content not allowed in prolog".
+            xdm_input = self._proc.parse_xml(xml_text=document.decode("utf-8-sig"))
+        except Exception as exc:
+            return ValidationResult(
+                is_valid=False,
+                errors=[ValidationMessage(severity="error", rule_id="XML-PARSE", location="/", text=str(exc))],
+                profile=profile,
+                syntax=syntax,
             )
-            if flag in ("error", "fatal"):
-                errors.append(msg)
-            else:
-                warnings.append(msg)
 
-        return ValidationResult(is_valid=len(errors) == 0, errors=errors, warnings=warnings)
+        try:
+            svrl_text = self._executable.transform_to_string(xdm_node=xdm_input)
+        except Exception as exc:
+            return ValidationResult(
+                is_valid=False,
+                errors=[
+                    ValidationMessage(
+                        severity="error",
+                        rule_id="XSLT-RUNTIME",
+                        location="/",
+                        text=f"Saxon XSLT transform failed: {exc}",
+                    )
+                ],
+                profile=profile,
+                syntax=syntax,
+            )
+
+        result = _parse_svrl_text(svrl_text or "")
+        result.profile = profile
+        result.syntax = syntax
+        return result
+
+
+def load_schematron_validator(stylesheet_path: Path | str) -> BaseStructuredValidator:
+    """Return the right Schematron backend for *stylesheet_path*, auto-detected.
+
+    Reads the ``version`` attribute on the XSLT root and dispatches to
+    ``SchematronValidator`` (XSLT 1.0, via lxml/libxslt) for ``version="1.x"``,
+    or ``SaxonSchematronValidator`` (XSLT 2.0+, via Saxon-HE) otherwise.
+
+    Country packages keep their own stylesheet-key → path map; this factory
+    only needs the resolved path.
+
+    Raises:
+        FileNotFoundError: If the stylesheet file does not exist.
+        ImportError: If an XSLT 2.0+ stylesheet is requested without the
+            optional ``saxonche`` extra installed.
+        ValueError: If the stylesheet cannot be compiled by either backend.
+    """
+    version = get_xslt_version(stylesheet_path)
+    if version.startswith("1."):
+        return SchematronValidator(stylesheet_path)
+    return SaxonSchematronValidator(stylesheet_path)
 
 
 # ---------------------------------------------------------------------------

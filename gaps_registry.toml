@@ -12,7 +12,16 @@
 # To find all active gap markers in country packages:
 #   grep -r "\[GAP id=" . --include="*.py" -n
 
-# No cross-package gap workarounds are currently open.
-# All previously identified gaps (see context-library/audit-history.md) were resolved
-# before the structured gap-marker scheme was introduced and have no [GAP id=...] markers
-# in country package code.
+[gap."core.schematron.xslt2_backend"]
+description = "SchematronValidator (lxml/libxslt) cannot compile Schematron-derived stylesheets that use XPath 2.0+ constructs (every...satisfies, string-join, cast as) — the FNFE-MPE Factur-X 1.08 / ZUGFeRD rule sets need this. mcp-einvoicing-de carried a local SaxonSchematronValidator + version-dispatch factory in mcp_einvoicing_de/validators/schematron.py predating this registry (no [GAP id=...] marker). Promoted into core as SaxonSchematronValidator, get_xslt_version, and load_schematron_validator. Tracked in context-library/audit-history.md as DE-XSLT2-1 / FR-XSLT2-1."
+resolved = true
+resolved_in = "1.14.0"
+
+# Follow-up (not done in this core-only change, per repo-separation rule):
+#   mcp-einvoicing-de/src/mcp_einvoicing_de/validators/schematron.py still carries its own
+#   copy of SaxonSchematronValidator. Migrate it to import from core and remove the local
+#   copy in a dedicated mcp-einvoicing-de session.
+#   mcp-facture-electronique-fr's validators.py already consumes core's SchematronValidator
+#   directly; it can switch validate_facturx to load_schematron_validator() once its own
+#   package is next touched, to get the XSLT2 backend without needing a version-dispatch
+#   helper of its own.

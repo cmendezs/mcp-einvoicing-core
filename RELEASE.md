@@ -35,6 +35,16 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.14.0] - 2026-07-03
+#### Added
+- `SaxonSchematronValidator`: XSLT 2.0/3.0 Schematron/SVRL backend for `mcp_einvoicing_core.schematron`, using Saxon-HE via the optional `saxonche` extra (`pip install mcp-einvoicing-core[xslt2]`). Resolves DE-XSLT2-1 / FR-XSLT2-1: `SchematronValidator` (lxml/libxslt, XSLT 1.0 only) cannot compile Schematron-derived stylesheets using XPath 2.0+ constructs (`every ... satisfies`, `string-join`, `cast as`), which the FNFE-MPE Factur-X 1.08 / ZUGFeRD rule sets require.
+- `get_xslt_version(stylesheet_path)`: reads the `version` attribute off an XSLT stylesheet's root element.
+- `load_schematron_validator(stylesheet_path)`: auto-dispatch factory returning `SchematronValidator` for XSLT 1.x or `SaxonSchematronValidator` for 2.x/3.x+, based on the declared version.
+- Verified end-to-end against a real bundled Factur-X EN16931 stylesheet and an official AFNOR June-2026 worked example — fixed a UTF-8 BOM decoding bug in the process (several real-world samples carry one; `xml_text=document.decode("utf-8")` left the BOM character in the string, which Saxon rejected as "content not allowed in prolog").
+#### Notes
+- `mcp-einvoicing-de` carries a pre-existing local copy of this exact class (`mcp_einvoicing_de/validators/schematron.py`), predating this core capability. Migrating DE to consume core's version instead is a separate, not-yet-done follow-up — see `gaps_registry.toml` id `core.schematron.xslt2_backend`.
+- `mcp-facture-electronique-fr`'s `validate_facturx` tool (v0.6.0) still constructs its validator via `SchematronValidator` directly and needs to switch to `load_schematron_validator()` to pick up this fix — also a separate follow-up.
+
 ### [1.13.1] - 2026-06-30
 #### Fixed
 - `TaxIdentifier.validate_br_cnpj`: reject an all-equal-character base (root+branch, positions 0-11), mirroring the existing `validate_br_cpf` check (BR-TL-5). Closes the pathological gap where `"00000000000000"` passed the standard mod-11 checksum.

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-einvoicing-core"
-version = "1.13.1"
+version = "1.14.0"
 description = "Base package for European electronic invoicing MCP servers"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -49,6 +49,13 @@ qr = [
     "qrcode[pil]>=7.4.0",
 ]
 xml-sign = []
+# saxonche bundles the Saxon-HE C/C++ runtime as a Python wheel (no JVM
+# required). Needed by SaxonSchematronValidator for Schematron-derived
+# stylesheets using XPath 2.0+ constructs lxml/libxslt cannot compile
+# (DE-XSLT2-1, FR-XSLT2-1 — see context-library/audit-history.md).
+xslt2 = [
+    "saxonche>=12.4.0",
+]
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
@@ -56,6 +63,7 @@ dev = [
     "mypy>=1.10.0",
     "ruff>=0.4.0",
     "qrcode[pil]>=7.4.0",
+    "saxonche>=12.4.0",
 ]
 
 [project.scripts]
