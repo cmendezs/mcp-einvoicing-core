@@ -17,10 +17,10 @@ description = "SchematronValidator (lxml/libxslt) cannot compile Schematron-deri
 resolved = true
 resolved_in = "1.14.0"
 
-# Follow-up (not done in this core-only change, per repo-separation rule):
-#   mcp-einvoicing-de/src/mcp_einvoicing_de/validators/schematron.py still carries its own
-#   copy of SaxonSchematronValidator. Migrate it to import from core and remove the local
-#   copy in a dedicated mcp-einvoicing-de session.
+# Follow-up:
+#   mcp-einvoicing-de v0.7.1: migrated — validators/schematron.py no longer carries its own
+#   copy of SaxonSchematronValidator; SchematronValidator(stylesheet_key) now delegates to
+#   core's load_schematron_validator(). Done.
 #   mcp-facture-electronique-fr's validators.py already consumes core's SchematronValidator
 #   directly; it can switch validate_facturx to load_schematron_validator() once its own
 #   package is next touched, to get the XSLT2 backend without needing a version-dispatch
