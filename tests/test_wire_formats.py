@@ -125,6 +125,34 @@ class TestUBLSerializer:
         assert root.find("cbc:DocumentCurrencyCode", ns).text == "EUR"
         assert root.find("cbc:CustomizationID", ns).text == _PROFILE
 
+    def test_profile_id_emitted_when_business_process_set(self):
+        inv = _make_invoice(
+            business_process="urn:fdc:peppol.eu:2017:poacc:billing:01:1.0"
+        )
+        xml = EN16931UBLSerializer().serialize(inv)
+        root = etree.fromstring(xml)
+        ns = {"cbc": "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"}
+        assert (
+            root.find("cbc:ProfileID", ns).text
+            == "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0"
+        )
+
+    def test_profile_id_absent_when_business_process_unset(self):
+        xml = EN16931UBLSerializer().serialize(_make_invoice())
+        root = etree.fromstring(xml)
+        ns = {"cbc": "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"}
+        assert root.find("cbc:ProfileID", ns) is None
+
+    def test_profile_id_document_order(self):
+        inv = _make_invoice(
+            business_process="urn:fdc:peppol.eu:2017:poacc:billing:01:1.0"
+        )
+        xml = EN16931UBLSerializer().serialize(inv)
+        root = etree.fromstring(xml)
+        cbc = "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+        children = [etree.QName(c.tag).localname for c in root if etree.QName(c.tag).namespace == cbc]
+        assert children.index("CustomizationID") < children.index("ProfileID") < children.index("ID")
+
     def test_seller_name_present(self):
         xml = EN16931UBLSerializer().serialize(_make_invoice())
         root = etree.fromstring(xml)
@@ -231,6 +259,18 @@ class TestUBLRoundTrip:
         assert restored.currency_code == original.currency_code
         assert restored.profile == original.profile
 
+    def test_business_process_round_trip(self):
+        original = _make_invoice(
+            business_process="urn:fdc:peppol.eu:2017:poacc:billing:01:1.0"
+        )
+        restored = self._round_trip(original)
+        assert restored.business_process == original.business_process
+
+    def test_business_process_absent_round_trip(self):
+        original = _make_invoice()
+        restored = self._round_trip(original)
+        assert restored.business_process is None
+
     def test_totals_round_trip(self):
         original = _make_invoice()
         restored = self._round_trip(original)
@@ -315,6 +355,45 @@ class TestCIISerializer:
         )
         assert id_el is not None
         assert id_el.text == _PROFILE
+
+    def test_business_process_emitted_when_set(self):
+        inv = _make_invoice(
+            business_process="urn:fdc:peppol.eu:2017:poacc:billing:01:1.0"
+        )
+        xml = EN16931CIISerializer().serialize(inv)
+        root = etree.fromstring(xml)
+        ns = {"rsm": _RSM, "ram": _RAM}
+        id_el = root.find(
+            "rsm:ExchangedDocumentContext"
+            "/ram:BusinessProcessSpecifiedDocumentContextParameter/ram:ID",
+            ns,
+        )
+        assert id_el is not None
+        assert id_el.text == "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0"
+
+    def test_business_process_absent_when_unset(self):
+        xml = EN16931CIISerializer().serialize(_make_invoice())
+        root = etree.fromstring(xml)
+        ns = {"rsm": _RSM, "ram": _RAM}
+        id_el = root.find(
+            "rsm:ExchangedDocumentContext"
+            "/ram:BusinessProcessSpecifiedDocumentContextParameter",
+            ns,
+        )
+        assert id_el is None
+
+    def test_business_process_before_guideline_in_document_order(self):
+        inv = _make_invoice(
+            business_process="urn:fdc:peppol.eu:2017:poacc:billing:01:1.0"
+        )
+        xml = EN16931CIISerializer().serialize(inv)
+        root = etree.fromstring(xml)
+        ns = {"rsm": _RSM, "ram": _RAM}
+        ctx = root.find("rsm:ExchangedDocumentContext", ns)
+        children = [etree.QName(c.tag).localname for c in ctx]
+        assert children.index(
+            "BusinessProcessSpecifiedDocumentContextParameter"
+        ) < children.index("GuidelineSpecifiedDocumentContextParameter")
 
     def test_invoice_number_present(self):
         xml = EN16931CIISerializer().serialize(_make_invoice())

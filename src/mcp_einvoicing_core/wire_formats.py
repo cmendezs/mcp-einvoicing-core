@@ -143,6 +143,7 @@ class EN16931UBLSerializer:
         root = etree.Element(_q(root_ns, root_local), nsmap=nsmap)
 
         _sub(root, _CBC, "CustomizationID", invoice.profile)
+        _sub_opt(root, _CBC, "ProfileID", invoice.business_process)
         _sub(root, _CBC, "ID", invoice.invoice_number)
         _sub(root, _CBC, "IssueDate", _date_ubl(invoice.invoice_date))
         _sub(root, _CBC, "InvoiceTypeCode" if not is_credit_note else "CreditNoteTypeCode",
@@ -409,6 +410,7 @@ class EN16931UBLParser:
             return Decimal(v) if v else default
 
         profile = get_text("cbc:CustomizationID") or ""
+        business_process = get_text("cbc:ProfileID")
         invoice_number = get_text("cbc:ID") or ""
         issue_date_str = get_text("cbc:IssueDate") or ""
         issue_date = date.fromisoformat(issue_date_str) if issue_date_str else date.today()
@@ -476,6 +478,7 @@ class EN16931UBLParser:
 
         return EN16931Invoice(
             profile=profile,
+            business_process=business_process,
             invoice_number=invoice_number,
             invoice_date=issue_date,
             invoice_type_code=type_code,
@@ -763,8 +766,11 @@ class EN16931CIISerializer:
     def _build_root(self, invoice: EN16931Invoice) -> etree._Element:
         root = etree.Element(_q(_RSM, "CrossIndustryInvoice"), nsmap=CII_NSMAP)
 
-        # ExchangedDocumentContext — profile URN (BT-24)
+        # ExchangedDocumentContext — business process (BT-23) + profile URN (BT-24)
         ctx = _sub(root, _RSM, "ExchangedDocumentContext")
+        if invoice.business_process:
+            bp = _sub(ctx, _RAM, "BusinessProcessSpecifiedDocumentContextParameter")
+            _sub(bp, _RAM, "ID", invoice.business_process)
         guideline = _sub(ctx, _RAM, "GuidelineSpecifiedDocumentContextParameter")
         _sub(guideline, _RAM, "ID", invoice.profile)
 

@@ -291,6 +291,14 @@ class EN16931Invoice(BaseModel):
             "_allowed_profiles = frozenset({MyEnum.member.value, ...})."
         ),
     )
+    business_process: Optional[str] = Field(
+        None,
+        description=(
+            "BT-23 Business process type. In UBL emitted as <cbc:ProfileID>; "
+            "in CII as <ram:BusinessProcessSpecifiedDocumentContextParameter><ram:ID>. "
+            "Distinct from `profile` which holds BT-24 (Specification identifier)."
+        ),
+    )
     invoice_number: str = Field(..., description="Invoice number (BT-1)")
     invoice_date: date = Field(..., description="Invoice issue date (BT-2)")
     invoice_type_code: str = Field(

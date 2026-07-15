@@ -644,6 +644,28 @@ class BaseEInvoicingClient:
         self._token_cache.invalidate()
         self._static_token = None
 
+    async def request(
+        self,
+        method: str,
+        path: str,
+        *,
+        params: Optional[dict[str, Any]] = None,
+        json: Optional[Any] = None,
+        data: Optional[dict[str, Any]] = None,
+        files: Optional[dict[str, Any]] = None,
+        retry_on_401: bool = True,
+    ) -> httpx.Response:
+        """Public HTTP request. Country packages should call this instead of `_request`."""
+        return await self._request(
+            method,
+            path,
+            params=params,
+            json=json,
+            data=data,
+            files=files,
+            retry_on_401=retry_on_401,
+        )
+
     async def _request(
         self,
         method: str,
