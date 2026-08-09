@@ -23,6 +23,8 @@ from mcp_einvoicing_core.digital_signature import (
     _RSA_SHA256_SIGN_ALG,
     _SHA256_DIGEST_ALG,
     _XADES,
+    _load_pkcs12,
+    load_certificate_der,
 )
 
 # ---------------------------------------------------------------------------
@@ -108,6 +110,27 @@ NFE_XML = b"""<?xml version="1.0" encoding="UTF-8"?>
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
+
+class TestLoadCertificateDer:
+    def test_returns_bytes(self, p12_path: Path) -> None:
+        der = load_certificate_der(str(p12_path), "test")
+        assert isinstance(der, bytes)
+        assert len(der) > 0
+
+    def test_matches_load_pkcs12_cert_der(self, p12_path: Path) -> None:
+        der = load_certificate_der(str(p12_path), "test")
+        cert_info = _load_pkcs12(str(p12_path), "test")
+        assert der == cert_info.cert_der
+
+    def test_no_password(self, p12_path_no_password: Path) -> None:
+        der = load_certificate_der(str(p12_path_no_password), None)
+        assert isinstance(der, bytes)
+        assert len(der) > 0
+
+    def test_missing_file_raises(self) -> None:
+        with pytest.raises(FileNotFoundError):
+            load_certificate_der("/nonexistent/cert.p12", None)
 
 
 class TestXAdESEPESSigner:

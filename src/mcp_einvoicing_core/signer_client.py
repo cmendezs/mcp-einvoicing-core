@@ -149,6 +149,42 @@ class SignerClient:
         except Exception as exc:
             raise SignerError(f"Signer returned invalid signed_b64: {exc}") from exc
 
+    async def sign_jws(
+        self,
+        claims: dict[str, Any],
+        *,
+        algorithm: str = "RS256",
+        extra_header: Optional[dict[str, Any]] = None,
+    ) -> str:
+        """Ask the signer process to mint and sign a compact JWS/JWT.
+
+        Used by ``AuthMode.JWS`` on ``BaseEInvoicingClient`` so the private
+        key used to sign authentication tokens never enters the MCP process.
+
+        Args:
+            claims: JWT payload claims (``iat``/``exp`` are typically already
+                set by the caller before this is invoked).
+            algorithm: JWS signing algorithm, e.g. ``"RS256"``.
+            extra_header: Additional JOSE header fields beyond ``typ``/``alg``/
+                ``x5c`` (the signer adds ``x5c`` itself from its loaded cert).
+
+        Returns:
+            The compact JWS/JWT string.
+
+        Raises:
+            SignerError: On connection failure or service-reported error.
+        """
+        params: dict[str, Any] = {
+            "claims": claims,
+            "algorithm": algorithm,
+            "extra_header": extra_header or {},
+        }
+        result = await self._call("sign_jws", params)
+        try:
+            return str(result["token"])
+        except KeyError as exc:
+            raise SignerError(f"Signer returned no token: {result}") from exc
+
     async def mtls_submit_files(
         self,
         url: str,

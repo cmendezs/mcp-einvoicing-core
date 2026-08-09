@@ -48,6 +48,15 @@ mtls_submit
         status_code  int
         body_b64     Base64-encoded response body.
         headers      dict of response headers.
+
+sign_jws
+    params:
+        claims        JWT payload claims dict (e.g. iat/exp/username).
+        algorithm     (optional) JWS signing algorithm, default "RS256".
+        extra_header  (optional) Extra JOSE header fields beyond typ/alg/x5c;
+                      the service adds x5c itself from its loaded certificate.
+    result:
+        token  Compact JWS/JWT string.
 """
 
 from __future__ import annotations
@@ -124,6 +133,8 @@ class _SignerService:
                 result = self._do_sign(params)
             elif method == "mtls_submit":
                 result = await self._do_mtls_submit(params)
+            elif method == "sign_jws":
+                result = self._do_sign_jws(params)
             else:
                 result = {"error": f"unknown method: {method!r}"}
 
@@ -189,6 +200,21 @@ class _SignerService:
             return {"error": f"signing failed: {exc}"}
 
         return {"result": {"signed_b64": base64.b64encode(signed_bytes).decode()}}
+
+    def _do_sign_jws(self, params: dict[str, Any]) -> dict[str, Any]:
+        claims: dict[str, Any] = params.get("claims", {})
+        algorithm: str = params.get("algorithm", "RS256")
+        extra_header: dict[str, Any] = params.get("extra_header", {})
+
+        from mcp_einvoicing_core.http_client import _sign_jws_token  # noqa: PLC0415
+
+        try:
+            token = _sign_jws_token(self._cert_info, algorithm, extra_header, claims)
+        except Exception as exc:
+            logger.exception("JWS signing failed")
+            return {"error": f"JWS signing failed: {exc}"}
+
+        return {"result": {"token": token}}
 
     async def _do_mtls_submit(self, params: dict[str, Any]) -> dict[str, Any]:
         import httpx  # noqa: PLC0415

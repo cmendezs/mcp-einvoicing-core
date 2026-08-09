@@ -245,6 +245,26 @@ def _load_pkcs12(cert_path: str, cert_password: Optional[str]) -> _CertInfo:
     )
 
 
+def load_certificate_der(cert_path: str, cert_password: Optional[str] = None) -> bytes:
+    """Return the DER-encoded public certificate bytes from a PKCS#12 file.
+
+    Public wrapper around the internal PKCS#12 loader for country packages
+    that need the certificate's public bytes to build platform-specific
+    authentication claims (e.g. ES FACe's JWS ``username`` claim, a SHA-1
+    digest of the certificate) without reaching into private core symbols
+    or the private key.
+
+    Args:
+        cert_path: Path to the PKCS#12 (.p12/.pfx) file.
+        cert_password: Passphrase for the file, or None if unprotected.
+
+    Returns:
+        DER-encoded certificate bytes (base64-encode these for a "clean PEM"
+        form: no BEGIN/END markers, no line breaks).
+    """
+    return _load_pkcs12(cert_path, cert_password).cert_der
+
+
 def _qn(ns: str, local: str) -> str:
     """Return a Clark-notation qualified name ``{ns}local``."""
     return f"{{{ns}}}{local}"

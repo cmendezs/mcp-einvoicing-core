@@ -22,6 +22,7 @@ Future countries:
 from __future__ import annotations
 
 import asyncio
+import base64
 import hashlib
 import logging
 import os
@@ -224,6 +225,18 @@ class AuthMode(str, Enum):
     """API-key authentication (header or query param).
     [GAP: Not yet implemented. Subclass and override _get_headers().]"""
 
+    JWS = "jws"
+    """JWS-signed JWT bearer token (e.g. ES FACe integrator API).
+
+    The client mints a short-lived JWT, signs it with RS256, and attaches the
+    signing certificate's DER bytes (base64) as the JOSE header ``x5c`` claim,
+    per FACe-manual-api-integradores.pdf s2.3. Pass a ``JWSConfig`` to
+    ``BaseEInvoicingClient`` to activate. Private-key use is routed through
+    the signer microservice (``SignerClient``) when configured; falls back to
+    in-process signing only when the signer microservice is absent, mirroring
+    the MTLS fallback pattern.
+    """
+
 
 # ---------------------------------------------------------------------------
 # OAuth2 configuration (Pydantic-settings, env-var driven)
@@ -264,6 +277,60 @@ class OAuthConfig(OAuthValues, BaseSettings):
     """
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
+
+
+class JWSConfig(BaseModel):
+    """Configuration for ``AuthMode.JWS``: JWS-signed JWT bearer authentication.
+
+    Mints a JWT on each token refresh, signs it with RS256 using the private
+    key from a PKCS#12 file, and attaches the certificate's DER bytes
+    (base64) as the JOSE header ``x5c`` claim (RFC 7515 s4.1.6). Country
+    packages supply the platform-specific claim/header content (e.g. ES
+    FACe's ``username`` claim, a SHA-1 digest of the certificate) via
+    ``extra_claims`` / ``extra_header``: this class only carries the
+    generic minting mechanics.
+    """
+
+    cert_path: str = Field(
+        ..., description="Path to the PKCS#12 (.p12/.pfx) signing certificate + key."
+    )
+    cert_password: Optional[str] = Field(
+        default=None, description="Passphrase for the PKCS#12 file, or None if unprotected."
+    )
+    ttl_seconds: int = Field(
+        default=300, description="Token validity window in seconds before it must be re-minted."
+    )
+    algorithm: str = Field(default="RS256", description="JWS signing algorithm.")
+    extra_claims: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional JWT payload claims merged in alongside iat/exp.",
+    )
+    extra_header: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional JOSE header fields merged in alongside typ/alg/x5c.",
+    )
+
+
+def _sign_jws_token(
+    cert_info: Any,
+    algorithm: str,
+    extra_header: dict[str, Any],
+    claims: dict[str, Any],
+) -> str:
+    """Sign *claims* as a compact JWS/JWT using *cert_info*'s private key.
+
+    Shared by ``BaseEInvoicingClient``'s in-process JWS fallback and
+    ``signer_service._SignerService._do_sign_jws`` (which holds the same
+    ``_CertInfo`` shape from ``digital_signature._load_pkcs12``) so the
+    x5c/signing logic is not duplicated between the two call sites.
+    """
+    from joserfc import jwt as _jose_jwt  # noqa: PLC0415
+    from joserfc.jwk import RSAKey  # noqa: PLC0415
+
+    x5c = [base64.b64encode(cert_info.cert_der).decode("ascii")]
+    header: dict[str, Any] = {"typ": "JWT", "alg": algorithm, "x5c": x5c, **extra_header}
+    key = RSAKey.import_key(cert_info.private_key)
+    return _jose_jwt.encode(header, claims, key, algorithms=[algorithm])
 
 
 class BaseEInvoicingConfig(BaseSettings):
@@ -416,6 +483,7 @@ class BaseEInvoicingClient:
         cert_path: Optional[str] = None,
         cert_password: Optional[str] = None,
         max_retries: int = 3,
+        jws_config: Optional[JWSConfig] = None,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._auth_mode = auth_mode
@@ -426,6 +494,7 @@ class BaseEInvoicingClient:
         self._cert_path = cert_path
         self._cert_password = cert_password
         self._max_retries = max_retries
+        self._jws_config = jws_config
         self._mtls_ssl_context: Optional[ssl.SSLContext] = None
         self._client: Optional[httpx.AsyncClient] = None  # long-lived; built on first use
 
@@ -433,6 +502,8 @@ class BaseEInvoicingClient:
             raise ValueError("oauth_config is required for OAUTH2_CLIENT_CREDENTIALS auth mode")
         if auth_mode == AuthMode.MTLS and cert_path is None:
             raise ValueError("cert_path is required for MTLS auth mode")
+        if auth_mode == AuthMode.JWS and jws_config is None:
+            raise ValueError("jws_config is required for JWS auth mode")
 
     def _get_httpx_client(self) -> httpx.AsyncClient:
         """Build and return a new ``httpx.AsyncClient`` for the active auth mode.
@@ -547,8 +618,41 @@ class BaseEInvoicingClient:
         self._token_cache.set(access_token, expires_in)
         return access_token
 
+    async def _mint_jws_token(self) -> tuple[str, int]:
+        """Mint a fresh JWS-signed JWT per ``self._jws_config``.
+
+        Routes private-key use through the signer microservice
+        (``SignerClient``) when configured, so the private key never enters
+        this process. Falls back to in-process signing (via
+        ``digital_signature._load_pkcs12`` + ``_sign_jws_token``) only when
+        the signer microservice is not configured, mirroring the MTLS
+        fallback pattern used elsewhere in this codebase.
+
+        Returns:
+            (compact JWT string, TTL in seconds) for the caller to cache.
+        """
+        assert self._jws_config is not None
+        config = self._jws_config
+        now = int(time.time())
+        claims: dict[str, Any] = {"iat": now, "exp": now + config.ttl_seconds, **config.extra_claims}
+
+        from mcp_einvoicing_core.signer_client import SignerClient  # noqa: PLC0415
+
+        if SignerClient.is_configured():
+            client = SignerClient.from_env()
+            token = await client.sign_jws(
+                claims, algorithm=config.algorithm, extra_header=config.extra_header
+            )
+            return token, config.ttl_seconds
+
+        from mcp_einvoicing_core.digital_signature import _load_pkcs12  # noqa: PLC0415
+
+        cert_info = _load_pkcs12(config.cert_path, config.cert_password)
+        token = _sign_jws_token(cert_info, config.algorithm, config.extra_header, claims)
+        return token, config.ttl_seconds
+
     async def _get_bearer_token(self) -> str:
-        """Return a valid Bearer token (cached or freshly fetched)."""
+        """Return a valid Bearer token (cached, freshly fetched, or freshly minted)."""
         if self._auth_mode == AuthMode.OAUTH2_CLIENT_CREDENTIALS:
             cached = self._token_cache.get()
             if cached:
@@ -560,6 +664,14 @@ class BaseEInvoicingClient:
                 raise AuthenticationError("static_bearer_token is not set")
             return self._static_token
 
+        if self._auth_mode == AuthMode.JWS:
+            cached = self._token_cache.get()
+            if cached:
+                return cached
+            token, ttl = await self._mint_jws_token()
+            self._token_cache.set(token, ttl)
+            return token
+
         raise AuthenticationError(f"Auth mode {self._auth_mode} does not use Bearer tokens")
 
     async def _get_headers(self) -> dict[str, str]:
@@ -569,6 +681,7 @@ class BaseEInvoicingClient:
         if self._auth_mode in (
             AuthMode.OAUTH2_CLIENT_CREDENTIALS,
             AuthMode.BEARER_TOKEN,
+            AuthMode.JWS,
         ):
             token = await self._get_bearer_token()
             headers["Authorization"] = f"Bearer {token}"

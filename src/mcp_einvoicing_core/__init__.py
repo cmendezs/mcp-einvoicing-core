@@ -68,6 +68,7 @@ from mcp_einvoicing_core.schematron import (
 from mcp_einvoicing_core.http_client import (
     AuthMode,
     BaseEInvoicingClient,
+    JWSConfig,
     OAuthConfig,
     OAuthValues,
     TokenCache,
@@ -99,6 +100,7 @@ from mcp_einvoicing_core.digital_signature import (
     XAdESSignerConfig,
     XMLDSigSigner,
     XMLDSigSignerConfig,
+    load_certificate_der,
 )
 from mcp_einvoicing_core.qr import generate_qr_png_base64
 from decimal import ROUND_HALF_EVEN, ROUND_HALF_UP
@@ -183,6 +185,7 @@ __all__ = [
     "BaseEInvoicingClient",
     "OAuthValues",
     "OAuthConfig",
+    "JWSConfig",
     "TokenCache",
     # Country-agnostic models
     "TaxIdentifier",
@@ -294,6 +297,7 @@ __all__ = [
     "XAdESEPESSigner",
     "XMLDSigSignerConfig",
     "XMLDSigSigner",
+    "load_certificate_der",
     # Audit infrastructure (mcp-einvoicing-core[audit] optional extra)
     "DEFAULT_CORE_MODULES",
     "KNOWN_SHARED_HELPERS",
