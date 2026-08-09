@@ -446,18 +446,45 @@ def assert_not_read_only(env_var: str) -> None:
 
 # Patterns that identify high-sensitivity PII in tool return values.
 # Applied by scrub() before data reaches the LLM context window.
-_IBAN_RE = re.compile(
-    r"\b[A-Z]{2}\d{2}[A-Z0-9 ]{11,30}\b",
-    re.IGNORECASE,
-)
-_BIC_RE = re.compile(
-    r"\b[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}(?:[A-Z0-9]{3})?\b",
-    re.IGNORECASE,
+#
+# Both alternatives are combined into a single pattern and matched in one pass
+# (see _scrub_value) so that a replacement placeholder is never re-scanned by
+# the other alternative. Two sequential .sub() calls previously let the BIC
+# pattern match the word "REDACTED" inside the IBAN placeholder it had just
+# produced, corrupting the output (e.g. "[IBAN REDACTED]" -> "[IBAN [BIC
+# REDACTED]]").
+#
+# The BIC alternative is intentionally case-sensitive (no re.IGNORECASE):
+# real BIC/SWIFT codes are canonically uppercase (ISO 9362), but the bare
+# shape "4 letters + 2 letters + 2 alnum [+ 3 alnum]" also matches ordinary
+# 8- or 11-letter words in prose ("encoding", "currency", "Deutschland").
+# Case-insensitive matching redacted those words wholesale, including inside
+# raw XML markup (e.g. the `encoding` attribute of an XML declaration).
+# Requiring uppercase-only removes that class of false positive; IBANs stay
+# case-insensitive since users sometimes type them lowercase, and the
+# letters-then-digits shape is far more distinctive than the BIC shape.
+#
+# The IBAN alternative matches either a compact token (no spaces) or one
+# formatted in the conventional groups-of-4 style ("DE89 3704 ..."). A bare
+# space in the character class (the previous approach) also matches the
+# space *between unrelated words*, so a sentence like "IBAN DE893704...013000
+# on file" had its whole trailing " on file" absorbed into the match, since
+# ASCII letters and a leading space are indistinguishable from IBAN filler
+# once IGNORECASE is applied. Requiring spaces to fall on 4-character group
+# boundaries prevents the pattern from running on into surrounding prose.
+_IBAN_INNER = r"[A-Z]{2}\d{2}(?:[A-Z0-9]{11,30}|(?: ?[A-Z0-9]{4}){2,7} ?[A-Z0-9]{0,4})"
+_BIC_INNER = r"[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}(?:[A-Z0-9]{3})?"
+_SCRUB_RE = re.compile(
+    rf"\b(?P<iban>(?i:{_IBAN_INNER}))\b|\b(?P<bic>{_BIC_INNER})\b"
 )
 
 # Sentinel substitutions — descriptive enough to tell the LLM what was masked.
 _IBAN_PLACEHOLDER = "[IBAN REDACTED]"
 _BIC_PLACEHOLDER = "[BIC REDACTED]"
+
+
+def _scrub_match(match: re.Match[str]) -> str:
+    return _IBAN_PLACEHOLDER if match.group("iban") else _BIC_PLACEHOLDER
 
 _MASKING_ENABLED: bool = os.environ.get("EINVOICING_DISABLE_LLM_MASKING", "").strip() not in {
     "1", "true", "yes",
@@ -477,6 +504,11 @@ def scrub(data: Any) -> Any:
     - **Untrusted content**: text fields from inbound XML should be wrapped with
       :func:`~mcp_einvoicing_core.xml_utils.mark_untrusted` *before* calling
       ``scrub()``.  The ``<untrusted-content>`` wrapper is preserved by ``scrub()``.
+    - **BIC matching is case-sensitive (uppercase only)**: real BIC/SWIFT codes are
+      canonically uppercase (ISO 9362); a case-insensitive match would also catch
+      ordinary 8- or 11-letter prose words. A BIC typed or stored in lowercase will
+      not be redacted. IBAN matching stays case-insensitive since IBANs are commonly
+      entered lowercase and their letters-then-digits shape is far more distinctive.
 
     Args:
         data: Return value from a tool handler — dict, list, or scalar.
@@ -495,9 +527,7 @@ def _scrub_value(obj: Any) -> Any:
     if isinstance(obj, list):
         return [_scrub_value(item) for item in obj]
     if isinstance(obj, str):
-        result = _IBAN_RE.sub(_IBAN_PLACEHOLDER, obj)
-        result = _BIC_RE.sub(_BIC_PLACEHOLDER, result)
-        return result
+        return _SCRUB_RE.sub(_scrub_match, obj)
     return obj
 
 
