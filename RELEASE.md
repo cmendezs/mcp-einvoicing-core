@@ -35,6 +35,14 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.16.0] - 2026-08-09
+#### Added
+- `AuthMode.JWS`: RS256-signed JWT authentication with an `x5c` JOSE header (RFC 7515), for platforms requiring JWS-based auth (first consumer: ES FACe integrator API, `FACe-manual-api-integradores.pdf` §2.3). `BaseEInvoicingClient` mints tokens via `_mint_jws_token()`, routing signing through the existing `SignerClient`/`signer_service.py` isolation pattern when configured, or in-process otherwise.
+- `JWSConfig`: Pydantic model for `AuthMode.JWS` configuration.
+- `load_certificate_der(cert_path, cert_password=None)`: public helper in `digital_signature.py` returning a certificate's public DER bytes, for country packages building platform-specific auth claims without reaching into private core internals.
+- `signer_client.py`/`signer_service.py`: new `sign_jws` operation.
+- New dependency: `joserfc>=1.0.0`.
+
 ### [1.14.0] - 2026-07-03
 #### Added
 - `SaxonSchematronValidator`: XSLT 2.0/3.0 Schematron/SVRL backend for `mcp_einvoicing_core.schematron`, using Saxon-HE via the optional `saxonche` extra (`pip install mcp-einvoicing-core[xslt2]`). Resolves DE-XSLT2-1 / FR-XSLT2-1: `SchematronValidator` (lxml/libxslt, XSLT 1.0 only) cannot compile Schematron-derived stylesheets using XPath 2.0+ constructs (`every ... satisfies`, `string-join`, `cast as`), which the FNFE-MPE Factur-X 1.08 / ZUGFeRD rule sets require.
