@@ -431,6 +431,39 @@ _HTTP_ERROR_MESSAGES: dict[int, str] = {
 }
 
 
+#: Default retry budget for 429/503 responses. Shared by BaseEInvoicingClient
+#: (via _retry_delay/_request) and signer_service.py's _do_mtls_submit, so the
+#: signer microservice's out-of-process mTLS path gets the same resilience as
+#: the in-process direct-mTLS fallback path.
+DEFAULT_MAX_RETRIES = 3
+
+
+def compute_retry_delay(response: httpx.Response, attempt: int) -> float:
+    """Compute seconds to wait before the next retry attempt.
+
+    Parses the ``Retry-After`` header when present (both integer-seconds and
+    HTTP-date forms). Falls back to exponential backoff: 1s, 2s, 4s … capped
+    at 60s.
+
+    Module-level (not a BaseEInvoicingClient method) so signer_service.py can
+    reuse it without depending on an HTTP client instance.
+    """
+    header = response.headers.get("Retry-After", "").strip()
+    if header:
+        try:
+            return max(0.0, float(header))
+        except ValueError:
+            pass
+        try:
+            from datetime import datetime, timezone  # noqa: PLC0415
+
+            dt = parsedate_to_datetime(header)
+            return max(0.0, (dt - datetime.now(timezone.utc)).total_seconds())
+        except Exception:
+            pass
+    return min(1.0 * (2**attempt), 60.0)
+
+
 def _extract_platform_error(
     response: httpx.Response,
     detail: str = "",
@@ -482,7 +515,7 @@ class BaseEInvoicingClient:
         http_timeout: float = 30.0,
         cert_path: Optional[str] = None,
         cert_password: Optional[str] = None,
-        max_retries: int = 3,
+        max_retries: int = DEFAULT_MAX_RETRIES,
         jws_config: Optional[JWSConfig] = None,
     ) -> None:
         self._base_url = base_url.rstrip("/")
@@ -737,20 +770,7 @@ class BaseEInvoicingClient:
         and HTTP-date forms). Falls back to exponential backoff: 1s, 2s, 4s
         … capped at 60s.
         """
-        header = response.headers.get("Retry-After", "").strip()
-        if header:
-            try:
-                return max(0.0, float(header))
-            except ValueError:
-                pass
-            try:
-                from datetime import datetime, timezone  # noqa: PLC0415
-
-                dt = parsedate_to_datetime(header)
-                return max(0.0, (dt - datetime.now(timezone.utc)).total_seconds())
-            except Exception:
-                pass
-        return min(1.0 * (2**attempt), 60.0)
+        return compute_retry_delay(response, attempt)
 
     def invalidate_token(self) -> None:
         """Invalidate the cached token. Call after receiving a 401."""

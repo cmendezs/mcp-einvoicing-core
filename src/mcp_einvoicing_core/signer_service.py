@@ -219,6 +219,11 @@ class _SignerService:
     async def _do_mtls_submit(self, params: dict[str, Any]) -> dict[str, Any]:
         import httpx  # noqa: PLC0415
 
+        from mcp_einvoicing_core.http_client import (  # noqa: PLC0415
+            DEFAULT_MAX_RETRIES,
+            compute_retry_delay,
+        )
+
         url = params.get("url", "")
         if not url:
             return {"error": "url is required"}
@@ -226,24 +231,45 @@ class _SignerService:
         extra_headers: dict[str, str] = params.get("extra_headers", {})
         raw_files: list[dict[str, Any]] = params.get("files", [])
 
+        # Built once — reused across retry attempts. Bytes-backed (not file
+        # handles), so re-sending on retry doesn't hit an exhausted stream.
+        if raw_files:
+            files = [
+                (
+                    f["name"],
+                    (f["filename"], base64.b64decode(f["content_b64"]), f["mime"]),
+                )
+                for f in raw_files
+            ]
+            payload = None
+            headers = extra_headers
+        else:
+            files = None
+            payload = base64.b64decode(params.get("payload_b64", ""))
+            content_type = params.get("content_type", "application/xml")
+            headers = {"Content-Type": content_type, **extra_headers}
+
         try:
-            async with httpx.AsyncClient(
-                verify=self._ssl_context, timeout=60.0
-            ) as client:
-                if raw_files:
-                    files = [
-                        (
-                            f["name"],
-                            (f["filename"], base64.b64decode(f["content_b64"]), f["mime"]),
+            async with httpx.AsyncClient(verify=self._ssl_context, timeout=60.0) as client:
+                for attempt in range(DEFAULT_MAX_RETRIES + 1):
+                    if files is not None:
+                        response = await client.post(url, files=files, headers=headers)
+                    else:
+                        response = await client.post(url, content=payload, headers=headers)
+
+                    if response.status_code in (429, 503) and attempt < DEFAULT_MAX_RETRIES:
+                        delay = compute_retry_delay(response, attempt)
+                        logger.warning(
+                            "mTLS submit to %s: HTTP %d — retrying in %.1fs (attempt %d/%d)",
+                            url,
+                            response.status_code,
+                            delay,
+                            attempt + 1,
+                            DEFAULT_MAX_RETRIES,
                         )
-                        for f in raw_files
-                    ]
-                    response = await client.post(url, files=files, headers=extra_headers)
-                else:
-                    payload = base64.b64decode(params.get("payload_b64", ""))
-                    content_type = params.get("content_type", "application/xml")
-                    headers = {"Content-Type": content_type, **extra_headers}
-                    response = await client.post(url, content=payload, headers=headers)
+                        await asyncio.sleep(delay)
+                        continue
+                    break
         except Exception as exc:
             logger.exception("mTLS submit failed for %s", url)
             return {"error": f"submission failed: {exc}"}
