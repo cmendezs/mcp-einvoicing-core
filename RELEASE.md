@@ -35,6 +35,18 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.16.2] - 2026-08-09
+#### Fixed
+- `signer_service.py`'s out-of-process mTLS submit path (`SignerClient.mtls_submit`/`mtls_submit_files` — the recommended path over every country package's legacy in-process fallback) had no 429/503 retry at all, while `BaseEInvoicingClient._request` already did.
+- Extracted `BaseEInvoicingClient._retry_delay`'s body into a module-level `compute_retry_delay()` function (plus `DEFAULT_MAX_RETRIES = 3`) in `http_client.py`, so `signer_service.py::_do_mtls_submit` can reuse the same Retry-After/backoff logic without an HTTP client instance; `_retry_delay` now delegates to it (no behavior change for existing callers).
+- `_do_mtls_submit` now retries 429/503 up to `DEFAULT_MAX_RETRIES` for both the `files=` (multipart) and `payload_b64=` (raw body) request shapes.
+- New `tests/test_signer_service.py` (6 tests, first coverage for `signer_service.py` at all).
+- Not a breaking change. `compute_retry_delay` is intentionally not re-exported from `mcp_einvoicing_core/__init__.py` — internal helper.
+
+### [1.16.1] - 2026-08-09
+#### Fixed
+- `base_server.py::scrub()`: combined IBAN/BIC redaction patterns into a single-pass regex so a redaction placeholder is never re-scanned by the other pattern (was corrupting `"[IBAN REDACTED]"` into `"[IBAN [BIC REDACTED]]"`); made BIC matching case-sensitive (uppercase-only) to stop it matching ordinary 8/11-letter prose words; bounded IBAN space-grouping to real 4-char boundaries. Added `tests/test_scrub.py`.
+
 ### [1.16.0] - 2026-08-09
 #### Added
 - `AuthMode.JWS`: RS256-signed JWT authentication with an `x5c` JOSE header (RFC 7515), for platforms requiring JWS-based auth (first consumer: ES FACe integrator API, `FACe-manual-api-integradores.pdf` §2.3). `BaseEInvoicingClient` mints tokens via `_mint_jws_token()`, routing signing through the existing `SignerClient`/`signer_service.py` isolation pattern when configured, or in-process otherwise.
