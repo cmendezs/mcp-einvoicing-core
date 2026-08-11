@@ -158,12 +158,14 @@ class TaxIdentifier(BaseModel):
         (``[0-9A-Z]{12}[0-9]{2}``, homologation from 2026-06-01, production from
         2026-07-01, Instrução Normativa RFB nº 2.229/2024).
 
-        ``[Unverified]``: the alphanumeric check-digit algorithm below (mod-11,
-        weighted, with each character converted via ``ord(char) - 48``) is
-        sourced from third-party tax-compliance writeups, not the primary "NT
-        Conjunta DFe 2025.001" (not in the local spec bundle). Re-verify against
-        the primary source before relying on this for production validation. See
-        context-library/countries/br.md "Known gaps and open items".
+        ``[Verified locally — NT Conjunta DFe 2025.001 v1.00, §2 worked
+        example, p.6]``: the alphanumeric check-digit algorithm below
+        (mod-11, weighted, with each character converted via
+        ``ord(char) - 48``) matches the primary source's worked example
+        ("12.ABC.345/01DE-35"), bundled in the mcp-nfe-br package at
+        ``specs/nfe/DFe NTCJ 2025.001_CNPJ Alfa_v1.00.pdf`` and pinned as a
+        golden fixture in
+        ``mcp-nfe-br/tests/fixtures/cnpj_alfanumerico_ntcj_2025_001.json``.
 
         Args:
             identifier: Raw CNPJ string. ``.``, ``/``, and ``-`` separators are
