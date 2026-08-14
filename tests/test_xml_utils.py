@@ -92,6 +92,25 @@ class TestFormatQuantity:
     def test_string_input(self) -> None:
         assert format_quantity("10.00") == "10"
 
+    def test_min_decimals_default_unchanged(self) -> None:
+        # min_decimals defaults to 0: existing bare-integer behaviour (e.g. NF-e
+        # TDec_1110v, which accepts integers without a decimal point) is preserved.
+        assert format_quantity(Decimal("100.0")) == "100"
+
+    def test_min_decimals_pads_whole_number(self) -> None:
+        # FatturaPA Amount8DecimalType / QuantitaType require a mandatory decimal
+        # point with at least 2 digits — a bare "100" fails XSD pattern validation.
+        assert format_quantity(Decimal("100.0"), min_decimals=2) == "100.00"
+
+    def test_min_decimals_pads_single_digit(self) -> None:
+        assert format_quantity(Decimal("1.5"), min_decimals=2) == "1.50"
+
+    def test_min_decimals_does_not_truncate_higher_precision(self) -> None:
+        assert format_quantity(Decimal("1.523"), min_decimals=2) == "1.523"
+
+    def test_min_decimals_respects_max_decimals(self) -> None:
+        assert format_quantity(Decimal("1.123456789"), max_decimals=4, min_decimals=2) == "1.1235"
+
 
 class TestValidateDateIso:
     def test_valid_date(self) -> None:

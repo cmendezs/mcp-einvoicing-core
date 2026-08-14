@@ -114,10 +114,18 @@ def format_amount(
     return str(Decimal(str(value)).quantize(quantizer, rounding=rounding_mode))
 
 
-def format_quantity(value: Decimal | str, max_decimals: int = 8) -> str:
-    """Format a quantity, stripping trailing zeros (FatturaPA PrezzoUnitario / Quantita pattern).
+def format_quantity(value: Decimal | str, max_decimals: int = 8, min_decimals: int = 0) -> str:
+    """Format a quantity, stripping trailing zeros beyond *min_decimals*.
 
     Float is excluded for the same reason as format_amount: use Decimal at the boundary.
+
+    ``min_decimals=0`` (the default) strips the decimal point entirely for whole numbers —
+    this is the pattern NF-e's ``TDec_1110v`` requires (bare integers are valid) and remains
+    the default so existing callers are unaffected.
+
+    FatturaPA's ``Amount8DecimalType`` (``PrezzoUnitario``) and ``QuantitaType`` (``Quantita``)
+    instead require a mandatory decimal point with at least 2 digits — pass ``min_decimals=2``
+    for those fields.
 
     >>> format_quantity(Decimal('1.0'))
     '1'
@@ -125,9 +133,21 @@ def format_quantity(value: Decimal | str, max_decimals: int = 8) -> str:
     '1.5'
     >>> format_quantity(Decimal('3.14159265'))
     '3.14159265'
+    >>> format_quantity(Decimal('100.0'), min_decimals=2)
+    '100.00'
+    >>> format_quantity(Decimal('1.5'), min_decimals=2)
+    '1.50'
+    >>> format_quantity(Decimal('1.523'), min_decimals=2)
+    '1.523'
     """
     formatted = f"{Decimal(str(value)):.{max_decimals}f}"
-    return formatted.rstrip("0").rstrip(".")
+    stripped = formatted.rstrip("0").rstrip(".")
+    if min_decimals <= 0:
+        return stripped
+    int_part, _, dec_part = stripped.partition(".")
+    if len(dec_part) < min_decimals:
+        dec_part = dec_part.ljust(min_decimals, "0")
+    return f"{int_part}.{dec_part}"
 
 
 # ---------------------------------------------------------------------------
