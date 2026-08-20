@@ -48,6 +48,18 @@
 | `logging_utils` | `setup_logging`, `get_logger` |
 | `audit` | اطار عمل تدقيق الامتثال: `AuditReport`, `CheckResult`, `CheckFinding`, ثوابت الشدة, `make_report`, `render_summary_table`, `parse_audit_args`, `run_check_core_coverage`, `run_check_version_compatibility`, `run_check_known_shared_helpers`, `TaxRate`, `load_rates` (اضافة اختيارية `[audit]`) |
 
+## حزم البلدان
+
+| البلد | الحزمة | المعيار | النطاق | حالة التغطية |
+|-------|--------|---------|--------|----------------|
+| فرنسا | [`mcp-facture-electronique-fr`](https://github.com/cmendezs/mcp-facture-electronique-fr) | NF XP Z12-012 / NF XP Z12-013 / Factur-X / UBL 2.1 / CII | B2B، طرح تدريجي اعتبارا من 1 سبتمبر 2026 | نشط |
+| المانيا | [`mcp-einvoicing-de`](https://github.com/cmendezs/mcp-einvoicing-de) | ZUGFeRD 2.x / XRechnung 3.x | B2B، تدريجي من 2025 الى 2028 | نشط |
+| بلجيكا | [`mcp-einvoicing-be`](https://github.com/cmendezs/mcp-einvoicing-be) | Peppol BIS 3.0 / PINT-BE | B2B، 1 يناير 2026 | نشط؛ قواعد التراكب الخاصة بـ Peppol لم يتم التحقق منها (EN 16931 الاساسي فقط) |
+| ايطاليا | [`mcp-fattura-elettronica-it`](https://github.com/cmendezs/mcp-fattura-elettronica-it) | FatturaPA / SDI | B2G + B2B + B2C، الزامي منذ 2019 (B2G منذ 2014) | نشط |
+| بولندا | [`mcp-ksef-pl`](https://github.com/cmendezs/mcp-ksef-pl) | KSeF FA(3) / FA(2) / Peppol BIS 3.0 | B2B، تدريجي من فبراير 2026 الى يناير 2027 | نشط؛ تدفق جلسة الدفعات غير مطبق |
+| اسبانيا | [`mcp-facturacion-electronica-es`](https://github.com/cmendezs/mcp-facturacion-electronica-es) | Factura-e / VeriFactu / SII / FACe | في انتظار Orden Ministerial، المستهدف 2026-10-01 | نشط لـ VeriFactu/SII؛ ربط صيغة B2B معطل بانتظار Orden Ministerial |
+| البرازيل | [`mcp-nfe-br`](https://github.com/cmendezs/mcp-nfe-br) | NF-e / NFC-e (modelo 55/65, schema 4.00) / NFS-e Nacional | B2B (NF-e) + B2C (NFC-e)، كلاهما الزامي منذ 2008 | نشط؛ اصلاح ضريبي IBS/CBS جار حتى 2033 |
+
 ## التثبيت
 
 ```bash
@@ -86,18 +98,6 @@ mcp-einvoicing-core
   ├── EInvoicingMCPServer               ← سجل اضافات يغلف FastMCP
   └── اطار عمل التدقيق                  ← فحوصات امتثال لكل حزمة
 ```
-
-## حزم البلدان
-
-| البلد | الحزمة | المعيار |
-|-------|--------|---------|
-| فرنسا | [`mcp-facture-electronique-fr`](https://github.com/cmendezs/mcp-facture-electronique-fr) | NF XP Z12-012 / NF XP Z12-013 / Factur-X / UBL 2.1 / CII |
-| المانيا | [`mcp-einvoicing-de`](https://github.com/cmendezs/mcp-einvoicing-de) | ZUGFeRD 2.x / XRechnung 3.x |
-| بلجيكا | [`mcp-einvoicing-be`](https://github.com/cmendezs/mcp-einvoicing-be) | Peppol BIS 3.0 / PINT-BE |
-| ايطاليا | [`mcp-fattura-elettronica-it`](https://github.com/cmendezs/mcp-fattura-elettronica-it) | FatturaPA / SDI |
-| بولندا | [`mcp-ksef-pl`](https://github.com/cmendezs/mcp-ksef-pl) | KSeF FA(3) / FA(2) / Peppol BIS 3.0 |
-| اسبانيا | [`mcp-facturacion-electronica-es`](https://github.com/cmendezs/mcp-facturacion-electronica-es) | Factura-e / VeriFactu / SII / FACe |
-| البرازيل | [`mcp-nfe-br`](https://github.com/cmendezs/mcp-nfe-br) | NF-e / NFC-e (modelo 55/65, schema 4.00) / NFS-e Nacional |
 
 ## نمط تسجيل الاضافات
 

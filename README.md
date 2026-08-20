@@ -48,6 +48,18 @@ audit framework so country-specific packages share a common foundation without d
 | `logging_utils` | `setup_logging`, `get_logger` |
 | `audit` | Compliance audit framework: `AuditReport`, `CheckResult`, `CheckFinding`, severity constants, `make_report`, `render_summary_table`, `parse_audit_args`, `run_check_core_coverage`, `run_check_version_compatibility`, `run_check_known_shared_helpers`, `TaxRate`, `load_rates` (optional `[audit]` extra) |
 
+## Country packages
+
+| Country | Package | Standard | Scope | Coverage status |
+|---------|---------|----------|-------|------------------|
+| France | [`mcp-facture-electronique-fr`](https://github.com/cmendezs/mcp-facture-electronique-fr) | NF XP Z12-012 / NF XP Z12-013 / Factur-X / UBL 2.1 / CII | B2B, phased rollout from 1 September 2026 | Live |
+| Germany | [`mcp-einvoicing-de`](https://github.com/cmendezs/mcp-einvoicing-de) | ZUGFeRD 2.x / XRechnung 3.x | B2B, phased 2025 to 2028 | Live |
+| Belgium | [`mcp-einvoicing-be`](https://github.com/cmendezs/mcp-einvoicing-be) | Peppol BIS 3.0 / PINT-BE | B2B, 1 January 2026 | Live; Peppol-specific overlay rules not checked (EN 16931 base only) |
+| Italy | [`mcp-fattura-elettronica-it`](https://github.com/cmendezs/mcp-fattura-elettronica-it) | FatturaPA / SDI | B2G + B2B + B2C, mandatory since 2019 (B2G since 2014) | Live |
+| Poland | [`mcp-ksef-pl`](https://github.com/cmendezs/mcp-ksef-pl) | KSeF FA(3) / FA(2) / Peppol BIS 3.0 | B2B, phased February 2026 to January 2027 | Live; batch session flow not implemented |
+| Spain | [`mcp-facturacion-electronica-es`](https://github.com/cmendezs/mcp-facturacion-electronica-es) | Factura-e / VeriFactu / SII / FACe | Pending Orden Ministerial, targeted 2026-10-01 | Live for VeriFactu/SII; B2B format wiring blocked on pending Orden Ministerial |
+| Brazil | [`mcp-nfe-br`](https://github.com/cmendezs/mcp-nfe-br) | NF-e / NFC-e (modelo 55/65, schema 4.00) / NFS-e Nacional | B2B (NF-e) + B2C (NFC-e), both mandatory since 2008 | Live; IBS/CBS tax reform rollout ongoing through 2033 |
+
 ## Installation
 
 ```bash
@@ -87,18 +99,6 @@ mcp-einvoicing-core
   ├── EInvoicingMCPServer               ← plugin registry wrapping FastMCP
   └── Audit framework                   ← per-package compliance checks
 ```
-
-## Country packages
-
-| Country | Package | Standard |
-|---------|---------|----------|
-| France | [`mcp-facture-electronique-fr`](https://github.com/cmendezs/mcp-facture-electronique-fr) | NF XP Z12-012 / NF XP Z12-013 / Factur-X / UBL 2.1 / CII |
-| Germany | [`mcp-einvoicing-de`](https://github.com/cmendezs/mcp-einvoicing-de) | ZUGFeRD 2.x / XRechnung 3.x |
-| Belgium | [`mcp-einvoicing-be`](https://github.com/cmendezs/mcp-einvoicing-be) | Peppol BIS 3.0 / PINT-BE |
-| Italy | [`mcp-fattura-elettronica-it`](https://github.com/cmendezs/mcp-fattura-elettronica-it) | FatturaPA / SDI |
-| Poland | [`mcp-ksef-pl`](https://github.com/cmendezs/mcp-ksef-pl) | KSeF FA(3) / FA(2) / Peppol BIS 3.0 |
-| Spain | [`mcp-facturacion-electronica-es`](https://github.com/cmendezs/mcp-facturacion-electronica-es) | Factura-e / VeriFactu / SII / FACe |
-| Brazil | [`mcp-nfe-br`](https://github.com/cmendezs/mcp-nfe-br) | NF-e / NFC-e (modelo 55/65, schema 4.00) / NFS-e Nacional |
 
 ## Plugin registration pattern
 
