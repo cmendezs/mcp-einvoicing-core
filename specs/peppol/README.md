@@ -27,13 +27,37 @@ All files sourced from the OpenPeppol AISBL publications portal (`https://docs.p
 |---|---|---|---|
 | `PEPPOL-EN16931-UBL-3.0.20.sch` | Peppol BIS Billing 3.0 UBL validation rules (Peppol-layer business rules on top of CEN EN 16931) | 3.0.20 | 2026-06-27 |
 | `CEN-EN16931-UBL-3.0.20.sch` | CEN EN 16931 UBL validation rules (core business rules) | 3.0.20 | 2026-06-27 |
-
 | `stylesheet-ubl.xslt` | XSLT stylesheet for rendering UBL 2.1 invoices to human-readable HTML | 3.0.20 | 2026-06-28 |
 | `BIS-Billing3-Examples.zip` | Official OpenPeppol BIS Billing 3.0 example UBL invoices (golden XML test vectors) | 3.0.20 | 2026-06-28 |
 
 Source: `https://docs.peppol.eu/poacc/billing/3.0/` and `https://github.com/OpenPeppol/peppol-bis-invoice-3/tree/v3.0.20/rules/sch`
 
 The BIS Billing 3.0 specification itself is published as a web document at `https://docs.peppol.eu/poacc/billing/3.0/bis/` (no standalone PDF available).
+
+**Licensing note (2026-08-19):** `CEN-EN16931-UBL-3.0.20.sch` carries an explicit, in-file
+`Licensed under European Union Public Licence (EUPL) version 1.2.` grant. `PEPPOL-EN16931-UBL-
+3.0.20.sch` and `stylesheet-ubl.xslt` do not — their headers only say content is "reproduced with
+permission from CEN" without stating redistribution terms, and the source repo
+(`OpenPEPPOL/peppol-bis-invoice-3`) carries no root `LICENSE`/`NOTICE` file. Confirmed against
+`docs.peppol.eu/poacc/billing/3.0/bis/`'s current copyright statement, which requires OpenPeppol
+AISBL's prior consent for any redistribution or modification. Full investigation and decision in
+[`context-library/decisions/peppol-schematron-artifact.md`](../../../context-library/decisions/peppol-schematron-artifact.md)
+(root repo). **Practical effect:** only `CEN-EN16931-UBL-3.0.20.sch` may be compiled and shipped in
+a package wheel; `PEPPOL-EN16931-UBL-3.0.20.sch` and `stylesheet-ubl.xslt` stay here as
+compile-input/verification references only, never as build output.
+
+## Build tooling
+
+| Tool | Version | Source | License | Retrieved | Used for |
+|---|---|---|---|---|---|
+| SchXslt2 | 1.11.2 | `https://codeberg.org/SchXslt/schxslt2/releases/download/v1.11.2/schxslt2-1.11.2.zip` | MIT (David Maus) | 2026-08-20 | Compiling `CEN-EN16931-UBL-3.0.20.sch` into a validating XSLT 3.0 stylesheet (`transpile.xsl`), run via `saxonche` (the `[xslt2]` extra core already depends on) — see `scripts/compile_en16931_base_schematron.py`. Not a runtime dependency; dev/CI-time only. |
+
+Vendored copy (with its own `LICENSE`) lives at `mcp-einvoicing-core/scripts/vendor/schxslt2-1.11.2/`,
+outside `specs/` since it is build tooling, not a normative spec. SchXslt2 is the maintained
+successor to the original SchXslt (`codeberg.org/SchXslt/schxslt`, now maintenance-mode-only); it
+targets XSLT 3.0, a strict superset of the XPath 2.0 our `.sch` files declare
+(`queryBinding="xslt2"`), so it compiles them without modification. Only used against
+`CEN-EN16931-UBL-3.0.20.sch` per the licensing note above — never against the Peppol overlay file.
 
 ## Key namespaces
 

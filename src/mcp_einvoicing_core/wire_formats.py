@@ -146,6 +146,16 @@ class EN16931UBLSerializer:
         _sub_opt(root, _CBC, "ProfileID", invoice.business_process)
         _sub(root, _CBC, "ID", invoice.invoice_number)
         _sub(root, _CBC, "IssueDate", _date_ubl(invoice.invoice_date))
+        # BT-9 (Payment due date): must be a top-level cbc:DueDate per the UBL
+        # 2.1 Invoice schema sequence (IssueDate -> IssueTime -> DueDate ->
+        # InvoiceTypeCode), confirmed against the vendored UBL-Invoice-2.1.xsd.
+        # This is also what BR-CO-25 actually checks (exists(//cbc:DueDate) or
+        # exists(//cac:PaymentTerms/cbc:Note)) — the cac:PaymentMeans/
+        # cbc:PaymentDueDate emitted below in _build_payment_means is a
+        # separate, schema-valid but functionally distinct element that
+        # BR-CO-25 does not look at; kept as-is, not a duplicate to remove.
+        if invoice.due_date:
+            _sub(root, _CBC, "DueDate", _date_ubl(invoice.due_date))
         _sub(root, _CBC, "InvoiceTypeCode" if not is_credit_note else "CreditNoteTypeCode",
              invoice.invoice_type_code)
         _sub_opt(root, _CBC, "Note", invoice.note)
@@ -467,7 +477,14 @@ class EN16931UBLParser:
         delivery_date: Optional[date] = (
             date.fromisoformat(delivery_date_str) if delivery_date_str else None
         )
-        due_date_str = get_text("cac:PaymentMeans/cbc:PaymentDueDate")
+        # BT-9: prefer the standard top-level cbc:DueDate (what BR-CO-25 and
+        # every conformant Peppol/EN16931 producer actually emit). Fall back
+        # to cac:PaymentMeans/cbc:PaymentDueDate for documents produced by
+        # this serializer before the 1.18.1 fix (still emitted there too, for
+        # exactly this backward-compatibility reason).
+        due_date_str = get_text("cbc:DueDate") or get_text(
+            "cac:PaymentMeans/cbc:PaymentDueDate"
+        )
         due_date: Optional[date] = (
             date.fromisoformat(due_date_str) if due_date_str else None
         )

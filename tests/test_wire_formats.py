@@ -217,6 +217,25 @@ class TestUBLSerializer:
         assert iban_el is not None
         assert iban_el.text == "BE68539007547034"
 
+    def test_due_date_emitted_at_top_level(self):
+        """BT-9 / BR-CO-25: cbc:DueDate must be a top-level Invoice child
+        (UBL 2.1 sequence: IssueDate -> IssueTime -> DueDate -> InvoiceTypeCode),
+        not only inside cac:PaymentMeans/cbc:PaymentDueDate. Fixed in 1.18.1
+        after being silently missing for every EN16931UBLSerializer consumer."""
+        inv = _make_invoice(due_date=date(2026, 6, 23))
+        xml = EN16931UBLSerializer().serialize(inv)
+        root = etree.fromstring(xml)
+        ns = {"cbc": "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"}
+        due_el = root.find("cbc:DueDate", ns)
+        assert due_el is not None
+        assert due_el.text == "2026-06-23"
+        # Must come after IssueDate and before InvoiceTypeCode per the UBL
+        # 2.1 XSD sequence.
+        children = [etree.QName(c).localname for c in root]
+        assert children.index("IssueDate") < children.index("DueDate") < children.index(
+            "InvoiceTypeCode"
+        )
+
     def test_document_level_allowance(self):
         inv = _make_invoice(
             allowances_charges=[
@@ -326,6 +345,26 @@ class TestUBLRoundTrip:
         restored = self._round_trip(original)
         assert restored.preceding_invoice_reference == "INV-2026-000"
         assert restored.preceding_invoice_date == date(2026, 4, 1)
+
+    def test_parses_third_party_invoice_with_only_top_level_due_date(self):
+        """A conformant third-party Peppol/EN16931 producer emits only the
+        standard top-level cbc:DueDate, never PaymentMeans/PaymentDueDate
+        (which is not what BR-CO-25 checks and this library only emitted as
+        a bug prior to 1.18.1). Before the parser fix, such an invoice's due
+        date was silently dropped on parse. Simulated by taking a real,
+        structurally complete serialized invoice and stripping only the
+        legacy PaymentMeans/PaymentDueDate element, isolating the top-level
+        cbc:DueDate as the sole remaining source."""
+        import re
+
+        original = _make_invoice(due_date=date(2026, 6, 30))
+        xml = EN16931UBLSerializer().serialize(original)
+        stripped = re.sub(rb"<cbc:PaymentDueDate>.*?</cbc:PaymentDueDate>", b"", xml)
+        assert b"PaymentDueDate" not in stripped
+        assert b"<cbc:DueDate>2026-06-30</cbc:DueDate>" in stripped
+
+        parsed = EN16931UBLParser().parse(stripped)
+        assert parsed.due_date == date(2026, 6, 30)
 
 
 # ---------------------------------------------------------------------------

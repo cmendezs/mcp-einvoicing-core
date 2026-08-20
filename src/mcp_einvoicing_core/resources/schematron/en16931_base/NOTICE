@@ -1,0 +1,33 @@
+CEN EN 16931 base Schematron (compiled)
+========================================
+
+Content: business-rule logic (the "BR-*" rules) originally published by
+CEN/TC 434 as CEN-EN16931-UBL-3.0.20.sch, distributed as part of the
+OpenPeppol AISBL "peppol-bis-invoice-3" repository release v3.0.20.
+
+Source repository: https://github.com/OpenPEPPOL/peppol-bis-invoice-3
+Source file:        rules/sch/CEN-EN16931-UBL.sch (release v3.0.20, 2025 November)
+Retrieved:           2026-06-27
+License:             European Union Public Licence (EUPL) v1.2, per the explicit
+                      in-file grant carried in the source .sch:
+                      "Licensed under European Union Public Licence (EUPL) version 1.2."
+                      Full license text: see LICENSE in this directory.
+
+This directory contains only the CEN EN 16931 base rules. It does NOT
+contain, and this NOTICE does NOT cover, the Peppol-specific overlay
+(PEPPOL-EN16931-UBL-*.sch) — that file carries no redistribution grant and
+is never compiled or bundled by this package. See
+context-library/decisions/peppol-schematron-artifact.md (root repo) for the
+full licensing investigation.
+
+Compiled artefact: CEN-EN16931-UBL.xslt
+Compiler:          SchXslt2 v1.11.2 (MIT, David Maus) — see
+                    mcp-einvoicing-core/specs/peppol/README.md "Build tooling"
+                    for the compiler's own provenance, and
+                    mcp-einvoicing-core/scripts/compile_en16931_base_schematron.py
+                    for the reproducible compile step.
+Compiled:          2026-08-20
+
+The compiled XSLT is a mechanical transformation of the .sch rule content
+(business-rule logic and messages) into an executable validation stylesheet;
+it carries forward the same EUPL 1.2 licensing as its source.

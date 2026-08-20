@@ -35,6 +35,15 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.18.1] - 2026-08-20
+#### Fixed
+- `EN16931UBLSerializer._build_root` (`wire_formats.py`) never emitted a top-level `<cbc:DueDate>` (BT-9) — `invoice.due_date` only reached `<cac:PaymentMeans>/<cbc:PaymentDueDate>`, a separate, schema-valid but functionally distinct element. This is not what CEN's `BR-CO-25` checks for (`exists(//cbc:DueDate) or exists(//cac:PaymentTerms/cbc:Note)`), so any EN16931/Peppol invoice with a due date and no `PaymentTerms` note failed `BR-CO-25` regardless of the due date actually being set. Fixed by emitting `<cbc:DueDate>` as a top-level Invoice child, positioned per the UBL 2.1 XSD sequence (`IssueDate` → `IssueTime` → `DueDate` → `InvoiceTypeCode`, confirmed against the vendored `UBL-Invoice-2.1.xsd`). The existing `PaymentMeans/PaymentDueDate` emission is left in place (harmless, schema-valid, not the source of the bug). Surfaced while wiring `[CORE-EN16931-BASE-SCHEMATRON-1]`'s real Schematron validation into `mcp-einvoicing-be`; the CII serializer (`SpecifiedTradePaymentTerms/DueDateDateTime`) was already correct and needed no change. Affects every `EN16931UBLSerializer` consumer: DE, FR, IT, PL, BE. Not a breaking change — the fix only adds a previously-missing, schema-mandated-position element; no existing field or method signature changed.
+
+### [1.18.0] - 2026-08-20
+#### Added
+- `schematron_artifacts.py`: `en16931_base_schematron_validator()`, a ready-to-use, bundled, compiled CEN EN 16931 base Schematron validator (the `BR-*` rules — structural + arithmetic/totals checks). Compiled from the vendored, EUPL-1.2-licensed `CEN-EN16931-UBL-3.0.20.sch` via SchXslt2 v1.11.2 (MIT), ships inside the wheel under `resources/schematron/en16931_base/` — no compile step at install or call time. Scope is EN16931 base rules only; does NOT include the Peppol-specific overlay (no confirmed OpenPeppol redistribution rights — see `context-library/decisions/peppol-schematron-artifact.md` in the root repo). Reproducible compile step: `scripts/compile_en16931_base_schematron.py`.
+- Closes the base-rule portion of `[CORE-PEPPOL-SCHEMATRON-1]` / `mcp-einvoicing-be` BE-SC-11 — see `context-library/roadmap-2026.md` `[CORE-EN16931-BASE-SCHEMATRON-1]`.
+
 ### [1.16.2] - 2026-08-09
 #### Fixed
 - `signer_service.py`'s out-of-process mTLS submit path (`SignerClient.mtls_submit`/`mtls_submit_files` — the recommended path over every country package's legacy in-process fallback) had no 429/503 retry at all, while `BaseEInvoicingClient._request` already did.
