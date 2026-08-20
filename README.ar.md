@@ -32,6 +32,7 @@
 | `peppol` | `PeppolSMPClient`, `PeppolParticipantId`, `PeppolServiceInfo`, `PeppolLookupResult`, `PeppolEnvironment`, `PEPPOL_BIS_BILLING_30` |
 | `peppol.transport` | `AS4MessageEnvelope`, `AS4TransportClient`, `AS4ReceiptHandler`, `PeppolTransmitter`, `AS4Receipt`, `AS4Credentials` (ارسال صادر عبر Peppol AS4) |
 | `schematron` | `SchematronValidator` (XSLT 1.0), `SaxonSchematronValidator` (XSLT 2.0/3.0، اضافة اختيارية `[xslt2]`)، `load_schematron_validator` (اختيار تلقائي للمحرك)، `get_xslt_version`، `BaseStructuredValidator`، `BaseXSDValidator`، `BaseJSONValidator`، `ValidationMessage`، `ValidationResult` |
+| `schematron_artifacts` | `en16931_base_schematron_validator` (شيماترون CEN EN16931 الاساسي المجمع والمرفق — قواعد `BR-*` فقط، بدون تراكب Peppol؛ اضافة اختيارية `[xslt2]`) |
 | `digital_signature` | `BaseDocumentSigner`, `XAdESEPESSigner`, `XAdESSignerConfig`, `XMLDSigSigner`, `XMLDSigSignerConfig` |
 | `endpoints` | `BaseEnvironmentEndpoints`, `EndpointSet`, `EndpointEnvironment` (توجيه عناوين URL للتجربة/الانتاج) |
 | `routing` | `RoutingIdentifier` (مدققات ثابتة: `validate_de_leitweg`), `RoutingIdValidationResult` |

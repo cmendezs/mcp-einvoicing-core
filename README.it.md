@@ -33,6 +33,7 @@ duplicare il codice.
 | `peppol` | `PeppolSMPClient`, `PeppolParticipantId`, `PeppolServiceInfo`, `PeppolLookupResult`, `PeppolEnvironment`, `PEPPOL_BIS_BILLING_30` |
 | `peppol.transport` | `AS4MessageEnvelope`, `AS4TransportClient`, `AS4ReceiptHandler`, `PeppolTransmitter`, `AS4Receipt`, `AS4Credentials` (trasmissione Peppol AS4 in uscita) |
 | `schematron` | `SchematronValidator` (XSLT 1.0), `SaxonSchematronValidator` (XSLT 2.0/3.0, extra opzionale `[xslt2]`), `load_schematron_validator` (factory a selezione automatica), `get_xslt_version`, `BaseStructuredValidator`, `BaseXSDValidator`, `BaseJSONValidator`, `ValidationMessage`, `ValidationResult` |
+| `schematron_artifacts` | `en16931_base_schematron_validator` (Schematron di base CEN EN16931 compilato e incluso — solo regole `BR-*`, senza overlay Peppol; extra opzionale `[xslt2]`) |
 | `digital_signature` | `BaseDocumentSigner`, `XAdESEPESSigner`, `XAdESSignerConfig`, `XMLDSigSigner`, `XMLDSigSignerConfig` |
 | `endpoints` | `BaseEnvironmentEndpoints`, `EndpointSet`, `EndpointEnvironment` (routing URL sandbox/produzione) |
 | `routing` | `RoutingIdentifier` (validatori statici: `validate_de_leitweg`), `RoutingIdValidationResult` |

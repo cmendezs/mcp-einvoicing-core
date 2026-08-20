@@ -33,6 +33,7 @@ Grundlage aufbauen, ohne Code zu duplizieren.
 | `peppol` | `PeppolSMPClient`, `PeppolParticipantId`, `PeppolServiceInfo`, `PeppolLookupResult`, `PeppolEnvironment`, `PEPPOL_BIS_BILLING_30` |
 | `peppol.transport` | `AS4MessageEnvelope`, `AS4TransportClient`, `AS4ReceiptHandler`, `PeppolTransmitter`, `AS4Receipt`, `AS4Credentials` (ausgehende Peppol-AS4-Uebertragung) |
 | `schematron` | `SchematronValidator` (XSLT 1.0), `SaxonSchematronValidator` (XSLT 2.0/3.0, optionales Extra `[xslt2]`), `load_schematron_validator` (automatische Backend-Auswahl), `get_xslt_version`, `BaseStructuredValidator`, `BaseXSDValidator`, `BaseJSONValidator`, `ValidationMessage`, `ValidationResult` |
+| `schematron_artifacts` | `en16931_base_schematron_validator` (gebuendeltes, kompiliertes CEN-EN16931-Basis-Schematron — nur `BR-*`-Regeln, ohne Peppol-Overlay; optionales Extra `[xslt2]`) |
 | `digital_signature` | `BaseDocumentSigner`, `XAdESEPESSigner`, `XAdESSignerConfig`, `XMLDSigSigner`, `XMLDSigSignerConfig` |
 | `endpoints` | `BaseEnvironmentEndpoints`, `EndpointSet`, `EndpointEnvironment` (Sandbox-/Produktions-URL-Routing) |
 | `routing` | `RoutingIdentifier` (statische Validatoren: `validate_de_leitweg`), `RoutingIdValidationResult` |

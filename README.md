@@ -32,6 +32,7 @@ audit framework so country-specific packages share a common foundation without d
 | `peppol` | `PeppolSMPClient`, `PeppolParticipantId`, `PeppolServiceInfo`, `PeppolLookupResult`, `PeppolEnvironment`, `PEPPOL_BIS_BILLING_30` |
 | `peppol.transport` | `AS4MessageEnvelope`, `AS4TransportClient`, `AS4ReceiptHandler`, `PeppolTransmitter`, `AS4Receipt`, `AS4Credentials` (Peppol AS4 outbound transmission) |
 | `schematron` | `SchematronValidator` (XSLT 1.0), `SaxonSchematronValidator` (XSLT 2.0/3.0, optional `[xslt2]` extra), `load_schematron_validator` (auto-dispatch factory), `get_xslt_version`, `BaseStructuredValidator`, `BaseXSDValidator`, `BaseJSONValidator`, `ValidationMessage`, `ValidationResult` |
+| `schematron_artifacts` | `en16931_base_schematron_validator` (bundled, compiled CEN EN16931 base Schematron — `BR-*` rules only, no Peppol overlay; optional `[xslt2]` extra) |
 | `digital_signature` | `BaseDocumentSigner`, `XAdESEPESSigner`, `XAdESSignerConfig`, `XMLDSigSigner`, `XMLDSigSignerConfig`, `load_certificate_der` |
 | `endpoints` | `BaseEnvironmentEndpoints`, `EndpointSet`, `EndpointEnvironment` (sandbox/production URL routing) |
 | `routing` | `RoutingIdentifier` (static validators: `validate_de_leitweg`), `RoutingIdValidationResult` |
