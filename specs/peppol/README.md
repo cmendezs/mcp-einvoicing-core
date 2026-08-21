@@ -20,6 +20,18 @@ All files sourced from the OpenPeppol AISBL publications portal (`https://docs.p
 | `Peppol-EDN-Service-Metadata-Locator-1.3.0-2025-02-06.pdf` | SML spec — DNS U-NAPTR discovery flow, `Meta:SMP` service name, management interfaces | 1.3.0 | 2026-05-21 |
 | `Peppol-EDN-Policy-for-use-of-identifiers-4.4.0-2025-02-06.pdf` | Identifier policy — POLICY 7 DNS hash algorithm (Base32-SHA256), participant ID format, document type and process ID schemes | 4.4.0 | 2026-05-21 |
 | `Peppol-EDN-Business-Message-Envelope-2.0.1-2023-08-17.pdf` | BME 2.0.1 spec — AS4 envelope structure (reference only; BME is out of scope for this library) | 2.0.1 | 2026-05-21 |
+| `PEPPOL-EDN-Directory-1.1.1-2020-10-15.pdf` | Peppol Directory spec — REST search API, business-card data model, PD-SML connection. Supersedes the earlier "out of scope" exclusion below now that `[CORE-PEPPOL-DIR-1]` (`roadmap-2026.md`) scopes a Directory search client | 1.1.1 | 2026-08-21 |
+| `PEPPOL-EDN-Policy-for-Transport-Security-1.1.0-2020-04-20.pdf` | TLS/certificate policy for SMP, Directory, and AP actors — supersedes the earlier "out of scope" exclusion below now that `[CORE-PEPPOL-TRUST-1]` scopes trust-store validation | 1.1.0 | 2026-08-21 |
+
+**Licensing note (2026-08-21):** every PDF in this table carries an in-file "Statement of copyright"
+granting **Creative Commons BY-NC-ND 4.0** (checked directly across all seven: the three vendored
+2026-05-21 and the two added here, all identical boilerplate) — "Share: copy and redistribute the
+material in any medium or format," permissive for verbatim redistribution, but NonCommercial and
+NoDerivatives. `mcp-einvoicing-core` is Apache-2.0, open source, and not operated for commercial
+purposes (confirmed with the project owner 2026-08-21) — this satisfies NC, and these files are
+vendored unmodified — this satisfies ND. This is a broader, cleaner grant than the CEN/Peppol
+Schematron overlay's total absence of a redistribution license (see the schematron licensing note
+below); the two should not be conflated.
 
 ## Peppol BIS Billing 3.0 schematron rules
 
@@ -85,10 +97,8 @@ These changes affect `peppol.py` and are tracked in `context-library/roadmap-202
 
 | File | Reason excluded |
 |---|---|
-| `peppol-sml-manage-*.wsdl` (both) | SML management SOAP interfaces — for SMP operators registering participants, not for invoice compliance clients |
-| `peppol-directory-business-card-20180621.xsd` | Peppol Directory business card — participant search UI, out of scope |
-| `PEPPOL-EDN-Directory-1.1.1-2020-10-15.pdf` | Peppol Directory spec — out of scope |
-| `PEPPOL-EDN-Policy-for-Transport-Security-1.1.0-2020-04-20.pdf` | AS4 mTLS policy — for access point operators, not SMP lookup clients |
+| `peppol-sml-manage-*.wsdl` (both) | SML management SOAP interfaces — for SMP operators registering participants, not for invoice compliance clients. Re-checked 2026-08-21 against `[CORE-PEPPOL-SML-1]`: license is clean (MIT-style OpenPeppol AISBL grant) but the scope reasoning still holds — stays excluded |
+| `peppol-directory-business-card-20180621.xsd` | Peppol Directory business card XSD — license is clean (Apache-2.0, Philip Helger), and it may turn out to be part of the Directory search response shape `[CORE-PEPPOL-DIR-1]` needs, but that is not yet confirmed against the newly-added `PEPPOL-EDN-Directory-1.1.1` spec's actual content. Stays excluded until that's checked — don't vendor speculatively |
 | `2024-01-15 Peppol Reporting - SP Operational Guideline v1.0.2.pdf` | SP operational reporting — separate concern |
 | `OpenPeppol-SP-ID-Scheme 1.0.0.pdf` | SP identification scheme — not relevant to SMP client |
 
