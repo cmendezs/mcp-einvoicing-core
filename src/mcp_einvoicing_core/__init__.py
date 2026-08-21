@@ -45,6 +45,13 @@ from mcp_einvoicing_core.peppol import (
     PeppolParticipantId,
     PeppolServiceInfo,
     PeppolSMPClient,
+    resolve_naptr,
+)
+from mcp_einvoicing_core.peppol.codelists import CodeList, CodelistNotConfiguredError
+from mcp_einvoicing_core.peppol.tools import (
+    IdentifierAdapter,
+    default_id_adapter,
+    register_peppol_tools,
 )
 from mcp_einvoicing_core.peppol.transport import (
     AS4Credentials,
@@ -54,6 +61,7 @@ from mcp_einvoicing_core.peppol.transport import (
     AS4TransportClient,
     PeppolTransmitter,
 )
+from mcp_einvoicing_core.pdf_tools import identify_and_extract_pdf, register_pdf_tools
 from mcp_einvoicing_core.schematron import (
     BaseJSONValidator,
     BaseStructuredValidator,
@@ -84,7 +92,7 @@ from mcp_einvoicing_core.models import (
     TaxIdValidationResult,
     VATSummary,
 )
-from mcp_einvoicing_core.pdf import PDFEmbedder
+from mcp_einvoicing_core.pdf import PDFEmbedder, CANONICAL_HYBRID_PDF_FILENAMES
 from mcp_einvoicing_core.profile_registry import (
     ProfileEntry,
     ProfileRegistry,
@@ -222,6 +230,14 @@ __all__ = [
     "PeppolLookupResult",
     "PeppolSMPClient",
     "PEPPOL_BIS_BILLING_30",
+    "resolve_naptr",
+    # Peppol tool plugin
+    "register_peppol_tools",
+    "default_id_adapter",
+    "IdentifierAdapter",
+    # Peppol eDEC code lists
+    "CodeList",
+    "CodelistNotConfiguredError",
     # Peppol AS4 transport
     "AS4Credentials",
     "AS4MessageEnvelope",
@@ -238,6 +254,10 @@ __all__ = [
     "InvoiceFixtureFactory",
     # PDF/A-3 utilities
     "PDFEmbedder",
+    "CANONICAL_HYBRID_PDF_FILENAMES",
+    # Hybrid-PDF tool plugin
+    "register_pdf_tools",
+    "identify_and_extract_pdf",
     # Download-rules framework
     "DownloadSpec",
     "download_artefacts",

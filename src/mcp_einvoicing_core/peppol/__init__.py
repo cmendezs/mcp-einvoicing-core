@@ -40,7 +40,7 @@ import re
 import urllib.parse
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
+from typing import Callable, Optional
 
 import httpx
 from lxml import etree
@@ -249,6 +249,117 @@ class PeppolLookupResult:
 
 
 # ---------------------------------------------------------------------------
+# Standalone U-NAPTR resolution (promoted from PeppolSMPClient._resolve_smp_hostname)
+# ---------------------------------------------------------------------------
+
+
+def _is_allowed_smp_hostname_impl(hostname: str) -> bool:
+    """Return True if *hostname* ends with a known Peppol AP suffix.
+
+    Module-level implementation shared by `resolve_naptr()` (default
+    allowlist check) and `PeppolSMPClient._is_allowed_smp_hostname` (instance
+    method retained for backward compatibility, delegates here).
+    """
+    env_extra = os.environ.get("EINVOICING_SMP_ALLOWLIST", "")
+    extra: frozenset[str] = (
+        frozenset(s.strip() for s in env_extra.split(",") if s.strip())
+        if env_extra
+        else frozenset()
+    )
+    allowlist = _SMP_ALLOWLIST_DEFAULT | extra
+    hostname_lower = hostname.lower()
+    return any(hostname_lower.endswith(suffix) for suffix in allowlist)
+
+
+async def resolve_naptr(
+    dns_name: str,
+    *,
+    doh_url: str = "https://cloudflare-dns.com/dns-query",
+    http_timeout: float = 10.0,
+    service: str = "META:SMP",
+    allowlist_check: Optional[Callable[[str], bool]] = None,
+) -> Optional[str]:
+    """Resolve a Peppol U-NAPTR DNS record and return the target hostname.
+
+    Standalone promotion of the DNS (SML) step previously buried inside
+    ``PeppolSMPClient._resolve_smp_hostname``. Performs only the DNS lookup,
+    not the subsequent SMP HTTP fetch, so it is useful as an isolated
+    diagnostic: it confirms SML registration independently of SMP
+    reachability.
+
+    Args:
+        dns_name: The full U-NAPTR query name, e.g.
+            ``participant_id.dns_name(sml_domain)``.
+        doh_url: DNS-over-HTTPS resolver endpoint.
+        http_timeout: HTTP timeout in seconds.
+        service: NAPTR service field to match (case-insensitive).
+            Default ``"META:SMP"`` per the Peppol SML specification.
+        allowlist_check: Callable validating a resolved hostname against the
+            Peppol AP allowlist. Defaults to `_is_allowed_smp_hostname_impl`
+            (extendable via the ``EINVOICING_SMP_ALLOWLIST`` env var).
+
+    Returns:
+        The resolved hostname, or None if no matching NAPTR record exists
+        (NXDOMAIN, or no record with the requested *service*: the
+        participant is not registered).
+
+    Raises:
+        PlatformError: If the DoH query itself fails (non-2xx response), or
+            if the resolved hostname is not in the Peppol AP allowlist.
+    """
+    check = allowlist_check or _is_allowed_smp_hostname_impl
+    logger.debug("Peppol U-NAPTR lookup: %s", dns_name)
+
+    params = {"name": dns_name, "type": "NAPTR"}
+    headers = {"Accept": "application/dns-json"}
+
+    async with httpx.AsyncClient(timeout=http_timeout) as client:
+        response = await client.get(doh_url, params=params, headers=headers)
+
+    if not response.is_success:
+        raise PlatformError(
+            status_code=response.status_code,
+            message=f"DNS-over-HTTPS query failed: {response.text[:200]}",
+        )
+
+    data = response.json()
+    # DoH JSON response: {"Status": 0, "Answer": [{"type": 35, "data": "..."}]}
+    # Status 0 = NOERROR, type 35 = NAPTR
+    if data.get("Status") != 0:
+        return None  # NXDOMAIN or other error → not registered
+
+    for answer in data.get("Answer", []):
+        if answer.get("type") != 35:  # NAPTR
+            continue
+        naptr_data = answer.get("data", "")
+        m = _NAPTR_DATA_RE.match(naptr_data)
+        if not m:
+            continue
+        if m.group("service").upper() != service.upper():
+            continue
+        uri_m = _NAPTR_URI_RE.search(m.group("regexp"))
+        if not uri_m:
+            continue
+        naptr_url = uri_m.group(2)
+        parsed = urllib.parse.urlparse(naptr_url)
+        hostname = parsed.netloc
+        if not hostname:
+            continue
+        if not check(hostname):
+            raise PlatformError(
+                status_code=0,
+                message=(
+                    f"Resolved SMP hostname {hostname!r} is not in the Peppol "
+                    "AP allowlist. Set EINVOICING_SMP_ALLOWLIST to override."
+                ),
+            )
+        logger.debug("Peppol U-NAPTR resolved: %s (URI: %s)", hostname, naptr_url)
+        return hostname
+
+    return None
+
+
+# ---------------------------------------------------------------------------
 # SMP client
 # ---------------------------------------------------------------------------
 
@@ -383,59 +494,16 @@ class PeppolSMPClient:
         The DNS name queried is: <base32>.iso6523-actorid-upis.<sml>
         (POLICY 7, Peppol Policy for use of Identifiers v4.4.0)
         Record type: U-NAPTR (DNS type 35, SML specification 1.3.0 §3.2)
+
+        Delegates to the standalone `resolve_naptr()` function (promoted in
+        v1.19.0 as a public diagnostic, see CORE-PEPPOL-DNS-1).
         """
         dns_name = participant_id.dns_name(self._sml_domain)
-        logger.debug("Peppol DNS lookup: %s", dns_name)
-
-        params = {"name": dns_name, "type": "NAPTR"}
-        headers = {"Accept": "application/dns-json"}
-
-        async with httpx.AsyncClient(timeout=self._http_timeout) as client:
-            response = await client.get(self._doh_url, params=params, headers=headers)
-
-        if not response.is_success:
-            raise PlatformError(
-                status_code=response.status_code,
-                message=f"DNS-over-HTTPS query failed: {response.text[:200]}",
-            )
-
-        data = response.json()
-        # DoH JSON response: {"Status": 0, "Answer": [{"type": 35, "data": "..."}]}
-        # Status 0 = NOERROR, type 35 = NAPTR
-        if data.get("Status") != 0:
-            return None  # NXDOMAIN or other error → participant not registered
-
-        for answer in data.get("Answer", []):
-            if answer.get("type") != 35:  # NAPTR
-                continue
-            naptr_data = answer.get("data", "")
-            m = _NAPTR_DATA_RE.match(naptr_data)
-            if not m:
-                continue
-            if m.group("service").upper() != "META:SMP":
-                continue
-            uri_m = _NAPTR_URI_RE.search(m.group("regexp"))
-            if not uri_m:
-                continue
-            smp_url = uri_m.group(2)
-            parsed = urllib.parse.urlparse(smp_url)
-            hostname = parsed.netloc
-            if not hostname:
-                continue
-            if not self._is_allowed_smp_hostname(hostname):
-                raise PlatformError(
-                    status_code=0,
-                    message=(
-                        f"Resolved SMP hostname {hostname!r} is not in the Peppol "
-                        "AP allowlist. Set EINVOICING_SMP_ALLOWLIST to override."
-                    ),
-                )
-            logger.debug(
-                "Peppol SMP hostname resolved: %s (NAPTR URI: %s)", hostname, smp_url
-            )
-            return hostname
-
-        return None
+        return await resolve_naptr(
+            dns_name,
+            doh_url=self._doh_url,
+            http_timeout=self._http_timeout,
+        )
 
     def _is_allowed_smp_hostname(self, hostname: str) -> bool:
         """Return True if *hostname* ends with a known Peppol AP suffix.
@@ -443,16 +511,11 @@ class PeppolSMPClient:
         The allowlist is seeded from ``_SMP_ALLOWLIST_DEFAULT`` and can be
         extended at deployment time via the ``EINVOICING_SMP_ALLOWLIST``
         environment variable (comma-separated additional suffixes).
+
+        Delegates to the module-level `_is_allowed_smp_hostname_impl`, shared
+        with `resolve_naptr()`'s default allowlist check.
         """
-        env_extra = os.environ.get("EINVOICING_SMP_ALLOWLIST", "")
-        extra: frozenset[str] = (
-            frozenset(s.strip() for s in env_extra.split(",") if s.strip())
-            if env_extra
-            else frozenset()
-        )
-        allowlist = _SMP_ALLOWLIST_DEFAULT | extra
-        hostname_lower = hostname.lower()
-        return any(hostname_lower.endswith(suffix) for suffix in allowlist)
+        return _is_allowed_smp_hostname_impl(hostname)
 
     async def _fetch_service_group(
         self, smp_base_url: str, participant_id: PeppolParticipantId
