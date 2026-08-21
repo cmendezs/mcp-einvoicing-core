@@ -30,7 +30,9 @@ Grundlage aufbauen, ohne Code zu duplizieren.
 | `convert` | `Syntax` (UBL, CII), `convert_wire_format` (automatische Quellerkennung, Serialisierung ins Zielformat) |
 | `base_server` | `EInvoicingMCPServer`, `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BaseLifecycleManager`, `BasePartyValidator`, `SubmitResult`, `assert_not_read_only`, `scrub` |
 | `http_client` | `BaseEInvoicingClient` (OAuth2, mTLS, Bearer, API-Key, ohne), `OAuthConfig`, `OAuthValues`, `TokenCache`, `AuthMode` |
-| `peppol` | `PeppolSMPClient`, `PeppolParticipantId`, `PeppolServiceInfo`, `PeppolLookupResult`, `PeppolEnvironment`, `PEPPOL_BIS_BILLING_30` |
+| `peppol` | `PeppolSMPClient`, `PeppolParticipantId`, `PeppolServiceInfo`, `PeppolLookupResult`, `PeppolEnvironment`, `PEPPOL_BIS_BILLING_30`, `resolve_naptr` (eigenstaendige U-NAPTR/SML-DNS-Diagnose) |
+| `peppol.tools` | `register_peppol_tools` (montierbares FastMCP-Plugin: Teilnehmer-Lookup, Service-Endpunkt, DNS-Diagnose, AS4-Versand, plus 8 eDEC-Codelisten-Tools), `default_id_adapter`, `IdentifierAdapter` (Vertrag fuer den nationalen Identifikator-Adapter) |
+| `peppol.codelists` | `CodeList`, `CodelistNotConfiguredError`, `load_codelist` und die eDEC-Lookup-Funktionen (Dokumenttypen, Prozesse, Teilnehmer-ID-Schemata, Transportprofile, SPIS-Anwendungsfaelle). Erfordert `EINVOICING_PEPPOL_CODELIST_DIR`, siehe Konfiguration unten |
 | `peppol.transport` | `AS4MessageEnvelope`, `AS4TransportClient`, `AS4ReceiptHandler`, `PeppolTransmitter`, `AS4Receipt`, `AS4Credentials` (ausgehende Peppol-AS4-Uebertragung) |
 | `schematron` | `SchematronValidator` (XSLT 1.0), `SaxonSchematronValidator` (XSLT 2.0/3.0, optionales Extra `[xslt2]`), `load_schematron_validator` (automatische Backend-Auswahl), `get_xslt_version`, `BaseStructuredValidator`, `BaseXSDValidator`, `BaseJSONValidator`, `ValidationMessage`, `ValidationResult` |
 | `schematron_artifacts` | `en16931_base_schematron_validator` (gebuendeltes, kompiliertes CEN-EN16931-Basis-Schematron — nur `BR-*`-Regeln, ohne Peppol-Overlay; optionales Extra `[xslt2]`) |
@@ -38,7 +40,8 @@ Grundlage aufbauen, ohne Code zu duplizieren.
 | `endpoints` | `BaseEnvironmentEndpoints`, `EndpointSet`, `EndpointEnvironment` (Sandbox-/Produktions-URL-Routing) |
 | `routing` | `RoutingIdentifier` (statische Validatoren: `validate_de_leitweg`), `RoutingIdValidationResult` |
 | `profile_registry` | `ProfileEntry`, `ProfileRegistry`, `profile_registry`, `set_profile_registry` |
-| `pdf` | `PDFEmbedder` (XML-Einbettung in PDF/A-3) |
+| `pdf` | `PDFEmbedder` (XML-Einbettung in PDF/A-3); `extract(filename=None)` probiert nacheinander die kanonischen Factur-X/XRechnung/ZUGFeRD-Dateinamen, `identify()` liest XMP-Metadaten, um ein Hybrid-PDF und dessen Konformitaetsstufe zu erkennen |
+| `pdf_tools` | `register_pdf_tools` (montierbares FastMCP-Plugin: `identify_and_extract_pdf`), `identify_and_extract_pdf` |
 | `qr` | `generate_qr_png_base64` |
 | `xml_utils` | `format_amount`, `format_quantity`, `xml_element`, `xml_optional`, `validate_date_iso`, `validate_iban`, `resolve_xml_input`, `mark_untrusted`, `mark_untrusted_fields`, `filter_empty_values`, `format_error` |
 | `download_rules` | `DownloadSpec`, `download_artefacts` |
@@ -78,6 +81,13 @@ Fuer die XSLT-2.0/3.0-Schematron-Validierung (`SaxonSchematronValidator` — erf
 ```bash
 pip install mcp-einvoicing-core[xslt2]
 ```
+
+## Konfiguration
+
+| Variable | Verwendet von | Zweck |
+|---|---|---|
+| `EINVOICING_PEPPOL_CODELIST_DIR` | `peppol.codelists` (und die Codelisten-Tools in `peppol.tools`) | Lokales Verzeichnis mit einer eigenen Kopie der OpenPeppol-eDEC-Codelisten. **Nicht in diesem Paket enthalten**: Fuer die eDEC-Codelisten liegt keine bestaetigte Weitergabeerlaubnis von OpenPeppol vor, daher liefert der Core nur den Parser und die Lookup-Tools, niemals die Daten selbst. Laden Sie den "as GeneriCode"-Export fuer jedes Artefakt (Document Types, Participant Identifier Schemes, Processes, Transport Profiles, SPIS Use Case) von [docs.peppol.eu/edelivery/codelists](https://docs.peppol.eu/edelivery/codelists/index.html) herunter und lassen Sie diese Variable auf das Verzeichnis mit diesen Dateien zeigen. Dateinamen werden anhand eines Praefixes erkannt, sodass ein Versionswechsel (z. B. v9.7 auf v9.8) keine Codeaenderung erfordert. Ist die Variable nicht gesetzt, liefern die Codelisten-Tools ein Ergebnis mit `configured: false` samt Einrichtungshinweisen, statt eine Ausnahme auszuloesen. |
+| `EINVOICING_SMP_ALLOWLIST` | `peppol` (`PeppolSMPClient`, `resolve_naptr`) | Durch Kommas getrennte Hostname-Suffixe zur Erweiterung der eingebauten Peppol-Access-Point-Allowlist, die bei der Validierung eines aufgeloesten SMP-Hostnamens verwendet wird. |
 
 ## Architektur
 
@@ -119,6 +129,28 @@ server.register_plugin(register_header_tools, "it-header")
 server.register_plugin(register_flow_tools, "fr-flow")
 server.run()
 ```
+
+Der Core stellt zudem ein eigenes montierbares Peppol-Tool-Plugin bereit, damit Laenderpakete
+SMP-Lookup und AS4-Versand nicht mehr selbst implementieren muessen. Stellen Sie dafuer einen
+nationalen Identifikator-Adapter bereit (eine kleine Funktion, die eine nationale Nummer, z. B.
+eine USt-IdNr., in eine Peppol-Teilnehmer-ID `"<Schema>:<Wert>"` umwandelt):
+
+```python
+from mcp_einvoicing_core.peppol.tools import register_peppol_tools
+
+def be_id_adapter(identifier: str) -> str:
+    if ":" in identifier:
+        return identifier
+    return f"0208:{normalize_vat_be(identifier)[2:]}"  # KBO/BCE-Schema
+
+server.register_plugin(
+    lambda m: register_peppol_tools(m, id_adapter=be_id_adapter), "peppol"
+)
+```
+
+Dadurch werden `peppol_lookup_participant`, `peppol_get_service_endpoint`, `resolve_peppol_dns`,
+`peppol_send` sowie 8 OpenPeppol-eDEC-Codelisten-Tools registriert (siehe Konfiguration oben zu
+`EINVOICING_PEPPOL_CODELIST_DIR`, erforderlich fuer die Codelisten-Tools).
 
 ## Kompatibilitaet mit Claude Desktop / Cursor / Kiro
 

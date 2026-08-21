@@ -29,7 +29,9 @@
 | `convert` | `Syntax` (UBL, CII), `convert_wire_format` (كشف تلقائي للمصدر، تسلسل الى الهدف) |
 | `base_server` | `EInvoicingMCPServer`, `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BaseLifecycleManager`, `BasePartyValidator`, `SubmitResult`, `assert_not_read_only`, `scrub` |
 | `http_client` | `BaseEInvoicingClient` (OAuth2, mTLS, bearer, مفتاح API, بدون), `OAuthConfig`, `OAuthValues`, `TokenCache`, `AuthMode` |
-| `peppol` | `PeppolSMPClient`, `PeppolParticipantId`, `PeppolServiceInfo`, `PeppolLookupResult`, `PeppolEnvironment`, `PEPPOL_BIS_BILLING_30` |
+| `peppol` | `PeppolSMPClient`, `PeppolParticipantId`, `PeppolServiceInfo`, `PeppolLookupResult`, `PeppolEnvironment`, `PEPPOL_BIS_BILLING_30`, `resolve_naptr` (تشخيص DNS مستقل عبر U-NAPTR/SML) |
+| `peppol.tools` | `register_peppol_tools` (اضافة FastMCP قابلة للتركيب: بحث عن مشارك، نقطة نهاية خدمة، تشخيص DNS، ارسال AS4، بالاضافة الى 8 ادوات لقوائم رموز eDEC)، `default_id_adapter`، `IdentifierAdapter` (عقد مهايئ المعرف الوطني) |
+| `peppol.codelists` | `CodeList`، `CodelistNotConfiguredError`، `load_codelist` ودوال بحث eDEC (انواع المستندات، العمليات، مخططات معرفات المشاركين، ملفات تعريف النقل، حالات استخدام SPIS). يتطلب `EINVOICING_PEPPOL_CODELIST_DIR`، انظر الاعدادات ادناه |
 | `peppol.transport` | `AS4MessageEnvelope`, `AS4TransportClient`, `AS4ReceiptHandler`, `PeppolTransmitter`, `AS4Receipt`, `AS4Credentials` (ارسال صادر عبر Peppol AS4) |
 | `schematron` | `SchematronValidator` (XSLT 1.0), `SaxonSchematronValidator` (XSLT 2.0/3.0، اضافة اختيارية `[xslt2]`)، `load_schematron_validator` (اختيار تلقائي للمحرك)، `get_xslt_version`، `BaseStructuredValidator`، `BaseXSDValidator`، `BaseJSONValidator`، `ValidationMessage`، `ValidationResult` |
 | `schematron_artifacts` | `en16931_base_schematron_validator` (شيماترون CEN EN16931 الاساسي المجمع والمرفق — قواعد `BR-*` فقط، بدون تراكب Peppol؛ اضافة اختيارية `[xslt2]`) |
@@ -37,7 +39,8 @@
 | `endpoints` | `BaseEnvironmentEndpoints`, `EndpointSet`, `EndpointEnvironment` (توجيه عناوين URL للتجربة/الانتاج) |
 | `routing` | `RoutingIdentifier` (مدققات ثابتة: `validate_de_leitweg`), `RoutingIdValidationResult` |
 | `profile_registry` | `ProfileEntry`, `ProfileRegistry`, `profile_registry`, `set_profile_registry` |
-| `pdf` | `PDFEmbedder` (تضمين XML في PDF/A-3) |
+| `pdf` | `PDFEmbedder` (تضمين XML في PDF/A-3)؛ `extract(filename=None)` يجرب اسماء الملفات القياسية لـ Factur-X/XRechnung/ZUGFeRD بالتتابع، `identify()` يقرا بيانات XMP الوصفية لاكتشاف ملف PDF هجين ومستوى توافقه |
+| `pdf_tools` | `register_pdf_tools` (اضافة FastMCP قابلة للتركيب: `identify_and_extract_pdf`)، `identify_and_extract_pdf` |
 | `qr` | `generate_qr_png_base64` |
 | `xml_utils` | `format_amount`, `format_quantity`, `xml_element`, `xml_optional`, `validate_date_iso`, `validate_iban`, `resolve_xml_input`, `mark_untrusted`, `mark_untrusted_fields`, `filter_empty_values`, `format_error` |
 | `download_rules` | `DownloadSpec`, `download_artefacts` |
@@ -77,6 +80,13 @@ pip install mcp-einvoicing-core[audit]
 ```bash
 pip install mcp-einvoicing-core[xslt2]
 ```
+
+## الاعدادات
+
+| المتغير | يستخدمه | الغرض |
+|---|---|---|
+| `EINVOICING_PEPPOL_CODELIST_DIR` | `peppol.codelists` (وادوات قوائم الرموز في `peppol.tools`) | دليل محلي يحتوي على نسختك الخاصة من قوائم رموز OpenPeppol eDEC. **غير مرفقة مع هذه الحزمة**: لا تتوفر قوائم رموز eDEC على تصريح توزيع مؤكد من OpenPeppol، لذا توفر الحزمة الاساسية المحلل وادوات البحث فقط، وليس البيانات نفسها ابدا. قم بتنزيل تصدير "as GeneriCode" لكل قطعة (Document Types، Participant Identifier Schemes، Processes، Transport Profiles، SPIS Use Case) من [docs.peppol.eu/edelivery/codelists](https://docs.peppol.eu/edelivery/codelists/index.html) وقم بتوجيه هذا المتغير الى الدليل الذي يحتويها. يتم التعرف على اسماء الملفات عبر البادئة، لذا فان ترقية الاصدار (مثلا من v9.7 الى v9.8) لا تتطلب اي تغيير في الكود. عند عدم ضبطه، تعيد ادوات قوائم الرموز نتيجة `configured: false` مع تعليمات الاعداد بدلا من رفع استثناء. |
+| `EINVOICING_SMP_ALLOWLIST` | `peppol` (`PeppolSMPClient`، `resolve_naptr`) | لواحق اسماء مضيف مفصولة بفواصل لتوسيع القائمة البيضاء المدمجة لنقاط وصول Peppol المستخدمة عند التحقق من اسم مضيف SMP الذي تم حله. |
 
 ## البنية المعمارية
 
@@ -118,6 +128,27 @@ server.register_plugin(register_header_tools, "it-header")
 server.register_plugin(register_flow_tools, "fr-flow")
 server.run()
 ```
+
+توفر الحزمة الاساسية ايضا اضافة ادوات Peppol الخاصة بها القابلة للتركيب حتى تتوقف حزم البلدان
+عن اعادة تطبيق بحث SMP وارسال AS4. قم بتوفير مهايئ معرف وطني (دالة صغيرة تحول رقما وطنيا
+بسيطا، مثل رقم ضريبة القيمة المضافة، الى معرف مشارك Peppol بصيغة `"<schema>:<value>"`):
+
+```python
+from mcp_einvoicing_core.peppol.tools import register_peppol_tools
+
+def be_id_adapter(identifier: str) -> str:
+    if ":" in identifier:
+        return identifier
+    return f"0208:{normalize_vat_be(identifier)[2:]}"  # مخطط KBO/BCE
+
+server.register_plugin(
+    lambda m: register_peppol_tools(m, id_adapter=be_id_adapter), "peppol"
+)
+```
+
+هذا يسجل `peppol_lookup_participant`، `peppol_get_service_endpoint`، `resolve_peppol_dns`،
+`peppol_send`، بالاضافة الى 8 ادوات لقوائم رموز OpenPeppol eDEC (انظر الاعدادات اعلاه لـ
+`EINVOICING_PEPPOL_CODELIST_DIR`، المطلوبة لادوات قوائم الرموز).
 
 ## التوافق مع Claude Desktop / Cursor / Kiro
 
