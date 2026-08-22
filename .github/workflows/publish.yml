@@ -23,6 +23,12 @@ jobs:
       - name: Install Hatch
         run: pip install hatch
 
+      - name: Generate tool reference
+        # Regenerate docs/TOOLS.md from the Peppol plugin registry at release time.
+        run: |
+          pip install -e .
+          python scripts/gen_tool_reference.py
+
       - name: Build package
         run: hatch build
 
