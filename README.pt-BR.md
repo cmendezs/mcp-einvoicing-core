@@ -55,13 +55,13 @@ auditoria de conformidade para que os pacotes por pais compartilhem uma base com
 
 | Pais | Pacote | Padrao | Escopo | Status de cobertura |
 |------|--------|--------|--------|-----------------------|
-| Franca | [`mcp-facture-electronique-fr`](https://github.com/cmendezs/mcp-facture-electronique-fr) | NF XP Z12-012 / NF XP Z12-013 / Factur-X / UBL 2.1 / CII | B2B, implantacao progressiva a partir de 1 de setembro de 2026 | Ativo |
-| Alemanha | [`mcp-einvoicing-de`](https://github.com/cmendezs/mcp-einvoicing-de) | ZUGFeRD 2.x / XRechnung 3.x | B2B, progressiva de 2025 a 2028 | Ativo |
-| Belgica | [`mcp-einvoicing-be`](https://github.com/cmendezs/mcp-einvoicing-be) | Peppol BIS 3.0 / PINT-BE | B2B, 1 de janeiro de 2026 | Ativo; regras de overlay especificas do Peppol nao verificadas (apenas EN 16931 base) |
-| Italia | [`mcp-fattura-elettronica-it`](https://github.com/cmendezs/mcp-fattura-elettronica-it) | FatturaPA / SDI | B2G + B2B + B2C, obrigatorio desde 2019 (B2G desde 2014) | Ativo |
-| Polonia | [`mcp-ksef-pl`](https://github.com/cmendezs/mcp-ksef-pl) | KSeF FA(3) / FA(2) / Peppol BIS 3.0 | B2B, progressiva de fevereiro de 2026 a janeiro de 2027 | Ativo; fluxo de sessao em lote nao implementado |
-| Espanha | [`mcp-facturacion-electronica-es`](https://github.com/cmendezs/mcp-facturacion-electronica-es) | Factura-e / VeriFactu / SII / FACe | Pendente da Orden Ministerial, prevista para 2026-10-01 | Ativo para VeriFactu/SII; integracao do formato B2B bloqueada ate a Orden Ministerial |
-| Brasil | [`mcp-nfe-br`](https://github.com/cmendezs/mcp-nfe-br) | NF-e / NFC-e (modelo 55/65, schema 4.00) / NFS-e Nacional | B2B (NF-e) + B2C (NFC-e), ambos obrigatorios desde 2008 | Ativo; reforma tributaria IBS/CBS em andamento ate 2033 |
+| 🇧🇪 Belgica | [`mcp-einvoicing-be`](https://github.com/cmendezs/mcp-einvoicing-be) | Peppol BIS 3.0 / PINT-BE | B2B, 1 de janeiro de 2026 | Ativo; regras de overlay especificas do Peppol nao verificadas (apenas EN 16931 base) |
+| 🇧🇷 Brasil | [`mcp-nfe-br`](https://github.com/cmendezs/mcp-nfe-br) | NF-e / NFC-e (modelo 55/65, schema 4.00) / NFS-e Nacional | B2B (NF-e) + B2C (NFC-e), ambos obrigatorios desde 2008 | Ativo; reforma tributaria IBS/CBS em andamento ate 2033 |
+| 🇫🇷 Franca | [`mcp-facture-electronique-fr`](https://github.com/cmendezs/mcp-facture-electronique-fr) | NF XP Z12-012 / NF XP Z12-013 / Factur-X / UBL 2.1 / CII | B2B, implantacao progressiva a partir de 1 de setembro de 2026 | Ativo |
+| 🇩🇪 Alemanha | [`mcp-einvoicing-de`](https://github.com/cmendezs/mcp-einvoicing-de) | ZUGFeRD 2.x / XRechnung 3.x | B2B, progressiva de 2025 a 2028 | Ativo |
+| 🇮🇹 Italia | [`mcp-fattura-elettronica-it`](https://github.com/cmendezs/mcp-fattura-elettronica-it) | FatturaPA / SDI | B2G + B2B + B2C, obrigatorio desde 2019 (B2G desde 2014) | Ativo |
+| 🇵🇱 Polonia | [`mcp-ksef-pl`](https://github.com/cmendezs/mcp-ksef-pl) | KSeF FA(3) / FA(2) / Peppol BIS 3.0 | B2B, progressiva de fevereiro de 2026 a janeiro de 2027 | Ativo; fluxo de sessao em lote nao implementado |
+| 🇪🇸 Espanha | [`mcp-facturacion-electronica-es`](https://github.com/cmendezs/mcp-facturacion-electronica-es) | Factura-e / VeriFactu / SII / FACe | Pendente da Orden Ministerial, prevista para 2026-10-01 | Ativo para VeriFactu/SII; integracao do formato B2B bloqueada ate a Orden Ministerial |
 
 ## Instalacao
 
