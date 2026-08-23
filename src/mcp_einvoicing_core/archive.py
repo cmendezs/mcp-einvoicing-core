@@ -15,7 +15,6 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -28,7 +27,7 @@ class ArchiveMetadata(BaseModel):
     archive_timestamp: datetime = Field(description="UTC timestamp when the document was archived.")
     retention_until: datetime = Field(description="UTC timestamp until which the document must be retained.")
     format_id: str = Field(description="Format identifier (e.g. 'FatturaPA-1.2.3', 'NF-e-4.00').")
-    signer_id: Optional[str] = Field(default=None, description="Identifier of the signer, if the document was signed.")
+    signer_id: str | None = Field(default=None, description="Identifier of the signer, if the document was signed.")
     raw: dict = Field(default_factory=dict, description="Full provider-specific response.")
 
 

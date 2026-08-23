@@ -42,7 +42,6 @@ from __future__ import annotations
 import io
 import logging
 import re
-from typing import Optional, Union
 
 logger = logging.getLogger(__name__)
 
@@ -213,7 +212,7 @@ class PDFEmbedder:
         *,
         filename: str = "factur-x.xml",
         afrelationship: str = "Alternative",
-        xmp_profile: Optional[str] = None,
+        xmp_profile: str | None = None,
     ) -> bytes:
         """Attach *xml_bytes* to *pdf_bytes* as a PDF/A-3 embedded file.
 
@@ -307,8 +306,8 @@ class PDFEmbedder:
 
     @staticmethod
     def extract(
-        pdf_bytes: bytes, filename: Optional[str] = "factur-x.xml"
-    ) -> Union[bytes, tuple[str, bytes], None]:
+        pdf_bytes: bytes, filename: str | None = "factur-x.xml"
+    ) -> bytes | tuple[str, bytes] | None:
         """Extract a named XML attachment from a PDF/A-3 file.
 
         Args:
@@ -380,7 +379,7 @@ class PDFEmbedder:
         return None
 
     @staticmethod
-    def identify(pdf_bytes: bytes) -> dict[str, Optional[Union[str, bool]]]:
+    def identify(pdf_bytes: bytes) -> dict[str, str | bool | None]:
         """Identify whether *pdf_bytes* is a Factur-X / ZUGFeRD hybrid PDF/A-3 file.
 
         Reads the XMP metadata block (if present) and extracts the Factur-X
@@ -415,7 +414,7 @@ class PDFEmbedder:
                 "Install it with: pip install pikepdf"
             ) from exc
 
-        result: dict[str, Optional[Union[str, bool]]] = {
+        result: dict[str, str | bool | None] = {
             "is_hybrid_pdf": False,
             "conformance_level": None,
             "document_type": None,

@@ -29,7 +29,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-
 # ---------------------------------------------------------------------------
 # Severity constants
 # ---------------------------------------------------------------------------

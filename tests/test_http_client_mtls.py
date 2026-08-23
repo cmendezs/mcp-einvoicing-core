@@ -16,7 +16,6 @@ from mcp_einvoicing_core.http_client import (
     _build_mtls_ssl_context,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fixture: self-signed PKCS#12 cert (reuse pattern from test_digital_signature)
 # ---------------------------------------------------------------------------
@@ -39,9 +38,9 @@ def _generate_test_p12(path: Path, password: bytes | None = b"test") -> None:
         .issuer_name(issuer)
         .public_key(key.public_key())
         .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.now(datetime.timezone.utc))
+        .not_valid_before(datetime.datetime.now(datetime.UTC))
         .not_valid_after(
-            datetime.datetime.now(datetime.timezone.utc)
+            datetime.datetime.now(datetime.UTC)
             + datetime.timedelta(days=365)
         )
         .sign(key, hashes.SHA256())

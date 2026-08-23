@@ -34,7 +34,8 @@ a scheme-qualified identifier.
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
 from mcp_einvoicing_core.peppol import (
     PEPPOL_BIS_BILLING_30,
@@ -86,7 +87,7 @@ def _environment_from_str(environment: str) -> PeppolEnvironment:
 def register_peppol_tools(
     mcp: Any,
     *,
-    id_adapter: Optional[IdentifierAdapter] = None,
+    id_adapter: IdentifierAdapter | None = None,
 ) -> None:
     """Register the shared Peppol tool surface onto *mcp*.
 

@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
+from mcp_einvoicing_core.exceptions import PlatformError
 from mcp_einvoicing_core.peppol import (
     PEPPOL_BIS_BILLING_30,
     PeppolEnvironment,
@@ -14,7 +14,6 @@ from mcp_einvoicing_core.peppol import (
 from mcp_einvoicing_core.peppol.transport.client import AS4TransportClient
 from mcp_einvoicing_core.peppol.transport.envelope import AS4MessageEnvelope
 from mcp_einvoicing_core.peppol.transport.models import AS4Credentials, AS4Receipt
-from mcp_einvoicing_core.exceptions import PlatformError
 
 logger = logging.getLogger(__name__)
 
@@ -64,8 +63,8 @@ class PeppolTransmitter:
         recipient_id: PeppolParticipantId,
         sender_id: str,
         *,
-        document_type_id: Optional[str] = None,
-        process_id: Optional[str] = None,
+        document_type_id: str | None = None,
+        process_id: str | None = None,
     ) -> AS4Receipt:
         """Transmit an invoice to a Peppol participant via AS4.
 

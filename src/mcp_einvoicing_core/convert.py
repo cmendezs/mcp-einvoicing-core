@@ -20,7 +20,7 @@ Usage::
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from mcp_einvoicing_core.wire_formats import (
     EN16931CIIParser,
@@ -30,7 +30,7 @@ from mcp_einvoicing_core.wire_formats import (
 )
 
 
-class Syntax(str, Enum):
+class Syntax(StrEnum):
     """Target wire format syntax."""
 
     UBL = "UBL"

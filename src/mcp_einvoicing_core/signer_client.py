@@ -24,7 +24,7 @@ import asyncio
 import base64
 import json
 import os
-from typing import Any, Optional
+from typing import Any
 
 
 class SignerError(Exception):
@@ -39,7 +39,7 @@ class SignerClient:
         self._token = token
 
     @classmethod
-    def from_env(cls) -> "SignerClient":
+    def from_env(cls) -> SignerClient:
         """Build a client from EINVOICING_SIGNER_SOCKET and EINVOICING_SIGNER_TOKEN.
 
         Raises:
@@ -102,10 +102,10 @@ class SignerClient:
         document_bytes: bytes,
         *,
         algorithm: str = "xades",
-        signature_policy_id: Optional[str] = None,
-        signature_policy_hash: Optional[str] = None,
-        signature_policy_hash_alg: Optional[str] = None,
-        claimed_role: Optional[str] = None,
+        signature_policy_id: str | None = None,
+        signature_policy_hash: str | None = None,
+        signature_policy_hash_alg: str | None = None,
+        claimed_role: str | None = None,
     ) -> bytes:
         """Ask the signer process to apply a digital signature.
 
@@ -154,7 +154,7 @@ class SignerClient:
         claims: dict[str, Any],
         *,
         algorithm: str = "RS256",
-        extra_header: Optional[dict[str, Any]] = None,
+        extra_header: dict[str, Any] | None = None,
     ) -> str:
         """Ask the signer process to mint and sign a compact JWS/JWT.
 
@@ -190,7 +190,7 @@ class SignerClient:
         url: str,
         files: list[tuple[str, str, bytes, str]],
         *,
-        extra_headers: Optional[dict[str, str]] = None,
+        extra_headers: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         """Ask the signer process to POST a multipart upload via mTLS.
 
@@ -239,7 +239,7 @@ class SignerClient:
         payload_bytes: bytes,
         *,
         content_type: str = "application/xml",
-        extra_headers: Optional[dict[str, str]] = None,
+        extra_headers: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         """Ask the signer process to POST *payload_bytes* to *url* via mTLS.
 

@@ -43,9 +43,8 @@ import os
 import sys
 import threading
 import time
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +52,7 @@ logger = logging.getLogger(__name__)
 _GENESIS_HASH = hashlib.sha256(b"").hexdigest()
 
 
-class AuditAction(str, Enum):
+class AuditAction(StrEnum):
     """Actions that must be logged in the tamper-evident audit trail."""
 
     SIGN = "SIGN"
@@ -76,8 +75,8 @@ class AuditLog:
 
     def __init__(
         self,
-        log_path: Optional[str] = None,
-        tenant: Optional[str] = None,
+        log_path: str | None = None,
+        tenant: str | None = None,
     ) -> None:
         self._log_path = log_path
         self._tenant = tenant
@@ -96,7 +95,7 @@ class AuditLog:
             self._load_tail()
 
     @classmethod
-    def from_env(cls) -> "AuditLog":
+    def from_env(cls) -> AuditLog:
         """Construct from ``EINVOICING_AUDIT_LOG`` and ``EINVOICING_AUDIT_TENANT``."""
         return cls(
             log_path=os.environ.get("EINVOICING_AUDIT_LOG") or None,
@@ -113,8 +112,8 @@ class AuditLog:
         document_ref: str,
         content_sha256: str,
         *,
-        correlation_id: Optional[str] = None,
-        extra: Optional[dict] = None,
+        correlation_id: str | None = None,
+        extra: dict | None = None,
     ) -> None:
         """Append one audit event to the log.
 
@@ -209,7 +208,7 @@ def _read_last_line(path: Path) -> str:
 
 
 # Module-level default instance — lazy, created on first access.
-_default_log: Optional[AuditLog] = None
+_default_log: AuditLog | None = None
 _default_lock = threading.Lock()
 
 

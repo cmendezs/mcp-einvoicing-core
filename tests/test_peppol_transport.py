@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from lxml import etree
 
+from mcp_einvoicing_core.exceptions import PlatformError
 from mcp_einvoicing_core.peppol.transport.envelope import AS4MessageEnvelope
 from mcp_einvoicing_core.peppol.transport.models import AS4Credentials, AS4Receipt
 from mcp_einvoicing_core.peppol.transport.receipt import AS4ReceiptHandler
-from mcp_einvoicing_core.exceptions import PlatformError
-
 
 SAMPLE_INVOICE = b"""<?xml version="1.0" encoding="UTF-8"?>
 <Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2">
@@ -175,7 +174,7 @@ class TestAS4Receipt:
         receipt = AS4Receipt(
             message_id="msg-1",
             ref_to_message_id="ref-1",
-            timestamp=datetime(2026, 6, 25, tzinfo=timezone.utc),
+            timestamp=datetime(2026, 6, 25, tzinfo=UTC),
         )
         assert receipt.message_id == "msg-1"
         assert receipt.ref_to_message_id == "ref-1"

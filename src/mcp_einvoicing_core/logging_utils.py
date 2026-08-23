@@ -13,14 +13,13 @@ from __future__ import annotations
 
 import logging
 import sys
-from typing import Optional
 
 _DEFAULT_FORMAT = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 
 
 def setup_logging(
     level: int | str = logging.INFO,
-    format_str: Optional[str] = None,
+    format_str: str | None = None,
     stream=sys.stderr,
 ) -> None:
     """Configure standard logging for an e-invoicing MCP server.

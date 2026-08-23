@@ -31,7 +31,8 @@ import logging
 import os
 import re
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Generic, Optional, TypeVar
+from collections.abc import Callable
+from typing import Any, Generic, TypeVar
 
 from fastmcp import FastMCP
 from pydantic import BaseModel, Field
@@ -92,7 +93,7 @@ class BaseDocumentGenerator(ABC, Generic[DocumentT]):
         Used to route documents to the correct country adapter.
         """
 
-    def get_namespace(self) -> Optional[str]:
+    def get_namespace(self) -> str | None:
         """Return the primary XML namespace for this format (optional).
 
         IT:  http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2
@@ -139,7 +140,7 @@ class BaseDocumentValidator(ABC):
         BE:  'Peppol BIS 3.0 / EN16931'
         """
 
-    def get_schema_path(self) -> Optional[str]:
+    def get_schema_path(self) -> str | None:
         """Return the local file path to the XSD/Schematron, if applicable.
 
         IT:  schemas/FatturaPA_v1.6.1.xsd (bundled in the IT package wheel)
@@ -227,7 +228,7 @@ class SubmitResult(BaseModel):
     """
 
     invoice_ref: str = Field(..., description="Primary platform document identifier")
-    session_ref: Optional[str] = Field(
+    session_ref: str | None = Field(
         default=None,
         description="Session reference for session-based platforms (KSeF, some AS4)",
     )
@@ -303,7 +304,7 @@ class BaseLifecycleManager(ABC):
         self,
         document_id: str,
         status: str,
-        metadata: Optional[dict] = None,
+        metadata: dict | None = None,
     ) -> dict:
         """Submit a lifecycle status update (Approved, Refused, Cashed, etc.).
 

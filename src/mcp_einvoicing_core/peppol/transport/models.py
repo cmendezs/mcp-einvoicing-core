@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -16,25 +15,25 @@ class AS4Credentials(BaseModel):
     private key. When both are provided, in-memory bytes take precedence.
     """
 
-    certificate_path: Optional[Path] = Field(
+    certificate_path: Path | None = Field(
         default=None,
         description="Path to PEM-encoded X.509 signing certificate.",
     )
-    private_key_path: Optional[Path] = Field(
+    private_key_path: Path | None = Field(
         default=None,
         description="Path to PEM-encoded private key.",
     )
-    certificate_bytes: Optional[bytes] = Field(
+    certificate_bytes: bytes | None = Field(
         default=None,
         description="In-memory PEM-encoded X.509 signing certificate.",
         exclude=True,
     )
-    private_key_bytes: Optional[bytes] = Field(
+    private_key_bytes: bytes | None = Field(
         default=None,
         description="In-memory PEM-encoded private key.",
         exclude=True,
     )
-    private_key_password: Optional[str] = Field(
+    private_key_password: str | None = Field(
         default=None,
         description="Password for encrypted private key.",
         exclude=True,
@@ -74,11 +73,11 @@ class AS4Receipt(BaseModel):
     timestamp: datetime = Field(
         description="Timestamp from the receipt signal message.",
     )
-    non_repudiation_information: Optional[str] = Field(
+    non_repudiation_information: str | None = Field(
         default=None,
         description="Base64-encoded NRI digest value from the receipt, if present.",
     )
-    raw_xml: Optional[bytes] = Field(
+    raw_xml: bytes | None = Field(
         default=None,
         description="Raw XML bytes of the receipt signal message.",
         exclude=True,

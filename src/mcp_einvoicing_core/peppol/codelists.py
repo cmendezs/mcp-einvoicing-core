@@ -34,7 +34,6 @@ import logging
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 from mcp_einvoicing_core.xml_utils import safe_fromstring
 
@@ -64,10 +63,10 @@ class CodeList:
 
     short_name: str
     version: str
-    canonical_uri: Optional[str]
-    canonical_version_uri: Optional[str]
+    canonical_uri: str | None
+    canonical_version_uri: str | None
     columns: tuple[str, ...]
-    rows: list[dict[str, Optional[str]]] = field(default_factory=list)
+    rows: list[dict[str, str | None]] = field(default_factory=list)
 
 
 def _local(tag: str) -> str:
@@ -102,7 +101,7 @@ def parse_genericode(xml_bytes: bytes) -> CodeList:
             "Identification or ColumnSet)."
         )
 
-    def _find_text(parent, local_name: str) -> Optional[str]:
+    def _find_text(parent, local_name: str) -> str | None:
         for el in parent:
             if _local(el.tag) == local_name:
                 return (el.text or "").strip() or None
@@ -120,19 +119,19 @@ def parse_genericode(xml_bytes: bytes) -> CodeList:
             if col_id:
                 columns.append(col_id)
 
-    rows: list[dict[str, Optional[str]]] = []
+    rows: list[dict[str, str | None]] = []
     if simple_code_list is not None:
         for row_el in simple_code_list:
             if _local(row_el.tag) != "Row":
                 continue
-            row: dict[str, Optional[str]] = {}
+            row: dict[str, str | None] = {}
             for value_el in row_el:
                 if _local(value_el.tag) != "Value":
                     continue
                 col_ref = value_el.get("ColumnRef")
                 if not col_ref:
                     continue
-                simple_value: Optional[str] = None
+                simple_value: str | None = None
                 for v_child in value_el:
                     if _local(v_child.tag) == "SimpleValue":
                         simple_value = (v_child.text or "").strip()
@@ -198,33 +197,33 @@ def load_codelist(name: str) -> CodeList:
     return parse_genericode(path.read_bytes())
 
 
-def _filter_active(rows: list[dict[str, Optional[str]]], active_only: bool) -> list[dict[str, Optional[str]]]:
+def _filter_active(rows: list[dict[str, str | None]], active_only: bool) -> list[dict[str, str | None]]:
     if not active_only:
         return rows
     return [r for r in rows if r.get("state") == "active"]
 
 
-def list_document_type_ids(active_only: bool = True) -> list[dict[str, Optional[str]]]:
+def list_document_type_ids(active_only: bool = True) -> list[dict[str, str | None]]:
     """Return Peppol document type identifier rows (scheme, value, name, state, ...)."""
     return _filter_active(load_codelist("document_types").rows, active_only)
 
 
-def list_process_ids(active_only: bool = True) -> list[dict[str, Optional[str]]]:
+def list_process_ids(active_only: bool = True) -> list[dict[str, str | None]]:
     """Return Peppol process identifier rows (scheme, value, state)."""
     return _filter_active(load_codelist("processes").rows, active_only)
 
 
-def list_participant_id_schemes(active_only: bool = True) -> list[dict[str, Optional[str]]]:
+def list_participant_id_schemes(active_only: bool = True) -> list[dict[str, str | None]]:
     """Return Peppol participant identifier scheme rows (schemeid, iso6523, country, state, ...)."""
     return _filter_active(load_codelist("participant_id_schemes").rows, active_only)
 
 
-def list_transport_profiles(active_only: bool = True) -> list[dict[str, Optional[str]]]:
+def list_transport_profiles(active_only: bool = True) -> list[dict[str, str | None]]:
     """Return Peppol transport profile rows (protocol, profile-id, state, ...)."""
     return _filter_active(load_codelist("transport_profiles").rows, active_only)
 
 
-def list_spis_use_case_ids(active_only: bool = True) -> list[dict[str, Optional[str]]]:
+def list_spis_use_case_ids(active_only: bool = True) -> list[dict[str, str | None]]:
     """Return Peppol SPIS use case identifier rows (use-case-id, state, ...)."""
     return _filter_active(load_codelist("spis_use_case").rows, active_only)
 

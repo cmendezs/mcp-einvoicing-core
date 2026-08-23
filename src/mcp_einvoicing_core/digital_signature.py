@@ -35,13 +35,11 @@ import hashlib
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from lxml import etree
 
 from mcp_einvoicing_core.xml_utils import safe_fromstring
-
 
 # ---------------------------------------------------------------------------
 # Abstract base
@@ -187,11 +185,11 @@ class XAdESSignerConfig:
     """
 
     cert_path: str
-    cert_password: Optional[str] = None
-    signature_policy_id: Optional[str] = None
-    signature_policy_hash: Optional[str] = None
+    cert_password: str | None = None
+    signature_policy_id: str | None = None
+    signature_policy_hash: str | None = None
     signature_policy_hash_alg: str = _DIGEST_ALG
-    claimed_role: Optional[str] = None
+    claimed_role: str | None = None
 
 
 @dataclass
@@ -205,13 +203,13 @@ class _CertInfo:
     private_key: object = field(repr=False)
 
 
-def _load_pkcs12(cert_path: str, cert_password: Optional[str]) -> _CertInfo:
+def _load_pkcs12(cert_path: str, cert_password: str | None) -> _CertInfo:
     """Load a PKCS#12 file and return the signing material."""
     try:
+        from cryptography.hazmat.primitives.serialization import Encoding  # noqa: PLC0415
         from cryptography.hazmat.primitives.serialization.pkcs12 import (  # noqa: PLC0415
             load_pkcs12,
         )
-        from cryptography.hazmat.primitives.serialization import Encoding  # noqa: PLC0415
     except ImportError as exc:
         raise ImportError(
             "cryptography>=42.0.0 is required for XAdES signing. "
@@ -245,7 +243,7 @@ def _load_pkcs12(cert_path: str, cert_password: Optional[str]) -> _CertInfo:
     )
 
 
-def load_certificate_der(cert_path: str, cert_password: Optional[str] = None) -> bytes:
+def load_certificate_der(cert_path: str, cert_password: str | None = None) -> bytes:
     """Return the DER-encoded public certificate bytes from a PKCS#12 file.
 
     Public wrapper around the internal PKCS#12 loader for country packages
@@ -274,9 +272,9 @@ def _make_element(
     ns: str,
     prefix: str,
     local: str,
-    nsmap: Optional[dict[str, str]] = None,
-    text: Optional[str] = None,
-    attrib: Optional[dict[str, str]] = None,
+    nsmap: dict[str, str] | None = None,
+    text: str | None = None,
+    attrib: dict[str, str] | None = None,
 ) -> etree._Element:
     """Create an lxml element with the given namespace and optional content."""
     full_nsmap = {prefix: ns}
@@ -468,13 +466,13 @@ class XAdESEPESSigner(BaseDocumentSigner):
         self,
         config: XAdESSignerConfig,
         *,
-        _preloaded_cert_info: Optional[_CertInfo] = None,
+        _preloaded_cert_info: _CertInfo | None = None,
     ) -> None:
         self._config = config
         # _preloaded_cert_info is used by the signer microservice which loads the
         # PKCS#12 once at process startup and passes the parsed material directly,
         # avoiding a second disk read and keeping the cert path out of tool handlers.
-        self._cert_info: Optional[_CertInfo] = _preloaded_cert_info
+        self._cert_info: _CertInfo | None = _preloaded_cert_info
 
     def load_credentials(self) -> None:
         """Load the PKCS#12 certificate and private key into memory."""
@@ -538,7 +536,7 @@ class XAdESEPESSigner(BaseDocumentSigner):
         sp_id = f"SignedProperties-{sig_uuid}"
         sp_ref_id = f"Ref-{sp_id}"
 
-        signing_time = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        signing_time = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
         # Step 1: parse the document and compute its C14N digest
         # (before injecting the signature — this is what the enveloped-
@@ -618,7 +616,7 @@ class XMLDSigSignerConfig:
     """
 
     cert_path: str
-    cert_password: Optional[str] = None
+    cert_password: str | None = None
     signature_algorithm: str = _RSA_SHA1_SIGN_ALG
     digest_algorithm: str = _SHA1_DIGEST_ALG
     signed_element_local_name: str = "infNFe"
@@ -687,10 +685,10 @@ class XMLDSigSigner(BaseDocumentSigner):
         self,
         config: XMLDSigSignerConfig,
         *,
-        _preloaded_cert_info: Optional[_CertInfo] = None,
+        _preloaded_cert_info: _CertInfo | None = None,
     ) -> None:
         self._config = config
-        self._cert_info: Optional[_CertInfo] = _preloaded_cert_info
+        self._cert_info: _CertInfo | None = _preloaded_cert_info
 
     def load_credentials(self) -> None:
         """Load the PKCS#12 certificate and private key into memory."""
@@ -814,7 +812,7 @@ class CAdESSignerConfig:
     """
 
     cert_path: str
-    cert_password: Optional[str] = None
+    cert_password: str | None = None
 
 
 class CAdESSigner(BaseDocumentSigner):
@@ -841,10 +839,10 @@ class CAdESSigner(BaseDocumentSigner):
         self,
         config: CAdESSignerConfig,
         *,
-        _preloaded_cert_info: Optional[_CertInfo] = None,
+        _preloaded_cert_info: _CertInfo | None = None,
     ) -> None:
         self._config = config
-        self._cert_info: Optional[_CertInfo] = _preloaded_cert_info
+        self._cert_info: _CertInfo | None = _preloaded_cert_info
 
     def load_credentials(self) -> None:
         """Load the PKCS#12 certificate and private key into memory."""

@@ -16,7 +16,7 @@ BR-CO-25).
 from __future__ import annotations
 
 from datetime import date
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -34,7 +34,7 @@ class BillingReference(BaseModel):
     invoice_number: str = Field(
         ..., description="Original invoice number (BT-25)"
     )
-    issue_date: Optional[date] = Field(
+    issue_date: date | None = Field(
         None, description="Original invoice issue date (BT-26)"
     )
 
@@ -60,7 +60,7 @@ class EN16931CreditNote(EN16931Invoice):
     )
 
     @model_validator(mode="after")
-    def _sync_preceding_invoice_fields(self) -> "EN16931CreditNote":
+    def _sync_preceding_invoice_fields(self) -> EN16931CreditNote:
         """Keep the base class preceding_invoice_* fields in sync with billing_reference."""
         if self.preceding_invoice_reference is None:
             object.__setattr__(

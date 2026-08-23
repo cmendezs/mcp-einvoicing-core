@@ -18,13 +18,12 @@ and grouping them in a ``BaseEnvironmentEndpoints`` container:
 
 from __future__ import annotations
 
-from enum import Enum
-from typing import Optional
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class EndpointEnvironment(str, Enum):
+class EndpointEnvironment(StrEnum):
     """Runtime environment selector."""
 
     SANDBOX = "sandbox"
@@ -34,8 +33,8 @@ class EndpointEnvironment(str, Enum):
 class EndpointSet(BaseModel):
     """A pair of sandbox and production URLs for a single logical endpoint."""
 
-    sandbox: Optional[str] = Field(None, description="Sandbox / test environment URL")
-    production: Optional[str] = Field(None, description="Production environment URL")
+    sandbox: str | None = Field(None, description="Sandbox / test environment URL")
+    production: str | None = Field(None, description="Production environment URL")
 
     def resolve(self, env: EndpointEnvironment) -> str:
         """Return the URL for the given environment.

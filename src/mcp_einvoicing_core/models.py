@@ -30,10 +30,8 @@ from __future__ import annotations
 
 import re
 from decimal import Decimal
-from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
-
 
 # ---------------------------------------------------------------------------
 # Primitive building blocks
@@ -577,11 +575,11 @@ class PartyAddress(BaseModel):
     postal_code: str = Field(..., description="Postal / ZIP code")
     city: str = Field(..., description="City / municipality")
     country_code: str = Field(..., min_length=2, max_length=2, description="ISO 3166-1 alpha-2")
-    province: Optional[str] = Field(
+    province: str | None = Field(
         default=None,
         description="Province / region code. Required by IT (Provincia) and ES (Provincia).",
     )
-    gln: Optional[str] = Field(
+    gln: str | None = Field(
         default=None,
         description="GS1 Global Location Number (13 digits). Emitted in address blocks when present (e.g. KSeF FA(2)/FA(3) <GLN>).",
     )
@@ -619,13 +617,13 @@ class InvoiceParty(BaseModel):
             "Use one TaxIdentifier per secondary identifier; order is not significant."
         ),
     )
-    name: Optional[str] = Field(default=None, description="Legal entity name (Denominazione)")
-    first_name: Optional[str] = Field(default=None, description="First name (natural person)")
-    last_name: Optional[str] = Field(default=None, description="Last name (natural person)")
-    address: Optional[PartyAddress] = None
+    name: str | None = Field(default=None, description="Legal entity name (Denominazione)")
+    first_name: str | None = Field(default=None, description="First name (natural person)")
+    last_name: str | None = Field(default=None, description="Last name (natural person)")
+    address: PartyAddress | None = None
 
     @model_validator(mode="after")
-    def check_identity(self) -> "InvoiceParty":
+    def check_identity(self) -> InvoiceParty:
         has_entity = bool(self.name)
         has_person = bool(self.first_name and self.last_name)
         if not has_entity and not has_person:
@@ -659,13 +657,13 @@ class InvoiceLineItem(BaseModel):
 
     line_number: int = Field(..., ge=1)
     description: str = Field(..., max_length=1000)
-    quantity: Optional[Decimal] = Field(default=None, description="Quantity. Omit for lump sums.")
-    unit_of_measure: Optional[str] = Field(default=None, max_length=10)
+    quantity: Decimal | None = Field(default=None, description="Quantity. Omit for lump sums.")
+    unit_of_measure: str | None = Field(default=None, max_length=10)
     unit_price: Decimal = Field(..., description="Unit price before VAT")
     total_price: Decimal = Field(..., description="Total line amount before VAT")
     vat_rate: Decimal = Field(default=Decimal("22"), ge=Decimal("0"), le=Decimal("100"))
     currency: str = Field(default="EUR", min_length=3, max_length=3)
-    vat_exemption_code: Optional[str] = Field(
+    vat_exemption_code: str | None = Field(
         default=None,
         description="Country-specific VAT exemption code. Required when vat_rate is 0.",
     )
@@ -685,7 +683,7 @@ class VATSummary(BaseModel):
     vat_rate: Decimal = Field(..., ge=Decimal("0"), le=Decimal("100"))
     taxable_base: Decimal = Field(..., description="Net amount subject to this VAT rate")
     vat_amount: Decimal = Field(..., description="VAT amount (taxable_base × vat_rate / 100)")
-    vat_exemption_code: Optional[str] = Field(
+    vat_exemption_code: str | None = Field(
         default=None,
         description="Exemption code when vat_rate is 0",
     )
@@ -705,7 +703,7 @@ class PaymentTerms(BaseModel):
     payment methods, UBL UNCL4461 has 70+).
     """
 
-    payment_terms_code: Optional[str] = Field(
+    payment_terms_code: str | None = Field(
         default=None,
         description="Country-specific payment terms code (IT: TP01/02/03, ES: contado/plazo)",
     )
@@ -714,19 +712,19 @@ class PaymentTerms(BaseModel):
         description="Country-specific payment method code (IT: MP01-23, UBL: UNCL4461)",
     )
     amount: Decimal = Field(..., description="Payment amount")
-    due_date: Optional[str] = Field(
+    due_date: str | None = Field(
         default=None,
         description="Payment due date (YYYY-MM-DD)",
     )
-    iban: Optional[str] = Field(
+    iban: str | None = Field(
         default=None,
         description="IBAN for bank transfers (validated by xml_utils.validate_iban)",
     )
-    bank_name: Optional[str] = Field(
+    bank_name: str | None = Field(
         default=None,
         description="Financial institution name",
     )
-    bic: Optional[str] = Field(
+    bic: str | None = Field(
         default=None,
         description="BIC/SWIFT code for international transfers",
     )
@@ -751,7 +749,7 @@ class InvoiceDocument(BaseModel):
     date: str = Field(..., description="Invoice date (YYYY-MM-DD)")
     number: str = Field(..., max_length=50, description="Invoice / document number")
     currency: str = Field(default="EUR", min_length=3, max_length=3)
-    transmission_format: Optional[str] = Field(
+    transmission_format: str | None = Field(
         default=None,
         description="Platform routing / format hint (FPA12, FPR12, B2B, etc.)",
     )
@@ -759,8 +757,8 @@ class InvoiceDocument(BaseModel):
     buyer: InvoiceParty
     lines: list[InvoiceLineItem] = Field(default_factory=list)
     vat_summary: list[VATSummary] = Field(default_factory=list)
-    payment: Optional[PaymentTerms] = None
-    note: Optional[str] = Field(
+    payment: PaymentTerms | None = None
+    note: str | None = Field(
         default=None,
         max_length=1000,
         description="Free-text description/reason (IT: Causale, UBL: Note)",
@@ -787,16 +785,16 @@ class TaxIdValidationResult(BaseModel):
     """
 
     valid: bool
-    value: Optional[str] = None
-    country_code: Optional[str] = None
-    error: Optional[str] = None
+    value: str | None = None
+    country_code: str | None = None
+    error: str | None = None
 
     @classmethod
-    def ok(cls, value: str, country_code: str) -> "TaxIdValidationResult":
+    def ok(cls, value: str, country_code: str) -> TaxIdValidationResult:
         return cls(valid=True, value=value, country_code=country_code)
 
     @classmethod
-    def fail(cls, error: str, country_code: Optional[str] = None) -> "TaxIdValidationResult":
+    def fail(cls, error: str, country_code: str | None = None) -> TaxIdValidationResult:
         return cls(valid=False, error=error, country_code=country_code)
 
 

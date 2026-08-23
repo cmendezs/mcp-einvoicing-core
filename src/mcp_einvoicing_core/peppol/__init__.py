@@ -38,9 +38,9 @@ import logging
 import os
 import re
 import urllib.parse
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Callable, Optional
+from enum import StrEnum
 
 import httpx
 from lxml import etree
@@ -111,7 +111,7 @@ PEPPOL_BIS_BILLING_30 = (
 # ---------------------------------------------------------------------------
 
 
-class PeppolEnvironment(str, Enum):
+class PeppolEnvironment(StrEnum):
     """Peppol network environment."""
 
     PRODUCTION = "production"
@@ -131,7 +131,7 @@ class PeppolParticipantId:
     value: str
 
     @classmethod
-    def parse(cls, raw: str) -> "PeppolParticipantId":
+    def parse(cls, raw: str) -> PeppolParticipantId:
         """Parse a raw "scheme:value" string.
 
         Args:
@@ -213,11 +213,11 @@ class PeppolServiceInfo:
     """
 
     document_type_id: str
-    endpoint_url: Optional[str] = None
-    transport_profile: Optional[str] = None
-    process_id: Optional[str] = None
-    certificate: Optional[str] = None
-    redirect_url: Optional[str] = None
+    endpoint_url: str | None = None
+    transport_profile: str | None = None
+    process_id: str | None = None
+    certificate: str | None = None
+    redirect_url: str | None = None
 
 
 @dataclass
@@ -234,8 +234,8 @@ class PeppolLookupResult:
     is_registered: bool
     participant_id: PeppolParticipantId
     supported_document_types: list[str] = field(default_factory=list)
-    smp_hostname: Optional[str] = None
-    error: Optional[str] = None
+    smp_hostname: str | None = None
+    error: str | None = None
 
     def to_dict(self) -> dict:
         """Return a plain dict suitable for MCP tool responses."""
@@ -277,8 +277,8 @@ async def resolve_naptr(
     doh_url: str = "https://cloudflare-dns.com/dns-query",
     http_timeout: float = 10.0,
     service: str = "META:SMP",
-    allowlist_check: Optional[Callable[[str], bool]] = None,
-) -> Optional[str]:
+    allowlist_check: Callable[[str], bool] | None = None,
+) -> str | None:
     """Resolve a Peppol U-NAPTR DNS record and return the target hostname.
 
     Standalone promotion of the DNS (SML) step previously buried inside
@@ -452,7 +452,7 @@ class PeppolSMPClient:
         self,
         participant_id: PeppolParticipantId,
         document_type_id: str,
-        smp_hostname: Optional[str] = None,
+        smp_hostname: str | None = None,
     ) -> PeppolServiceInfo:
         """Fetch the AS4 endpoint for a specific document type.
 
@@ -484,7 +484,7 @@ class PeppolSMPClient:
 
     async def _resolve_smp_hostname(
         self, participant_id: PeppolParticipantId
-    ) -> Optional[str]:
+    ) -> str | None:
         """Resolve the SMP hostname for a participant via DNS-over-HTTPS U-NAPTR lookup.
 
         Returns the SMP hostname string (netloc of the NAPTR URI), or None if no
@@ -628,7 +628,7 @@ class PeppolSMPClient:
             logger.warning("SMP service metadata XML parse error: %s", exc)
             return PeppolServiceInfo(document_type_id=document_type_id)
 
-        def find_text(parent: etree._Element, local_name: str) -> Optional[str]:
+        def find_text(parent: etree._Element, local_name: str) -> str | None:
             for el in parent.iter():
                 tag_local = etree.QName(el.tag).localname if "{" in el.tag else el.tag
                 if tag_local == local_name:
@@ -649,8 +649,8 @@ class PeppolSMPClient:
                 )
 
         # Normal <ServiceInformation> path
-        endpoint_url: Optional[str] = None
-        transport_profile: Optional[str] = None
+        endpoint_url: str | None = None
+        transport_profile: str | None = None
 
         for el in root.iter():
             local = etree.QName(el.tag).localname if "{" in el.tag else el.tag

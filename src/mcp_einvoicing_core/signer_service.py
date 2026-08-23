@@ -70,7 +70,7 @@ import secrets
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +81,7 @@ class _SignerService:
     def __init__(
         self,
         cert_path: str,
-        cert_password: Optional[str],
+        cert_password: str | None,
         token: str,
         socket_path: str,
     ) -> None:
@@ -298,7 +298,7 @@ def main() -> None:
     if not cert_path:
         sys.exit("EINVOICING_CERT_PATH is required")
 
-    cert_password: Optional[str] = os.environ.get("EINVOICING_CERT_PASSWORD") or None
+    cert_password: str | None = os.environ.get("EINVOICING_CERT_PASSWORD") or None
     socket_path = os.environ.get("EINVOICING_SIGNER_SOCKET") or _default_socket_path()
     token = os.environ.get("EINVOICING_SIGNER_TOKEN") or secrets.token_hex(32)
 

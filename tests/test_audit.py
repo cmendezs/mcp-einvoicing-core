@@ -16,7 +16,6 @@ from mcp_einvoicing_core.audit import (
     run_check_known_shared_helpers,
 )
 
-
 # ---------------------------------------------------------------------------
 # CHECK 6 — Known shared helpers
 # ---------------------------------------------------------------------------

@@ -25,10 +25,9 @@ from __future__ import annotations
 import base64
 import re
 from decimal import ROUND_HALF_UP, Decimal
-from typing import Any, Optional
+from typing import Any
 
 from lxml import etree
-
 
 # ---------------------------------------------------------------------------
 # Defensive XML parser (XXE / billion-laughs / external-DTD protection)
@@ -195,7 +194,7 @@ def validate_iban(iban: str) -> bool:
 def xml_element(
     tag: str,
     content: str,
-    attrs: Optional[dict[str, str]] = None,
+    attrs: dict[str, str] | None = None,
     *,
     unsafe: bool = False,
 ) -> str:
@@ -221,7 +220,7 @@ def xml_element(
     return f"<{tag}{attr_str}>{body}</{tag}>"
 
 
-def xml_optional(tag: str, value: Optional[str], *, unsafe: bool = False) -> str:
+def xml_optional(tag: str, value: str | None, *, unsafe: bool = False) -> str:
     """Return xml_element(tag, value) if value is non-empty, otherwise ''.
 
     >>> xml_optional('Causale', 'pro forma')
@@ -253,7 +252,7 @@ def xml_escape(text: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def format_error(message: str, code: Optional[str] = None) -> dict[str, str]:
+def format_error(message: str, code: str | None = None) -> dict[str, str]:
     """Return a standardized MCP tool error response.
 
     Both existing repos return {"error": "..."} from tools on failure.
@@ -273,7 +272,7 @@ def format_error(message: str, code: Optional[str] = None) -> dict[str, str]:
 # ---------------------------------------------------------------------------
 
 
-def resolve_xml_input(xml_content: Optional[str], xml_base64: Optional[str]) -> bytes:
+def resolve_xml_input(xml_content: str | None, xml_base64: str | None) -> bytes:
     """Resolve the xml_content / xml_base64 pair to raw bytes.
 
     Every MCP tool that accepts XML uses the same two-field input pattern:

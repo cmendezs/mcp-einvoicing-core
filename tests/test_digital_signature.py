@@ -11,18 +11,18 @@ import pytest
 from lxml import etree
 
 from mcp_einvoicing_core.digital_signature import (
-    CAdESSigner,
-    CAdESSignerConfig,
-    XAdESEPESSigner,
-    XAdESSignerConfig,
-    XMLDSigSigner,
-    XMLDSigSignerConfig,
     _C14N_ALG,
     _DS,
     _ENVELOPED_TRANSFORM,
     _RSA_SHA256_SIGN_ALG,
     _SHA256_DIGEST_ALG,
     _XADES,
+    CAdESSigner,
+    CAdESSignerConfig,
+    XAdESEPESSigner,
+    XAdESSignerConfig,
+    XMLDSigSigner,
+    XMLDSigSignerConfig,
     _load_pkcs12,
     load_certificate_der,
 )
@@ -50,9 +50,9 @@ def _generate_test_p12(path: Path, password: bytes | None = b"test") -> None:
         .issuer_name(issuer)
         .public_key(key.public_key())
         .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.now(datetime.timezone.utc))
+        .not_valid_before(datetime.datetime.now(datetime.UTC))
         .not_valid_after(
-            datetime.datetime.now(datetime.timezone.utc)
+            datetime.datetime.now(datetime.UTC)
             + datetime.timedelta(days=365)
         )
         .sign(key, hashes.SHA256())

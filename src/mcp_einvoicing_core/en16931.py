@@ -36,10 +36,9 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
-from typing import Annotated, ClassVar, Optional
+from typing import Annotated, ClassVar
 
 from pydantic import BaseModel, Field, field_validator, model_validator
-
 
 # ---------------------------------------------------------------------------
 # Address — BG-5 (seller postal address) / BG-8 (buyer postal address)
@@ -56,13 +55,13 @@ class EN16931Address(BaseModel):
     """
 
     line_one: str = Field(..., description="Street and house number (BT-35 / BT-50)")
-    line_two: Optional[str] = Field(None, description="Address continuation line (BT-36 / BT-51)")
+    line_two: str | None = Field(None, description="Address continuation line (BT-36 / BT-51)")
     city: str = Field(..., description="City / municipality (BT-37 / BT-52)")
     postcode: str = Field(..., description="Postal / ZIP code (BT-38 / BT-53)")
     country_code: Annotated[str, Field(min_length=2, max_length=2)] = Field(
         ..., description="ISO 3166-1 alpha-2 country code (BT-40 / BT-55)"
     )
-    region: Optional[str] = Field(None, description="Region / province (BT-39 / BT-54)")
+    region: str | None = Field(None, description="Region / province (BT-39 / BT-54)")
 
     @field_validator("country_code")
     @classmethod
@@ -88,16 +87,16 @@ class EN16931Party(BaseModel):
 
     name: str = Field(..., description="Legal entity name (BT-27 / BT-44)")
     address: EN16931Address
-    vat_id: Optional[str] = Field(None, description="VAT number (BT-31 / BT-48)")
-    electronic_address: Optional[str] = Field(
+    vat_id: str | None = Field(None, description="VAT number (BT-31 / BT-48)")
+    electronic_address: str | None = Field(
         None, description="Peppol / EAS electronic address (BT-34 / BT-49)"
     )
-    electronic_address_scheme: Optional[str] = Field(
+    electronic_address_scheme: str | None = Field(
         None, description="EAS scheme code, e.g. '0088' for GLN (BT-34-SchemeID / BT-49-SchemeID)"
     )
-    contact_name: Optional[str] = Field(None, description="Contact person name (BT-41 / BT-56)")
-    contact_phone: Optional[str] = Field(None, description="Contact phone (BT-42 / BT-57)")
-    contact_email: Optional[str] = Field(None, description="Contact email (BT-43 / BT-58)")
+    contact_name: str | None = Field(None, description="Contact person name (BT-41 / BT-56)")
+    contact_phone: str | None = Field(None, description="Contact phone (BT-42 / BT-57)")
+    contact_email: str | None = Field(None, description="Contact email (BT-43 / BT-58)")
 
 
 # ---------------------------------------------------------------------------
@@ -126,11 +125,11 @@ class EN16931Tax(BaseModel):
     )
     taxable_amount: Decimal = Field(..., description="Net taxable base amount (BT-116)")
     tax_amount: Decimal = Field(..., description="Calculated VAT amount (BT-117)")
-    exemption_reason: Optional[str] = Field(
+    exemption_reason: str | None = Field(
         None,
         description="Exemption reason text (BT-120) — required when category ≠ S",
     )
-    exemption_reason_code: Optional[str] = Field(
+    exemption_reason_code: str | None = Field(
         None, description="VATEX exemption reason code (BT-121)"
     )
 
@@ -150,16 +149,16 @@ class EN16931AllowanceCharge(BaseModel):
 
     is_charge: bool = Field(..., description="True = charge (BG-21/BG-28), False = allowance (BG-20/BG-27)")
     amount: Decimal = Field(..., ge=Decimal("0"), description="Amount (BT-92 / BT-99 / BT-136 / BT-141)")
-    base_amount: Optional[Decimal] = Field(
+    base_amount: Decimal | None = Field(
         None, description="Base amount for percentage calculation (BT-93 / BT-100 / BT-137 / BT-142)"
     )
-    percentage: Optional[Decimal] = Field(
+    percentage: Decimal | None = Field(
         None, description="Percentage (BT-94 / BT-101 / BT-138 / BT-143)"
     )
-    reason: Optional[str] = Field(
+    reason: str | None = Field(
         None, description="Reason text (BT-97 / BT-104 / BT-139 / BT-144)"
     )
-    reason_code: Optional[str] = Field(
+    reason_code: str | None = Field(
         None, description="UNCL7161 reason code (BT-98 / BT-105 / BT-140 / BT-145)"
     )
     tax_category: str = Field(
@@ -187,7 +186,7 @@ class EN16931LineItem(BaseModel):
 
     line_id: str = Field(..., description="Line identifier (BT-126)")
     name: str = Field(..., description="Item name (BT-153)")
-    description: Optional[str] = Field(None, description="Item description (BT-154)")
+    description: str | None = Field(None, description="Item description (BT-154)")
     quantity: Decimal = Field(..., description="Billed quantity (BT-129)")
     unit_code: str = Field(..., description="UNECE Rec 20 unit of measure code (BT-130)")
     unit_price: Decimal = Field(..., description="Net price per unit (BT-146)")
@@ -197,19 +196,19 @@ class EN16931LineItem(BaseModel):
     line_net_amount: Decimal = Field(..., description="Line net amount (BT-131)")
     tax_category: str = Field(..., description="UNCL5305 VAT category code (BT-151)")
     tax_rate: Decimal = Field(..., description="Line VAT rate % (BT-152)")
-    buyer_accounting_reference: Optional[str] = Field(
+    buyer_accounting_reference: str | None = Field(
         None, description="Buyer accounting reference (BT-133)"
     )
-    seller_article_id: Optional[str] = Field(
+    seller_article_id: str | None = Field(
         None, description="Seller item identifier (BT-155)"
     )
-    buyer_article_id: Optional[str] = Field(
+    buyer_article_id: str | None = Field(
         None, description="Buyer item identifier (BT-156)"
     )
-    standard_article_id: Optional[str] = Field(
+    standard_article_id: str | None = Field(
         None, description="Standard item identifier, e.g. EAN (BT-157)"
     )
-    standard_article_id_scheme: Optional[str] = Field(
+    standard_article_id_scheme: str | None = Field(
         None, description="Scheme ID for standard article identifier (BT-157-1)"
     )
     line_allowances: list[EN16931AllowanceCharge] = Field(
@@ -234,14 +233,14 @@ class EN16931PaymentMeans(BaseModel):
     type_code: str = Field(
         ..., description="UNCL4461 payment means code (BT-81), e.g. '58' for SEPA Credit Transfer"
     )
-    iban: Optional[str] = Field(None, description="Payee IBAN (BT-84)")
-    bic: Optional[str] = Field(None, description="Payee BIC/SWIFT (BT-86)")
-    account_name: Optional[str] = Field(None, description="Account holder name (BT-85)")
-    payment_id: Optional[str] = Field(None, description="Remittance information (BT-83)")
-    mandate_reference: Optional[str] = Field(
+    iban: str | None = Field(None, description="Payee IBAN (BT-84)")
+    bic: str | None = Field(None, description="Payee BIC/SWIFT (BT-86)")
+    account_name: str | None = Field(None, description="Account holder name (BT-85)")
+    payment_id: str | None = Field(None, description="Remittance information (BT-83)")
+    mandate_reference: str | None = Field(
         None, description="SEPA Direct Debit mandate reference (BT-89)"
     )
-    creditor_id: Optional[str] = Field(
+    creditor_id: str | None = Field(
         None, description="SEPA Creditor Identifier (BT-90)"
     )
 
@@ -291,7 +290,7 @@ class EN16931Invoice(BaseModel):
             "_allowed_profiles = frozenset({MyEnum.member.value, ...})."
         ),
     )
-    business_process: Optional[str] = Field(
+    business_process: str | None = Field(
         None,
         description=(
             "BT-23 Business process type. In UBL emitted as <cbc:ProfileID>; "
@@ -311,27 +310,27 @@ class EN16931Invoice(BaseModel):
 
     # ── Optional header references ───────────────────────────────────────────
 
-    buyer_reference: Optional[str] = Field(
+    buyer_reference: str | None = Field(
         None,
         description=(
             "Buyer reference / routing ID (BT-10). "
             "Mandatory for XRechnung and public-sector buyers."
         ),
     )
-    purchase_order_reference: Optional[str] = Field(
+    purchase_order_reference: str | None = Field(
         None, description="Purchase order reference (BT-13)"
     )
-    contract_reference: Optional[str] = Field(None, description="Contract reference (BT-12)")
-    project_reference: Optional[str] = Field(None, description="Project reference (BT-11)")
-    note: Optional[str] = Field(None, description="Invoice note / reason (BT-22)")
+    contract_reference: str | None = Field(None, description="Contract reference (BT-12)")
+    project_reference: str | None = Field(None, description="Project reference (BT-11)")
+    note: str | None = Field(None, description="Invoice note / reason (BT-22)")
 
     # ── Delivery dates ───────────────────────────────────────────────────────
 
-    delivery_date: Optional[date] = Field(None, description="Actual delivery date (BT-72)")
-    billing_period_start: Optional[date] = Field(
+    delivery_date: date | None = Field(None, description="Actual delivery date (BT-72)")
+    billing_period_start: date | None = Field(
         None, description="Billing period start date (BT-73)"
     )
-    billing_period_end: Optional[date] = Field(
+    billing_period_end: date | None = Field(
         None, description="Billing period end date (BT-74)"
     )
 
@@ -370,7 +369,7 @@ class EN16931Invoice(BaseModel):
     )
 
     @model_validator(mode="after")
-    def _require_tax_lines(self) -> "EN16931Invoice":
+    def _require_tax_lines(self) -> EN16931Invoice:
         """EN 16931 rule BR-CO-18: at least one VAT breakdown line is mandatory.
 
         Subclasses that represent summary-only or non-EN-16931 formats (e.g.
@@ -384,7 +383,7 @@ class EN16931Invoice(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def _check_profile_urn(self) -> "EN16931Invoice":
+    def _check_profile_urn(self) -> EN16931Invoice:
         """Enforce allowed profile URNs when _allowed_profiles is set on the subclass.
 
         Country subclasses that narrow `profile` to a typed enum should also set
@@ -408,13 +407,13 @@ class EN16931Invoice(BaseModel):
 
     # ── Payment — BG-16 ──────────────────────────────────────────────────────
 
-    payment_means: Optional[EN16931PaymentMeans] = Field(
+    payment_means: EN16931PaymentMeans | None = Field(
         None, description="Payment instructions (BG-16)"
     )
-    payment_terms: Optional[str] = Field(
+    payment_terms: str | None = Field(
         None, description="Payment terms free text (BT-20)"
     )
-    due_date: Optional[date] = Field(None, description="Payment due date (BT-9)")
+    due_date: date | None = Field(None, description="Payment due date (BT-9)")
 
     # ── Invoice lines — BG-25 ────────────────────────────────────────────────
 
@@ -428,10 +427,10 @@ class EN16931Invoice(BaseModel):
 
     # ── Preceding invoice references ─────────────────────────────────────────
 
-    preceding_invoice_reference: Optional[str] = Field(
+    preceding_invoice_reference: str | None = Field(
         None, description="Preceding invoice reference for credit notes (BT-25)"
     )
-    preceding_invoice_date: Optional[date] = Field(
+    preceding_invoice_date: date | None = Field(
         None, description="Preceding invoice issue date (BT-26)"
     )
 

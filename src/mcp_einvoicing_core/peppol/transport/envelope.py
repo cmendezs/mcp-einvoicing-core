@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from lxml import etree
 
@@ -48,8 +47,8 @@ class AS4MessageEnvelope:
         process_id: str,
         payload_xml: bytes,
         *,
-        conversation_id: Optional[str] = None,
-        message_id: Optional[str] = None,
+        conversation_id: str | None = None,
+        message_id: str | None = None,
     ) -> None:
         self.sender_id = sender_id
         self.receiver_id = receiver_id
@@ -58,7 +57,7 @@ class AS4MessageEnvelope:
         self.payload_xml = payload_xml
         self.conversation_id = conversation_id or str(uuid.uuid4())
         self.message_id = message_id or str(uuid.uuid4())
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def build(self) -> bytes:
         """Build the complete SOAP envelope as XML bytes."""

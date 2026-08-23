@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-einvoicing-core"
-version = "1.19.0"
+version = "1.19.1"
 description = "Base package for European electronic invoicing MCP servers"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -66,7 +66,7 @@ dev = [
     "pytest-asyncio>=0.23.0",
     "pytest-httpx>=0.30.0",
     "mypy>=1.10.0",
-    "ruff>=0.4.0,<0.16.0",
+    "ruff>=0.4.0",
     "qrcode[pil]>=7.4.0",
     "saxonche>=12.4.0",
 ]
@@ -92,6 +92,10 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = ["N999", "E501"]
 
 [tool.mypy]
 python_version = "3.11"

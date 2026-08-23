@@ -32,7 +32,6 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import ROUND_HALF_EVEN, ROUND_HALF_UP, Decimal
-from typing import Optional
 
 from lxml import etree
 
@@ -86,14 +85,14 @@ def _q(ns: str, local: str) -> str:
     return f"{{{ns}}}{local}"
 
 
-def _sub(parent: etree._Element, ns: str, local: str, text: Optional[str] = None) -> etree._Element:
+def _sub(parent: etree._Element, ns: str, local: str, text: str | None = None) -> etree._Element:
     el = etree.SubElement(parent, _q(ns, local))
     if text is not None:
         el.text = text
     return el
 
 
-def _sub_opt(parent: etree._Element, ns: str, local: str, text: Optional[str]) -> None:
+def _sub_opt(parent: etree._Element, ns: str, local: str, text: str | None) -> None:
     if text:
         _sub(parent, ns, local, text)
 
@@ -258,7 +257,7 @@ class EN16931UBLSerializer:
         _sub(country, _CBC, "IdentificationCode", addr.country_code)
 
     def _build_payment_means(self, parent: etree._Element, pm: EN16931PaymentMeans,
-                              due_date: Optional[date], currency: str) -> None:
+                              due_date: date | None, currency: str) -> None:
         el = _sub(parent, _CAC, "PaymentMeans")
         _sub(el, _CBC, "PaymentMeansCode", pm.type_code)
         if due_date:
@@ -402,17 +401,17 @@ class EN16931UBLParser:
         local = etree.QName(root.tag).localname
         is_credit_note = local == "CreditNote"
 
-        def txt(el: Optional[etree._Element]) -> Optional[str]:
+        def txt(el: etree._Element | None) -> str | None:
             return el.text.strip() if el is not None and el.text else None
 
-        def find(xpath: str) -> Optional[etree._Element]:
+        def find(xpath: str) -> etree._Element | None:
             results = root.xpath(xpath, namespaces={"cbc": _CBC, "cac": _CAC})
             return results[0] if results else None  # type: ignore[return-value]
 
         def findall(xpath: str) -> list[etree._Element]:
             return root.xpath(xpath, namespaces={"cbc": _CBC, "cac": _CAC})  # type: ignore[return-value]
 
-        def get_text(xpath: str) -> Optional[str]:
+        def get_text(xpath: str) -> str | None:
             return txt(find(xpath))
 
         def get_decimal(xpath: str, default: Decimal = Decimal("0")) -> Decimal:
@@ -453,8 +452,8 @@ class EN16931UBLParser:
         if pm_el is not None:
             payment_means = self._parse_payment_means(pm_el)
 
-        billing_start: Optional[date] = None
-        billing_end: Optional[date] = None
+        billing_start: date | None = None
+        billing_end: date | None = None
         period_el = find("cac:InvoicePeriod")
         if period_el is not None:
             s = txt(period_el.find(_q(_CBC, "StartDate")))
@@ -470,11 +469,11 @@ class EN16931UBLParser:
         preceding_date_str = get_text(
             "cac:BillingReference/cac:InvoiceDocumentReference/cbc:IssueDate"
         )
-        preceding_date: Optional[date] = (
+        preceding_date: date | None = (
             date.fromisoformat(preceding_date_str) if preceding_date_str else None
         )
         delivery_date_str = get_text("cac:Delivery/cbc:ActualDeliveryDate")
-        delivery_date: Optional[date] = (
+        delivery_date: date | None = (
             date.fromisoformat(delivery_date_str) if delivery_date_str else None
         )
         # BT-9: prefer the standard top-level cbc:DueDate (what BR-CO-25 and
@@ -485,7 +484,7 @@ class EN16931UBLParser:
         due_date_str = get_text("cbc:DueDate") or get_text(
             "cac:PaymentMeans/cbc:PaymentDueDate"
         )
-        due_date: Optional[date] = (
+        due_date: date | None = (
             date.fromisoformat(due_date_str) if due_date_str else None
         )
 
@@ -529,7 +528,7 @@ class EN16931UBLParser:
             preceding_invoice_date=preceding_date,
         )
 
-    def _parse_party(self, el: Optional[etree._Element]) -> EN16931Party:
+    def _parse_party(self, el: etree._Element | None) -> EN16931Party:
         if el is None:
             return EN16931Party(
                 name="",
@@ -538,7 +537,7 @@ class EN16931UBLParser:
                 ),
             )
 
-        def txt(tag_el: Optional[etree._Element]) -> Optional[str]:
+        def txt(tag_el: etree._Element | None) -> str | None:
             return tag_el.text.strip() if tag_el is not None and tag_el.text else None
 
         name = txt(el.find(".//" + _q(_CBC, "RegistrationName")))
@@ -568,11 +567,11 @@ class EN16931UBLParser:
             contact_email=contact_email,
         )
 
-    def _parse_address(self, el: Optional[etree._Element]) -> EN16931Address:
+    def _parse_address(self, el: etree._Element | None) -> EN16931Address:
         if el is None:
             return EN16931Address(line_one="", city="", postcode="", country_code="XX")
 
-        def txt(tag_el: Optional[etree._Element]) -> Optional[str]:
+        def txt(tag_el: etree._Element | None) -> str | None:
             return tag_el.text.strip() if tag_el is not None and tag_el.text else None
 
         return EN16931Address(
@@ -585,7 +584,7 @@ class EN16931UBLParser:
         )
 
     def _parse_tax_subtotal(self, el: etree._Element) -> EN16931Tax:
-        def txt(tag: str) -> Optional[str]:
+        def txt(tag: str) -> str | None:
             found = el.find(".//" + _q(_CBC, tag))
             return found.text.strip() if found is not None and found.text else None
 
@@ -605,7 +604,7 @@ class EN16931UBLParser:
         )
 
     def _parse_payment_means(self, el: etree._Element) -> EN16931PaymentMeans:
-        def txt(tag: str) -> Optional[str]:
+        def txt(tag: str) -> str | None:
             found = el.find(_q(_CBC, tag))
             return found.text.strip() if found is not None and found.text else None
 
@@ -647,7 +646,7 @@ class EN16931UBLParser:
         )
 
     def _parse_allowance_charge(self, el: etree._Element) -> EN16931AllowanceCharge:
-        def txt(tag: str) -> Optional[str]:
+        def txt(tag: str) -> str | None:
             found = el.find(_q(_CBC, tag))
             return found.text.strip() if found is not None and found.text else None
 
@@ -675,11 +674,11 @@ class EN16931UBLParser:
         )
 
     def _parse_line(self, el: etree._Element, is_credit_note: bool) -> EN16931LineItem:
-        def txt(tag: str) -> Optional[str]:
+        def txt(tag: str) -> str | None:
             found = el.find(_q(_CBC, tag))
             return found.text.strip() if found is not None and found.text else None
 
-        def txt_nested(xpath: str) -> Optional[str]:
+        def txt_nested(xpath: str) -> str | None:
             results = el.xpath(xpath, namespaces={"cbc": _CBC, "cac": _CAC})
             if results and results[0].text:
                 return results[0].text.strip()
@@ -1048,14 +1047,14 @@ class EN16931CIIParser:
     def _extract(self, root: etree._Element) -> EN16931Invoice:
         ns = {"rsm": _RSM, "ram": _RAM, "udt": _UDT, "qdt": _QDT}
 
-        def xpath_txt(path: str) -> Optional[str]:
+        def xpath_txt(path: str) -> str | None:
             results = root.xpath(path + "/text()", namespaces=ns)
             return str(results[0]).strip() if results else None
 
         def xpath_els(path: str) -> list[etree._Element]:
             return root.xpath(path, namespaces=ns)  # type: ignore[return-value]
 
-        def xpath_el(path: str) -> Optional[etree._Element]:
+        def xpath_el(path: str) -> etree._Element | None:
             r = xpath_els(path)
             return r[0] if r else None
 
@@ -1104,13 +1103,13 @@ class EN16931CIIParser:
             f"{agreement}/ram:InvoiceReferencedDocument"
             "/ram:FormattedIssueDateTime/qdt:DateTimeString"
         )
-        preceding_date: Optional[date] = None
+        preceding_date: date | None = None
         if preceding_date_str and len(preceding_date_str) == 8:
             preceding_date = date.fromisoformat(
                 f"{preceding_date_str[:4]}-{preceding_date_str[4:6]}-{preceding_date_str[6:]}"
             )
 
-        delivery_date: Optional[date] = None
+        delivery_date: date | None = None
         delivery_str = xpath_txt(
             f"{delivery_path}/ram:ActualDeliverySupplyChainEvent"
             "/ram:OccurrenceDateTime/udt:DateTimeString"
@@ -1120,8 +1119,8 @@ class EN16931CIIParser:
                 f"{delivery_str[:4]}-{delivery_str[4:6]}-{delivery_str[6:]}"
             )
 
-        billing_start: Optional[date] = None
-        billing_end: Optional[date] = None
+        billing_start: date | None = None
+        billing_end: date | None = None
         period_start_str = xpath_txt(
             f"{delivery_path}/ram:DeliverySpecifiedPeriod/ram:StartDateTime/udt:DateTimeString"
         )
@@ -1149,7 +1148,7 @@ class EN16931CIIParser:
             f"{settlement}/ram:SpecifiedTradePaymentTerms"
             "/ram:DueDateDateTime/udt:DateTimeString"
         )
-        due_date: Optional[date] = None
+        due_date: date | None = None
         if due_str and len(due_str) == 8:
             due_date = date.fromisoformat(
                 f"{due_str[:4]}-{due_str[4:6]}-{due_str[6:]}"
@@ -1221,14 +1220,14 @@ class EN16931CIIParser:
             preceding_invoice_date=preceding_date,
         )
 
-    def _parse_party_cii(self, el: Optional[etree._Element]) -> EN16931Party:
+    def _parse_party_cii(self, el: etree._Element | None) -> EN16931Party:
         if el is None:
             return EN16931Party(
                 name="",
                 address=EN16931Address(line_one="", city="", postcode="", country_code="XX"),
             )
 
-        def txt(path: str) -> Optional[str]:
+        def txt(path: str) -> str | None:
             results = el.xpath(path + "/text()", namespaces={"ram": _RAM, "udt": _UDT})
             return str(results[0]).strip() if results else None
 
@@ -1252,7 +1251,7 @@ class EN16931CIIParser:
         contact_el = contact_el_list[0] if contact_el_list else None
         contact_name = contact_phone = contact_email = None
         if contact_el is not None:
-            def ctxt(path: str) -> Optional[str]:
+            def ctxt(path: str) -> str | None:
                 r = contact_el.xpath(path + "/text()", namespaces={"ram": _RAM})
                 return str(r[0]).strip() if r else None
             contact_name = ctxt("ram:PersonName")
@@ -1274,11 +1273,11 @@ class EN16931CIIParser:
             contact_email=contact_email,
         )
 
-    def _parse_address_cii(self, el: Optional[etree._Element]) -> EN16931Address:
+    def _parse_address_cii(self, el: etree._Element | None) -> EN16931Address:
         if el is None:
             return EN16931Address(line_one="", city="", postcode="", country_code="XX")
 
-        def txt(local: str) -> Optional[str]:
+        def txt(local: str) -> str | None:
             found = el.find(_q(_RAM, local))
             return found.text.strip() if found is not None and found.text else None
 
@@ -1292,7 +1291,7 @@ class EN16931CIIParser:
         )
 
     def _parse_tax_cii(self, el: etree._Element) -> EN16931Tax:
-        def txt(local: str) -> Optional[str]:
+        def txt(local: str) -> str | None:
             found = el.find(_q(_RAM, local))
             return found.text.strip() if found is not None and found.text else None
 
@@ -1306,7 +1305,7 @@ class EN16931CIIParser:
         )
 
     def _parse_payment_means_cii(self, el: etree._Element) -> EN16931PaymentMeans:
-        def txt(local: str) -> Optional[str]:
+        def txt(local: str) -> str | None:
             found = el.find(_q(_RAM, local))
             return found.text.strip() if found is not None and found.text else None
 
@@ -1333,7 +1332,7 @@ class EN16931CIIParser:
         )
 
     def _parse_allowance_charge_cii(self, el: etree._Element) -> EN16931AllowanceCharge:
-        def txt(local: str) -> Optional[str]:
+        def txt(local: str) -> str | None:
             found = el.find(_q(_RAM, local))
             return found.text.strip() if found is not None and found.text else None
 
@@ -1368,7 +1367,7 @@ class EN16931CIIParser:
     def _parse_line_cii(self, el: etree._Element) -> EN16931LineItem:
         ns = {"ram": _RAM, "udt": _UDT}
 
-        def txt(path: str) -> Optional[str]:
+        def txt(path: str) -> str | None:
             r = el.xpath(path + "/text()", namespaces=ns)
             return str(r[0]).strip() if r else None
 

@@ -58,7 +58,7 @@ import os
 import secrets
 import threading
 import time
-from typing import Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -138,14 +138,14 @@ class ConfirmationGate:
     Inject a custom instance in tests.
     """
 
-    _default: Optional["ConfirmationGate"] = None
+    _default: ConfirmationGate | None = None
     _default_lock = threading.Lock()
 
-    def __init__(self, store: Optional[ConfirmationStore] = None) -> None:
+    def __init__(self, store: ConfirmationStore | None = None) -> None:
         self._store = store if store is not None else ConfirmationStore()
 
     @classmethod
-    def get_default(cls) -> "ConfirmationGate":
+    def get_default(cls) -> ConfirmationGate:
         """Return the process-wide singleton ``ConfirmationGate``."""
         if cls._default is None:
             with cls._default_lock:
@@ -153,7 +153,7 @@ class ConfirmationGate:
                     cls._default = cls()
         return cls._default
 
-    def is_confirmed(self, token: Optional[str]) -> bool:
+    def is_confirmed(self, token: str | None) -> bool:
         """Return True if *token* is valid OR if HITL is disabled globally."""
         if _HITL_DISABLED:
             return True
@@ -161,7 +161,7 @@ class ConfirmationGate:
             return False
         return self._store.is_valid(token)
 
-    def consume(self, token: Optional[str]) -> None:
+    def consume(self, token: str | None) -> None:
         """Remove *token* after a confirmed action executes (single-use)."""
         if token is not None and not _HITL_DISABLED:
             self._store.consume(token)
@@ -170,7 +170,7 @@ class ConfirmationGate:
         self,
         action: str,
         summary: str,
-        token: Optional[str] = None,
+        token: str | None = None,
     ) -> dict[str, Any]:
         """Return the ``awaiting_confirmation`` dict for the first-call response.
 

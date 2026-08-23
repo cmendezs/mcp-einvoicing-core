@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from lxml import etree
 
@@ -77,9 +76,9 @@ class AS4ReceiptHandler:
                     timestamp_str.replace("Z", "+00:00")
                 )
             except ValueError:
-                timestamp = datetime.now(timezone.utc)
+                timestamp = datetime.now(UTC)
         else:
-            timestamp = datetime.now(timezone.utc)
+            timestamp = datetime.now(UTC)
 
         nri = self._find_text(signal, "DigestValue")
 
@@ -93,7 +92,7 @@ class AS4ReceiptHandler:
 
     def _find_element(
         self, root: etree._Element, local_name: str
-    ) -> Optional[etree._Element]:
+    ) -> etree._Element | None:
         for el in root.iter():
             tag_local = etree.QName(el.tag).localname if "{" in el.tag else el.tag
             if tag_local == local_name:
@@ -102,7 +101,7 @@ class AS4ReceiptHandler:
 
     def _find_text(
         self, parent: etree._Element, local_name: str
-    ) -> Optional[str]:
+    ) -> str | None:
         el = self._find_element(parent, local_name)
         if el is not None:
             return (el.text or "").strip() or None

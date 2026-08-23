@@ -1,8 +1,8 @@
 from mcp_einvoicing_core.models import (
     _BR_CNPJ_WEIGHTS_1,
     _BR_CNPJ_WEIGHTS_2,
-    _br_check_digit,
     TaxIdentifier,
+    _br_check_digit,
 )
 
 

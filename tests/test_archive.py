@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -11,7 +11,7 @@ from mcp_einvoicing_core.archive import ArchiveMetadata, BaseArchiveProvider
 
 class TestArchiveMetadata:
     def test_minimal_construction(self) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         meta = ArchiveMetadata(
             document_id="doc-001",
             document_hash="abcdef1234567890" * 4,
@@ -24,7 +24,7 @@ class TestArchiveMetadata:
         assert meta.raw == {}
 
     def test_full_construction(self) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         meta = ArchiveMetadata(
             document_id="doc-002",
             document_hash="a" * 64,

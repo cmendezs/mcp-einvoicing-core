@@ -29,10 +29,11 @@ import os
 import ssl
 import tempfile
 import time
+from datetime import UTC
 from email.utils import parsedate_to_datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import urlparse
 
 import httpx
@@ -104,7 +105,7 @@ def _make_pin_hook(host: str, pins: frozenset[str]):
         if ssl_obj is None:
             return
         try:
-            cert_der: Optional[bytes] = ssl_obj.getpeercert(binary_form=True)
+            cert_der: bytes | None = ssl_obj.getpeercert(binary_form=True)
         except Exception:
             return
         if cert_der is None:
@@ -127,7 +128,7 @@ def _make_pin_hook(host: str, pins: frozenset[str]):
 # ---------------------------------------------------------------------------
 
 
-def _build_mtls_ssl_context(cert_path: str, cert_password: Optional[str]) -> ssl.SSLContext:
+def _build_mtls_ssl_context(cert_path: str, cert_password: str | None) -> ssl.SSLContext:
     """Return an SSLContext loaded with the client certificate from a PKCS#12 file.
 
     The certificate and private key are extracted in memory using the
@@ -202,7 +203,7 @@ def _build_mtls_ssl_context(cert_path: str, cert_password: Optional[str]) -> ssl
 # ---------------------------------------------------------------------------
 
 
-class AuthMode(str, Enum):
+class AuthMode(StrEnum):
     """Authentication mode for BaseEInvoicingClient."""
 
     OAUTH2_CLIENT_CREDENTIALS = "oauth2_client_credentials"
@@ -256,7 +257,7 @@ class OAuthValues(BaseModel):
     token_url: str = Field(..., description="OAuth2 token endpoint URL")
     client_id: str = Field(..., description="OAuth2 Client ID")
     client_secret: str = Field(..., description="OAuth2 Client Secret")
-    scope: Optional[str] = Field(default=None, description="OAuth2 scope (optional)")
+    scope: str | None = Field(default=None, description="OAuth2 scope (optional)")
     http_timeout: float = Field(default=30.0, description="HTTP request timeout in seconds")
 
     @field_validator("token_url")
@@ -294,7 +295,7 @@ class JWSConfig(BaseModel):
     cert_path: str = Field(
         ..., description="Path to the PKCS#12 (.p12/.pfx) signing certificate + key."
     )
-    cert_password: Optional[str] = Field(
+    cert_password: str | None = Field(
         default=None, description="Passphrase for the PKCS#12 file, or None if unprotected."
     )
     ttl_seconds: int = Field(
@@ -373,7 +374,7 @@ class TokenCache:
     )  # default 30 minutes
 
     def __init__(self) -> None:
-        self._access_token: Optional[str] = None
+        self._access_token: str | None = None
         self._expires_at: float = 0.0
         self._last_used_at: float = 0.0
 
@@ -400,7 +401,7 @@ class TokenCache:
     # calls this, and no tool handler has direct access to a TokenCache instance).
     set = _set
 
-    def get(self) -> Optional[str]:
+    def get(self) -> str | None:
         """Return the current valid token, or None if expired/idle/absent."""
         if not self.is_valid():
             return None
@@ -455,10 +456,10 @@ def compute_retry_delay(response: httpx.Response, attempt: int) -> float:
         except ValueError:
             pass
         try:
-            from datetime import datetime, timezone  # noqa: PLC0415
+            from datetime import datetime  # noqa: PLC0415
 
             dt = parsedate_to_datetime(header)
-            return max(0.0, (dt - datetime.now(timezone.utc)).total_seconds())
+            return max(0.0, (dt - datetime.now(UTC)).total_seconds())
         except Exception:
             pass
     return min(1.0 * (2**attempt), 60.0)
@@ -467,7 +468,7 @@ def compute_retry_delay(response: httpx.Response, attempt: int) -> float:
 def _extract_platform_error(
     response: httpx.Response,
     detail: str = "",
-    error_code: Optional[str] = None,
+    error_code: str | None = None,
 ) -> PlatformError:
     """Build a PlatformError from a failed HTTP response and pre-parsed detail.
 
@@ -509,14 +510,14 @@ class BaseEInvoicingClient:
         self,
         base_url: str,
         auth_mode: AuthMode = AuthMode.NONE,
-        oauth_config: Optional[OAuthValues] = None,
-        token_cache: Optional[TokenCache] = None,
-        static_bearer_token: Optional[str] = None,
+        oauth_config: OAuthValues | None = None,
+        token_cache: TokenCache | None = None,
+        static_bearer_token: str | None = None,
         http_timeout: float = 30.0,
-        cert_path: Optional[str] = None,
-        cert_password: Optional[str] = None,
+        cert_path: str | None = None,
+        cert_password: str | None = None,
         max_retries: int = DEFAULT_MAX_RETRIES,
-        jws_config: Optional[JWSConfig] = None,
+        jws_config: JWSConfig | None = None,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._auth_mode = auth_mode
@@ -528,8 +529,8 @@ class BaseEInvoicingClient:
         self._cert_password = cert_password
         self._max_retries = max_retries
         self._jws_config = jws_config
-        self._mtls_ssl_context: Optional[ssl.SSLContext] = None
-        self._client: Optional[httpx.AsyncClient] = None  # long-lived; built on first use
+        self._mtls_ssl_context: ssl.SSLContext | None = None
+        self._client: httpx.AsyncClient | None = None  # long-lived; built on first use
 
         if auth_mode == AuthMode.OAUTH2_CLIENT_CREDENTIALS and oauth_config is None:
             raise ValueError("oauth_config is required for OAUTH2_CLIENT_CREDENTIALS auth mode")
@@ -603,7 +604,7 @@ class BaseEInvoicingClient:
             await self._client.aclose()
         self._client = None
 
-    async def __aenter__(self) -> "BaseEInvoicingClient":
+    async def __aenter__(self) -> BaseEInvoicingClient:
         return self
 
     async def __aexit__(self, *_: object) -> None:
@@ -733,7 +734,7 @@ class BaseEInvoicingClient:
 
         return headers
 
-    def _parse_error_body(self, response: httpx.Response) -> tuple[str, Optional[str]]:
+    def _parse_error_body(self, response: httpx.Response) -> tuple[str, str | None]:
         """Extract (detail, error_code) from a failed response body.
 
         Override in a subclass to handle platform-specific error schemas:
@@ -782,10 +783,10 @@ class BaseEInvoicingClient:
         method: str,
         path: str,
         *,
-        params: Optional[dict[str, Any]] = None,
-        json: Optional[Any] = None,
-        data: Optional[dict[str, Any]] = None,
-        files: Optional[dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
+        json: Any | None = None,
+        data: dict[str, Any] | None = None,
+        files: dict[str, Any] | None = None,
         retry_on_401: bool = True,
     ) -> httpx.Response:
         """Public HTTP request. Country packages should call this instead of `_request`."""
@@ -804,10 +805,10 @@ class BaseEInvoicingClient:
         method: str,
         path: str,
         *,
-        params: Optional[dict[str, Any]] = None,
-        json: Optional[Any] = None,
-        data: Optional[dict[str, Any]] = None,
-        files: Optional[dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
+        json: Any | None = None,
+        data: dict[str, Any] | None = None,
+        files: dict[str, Any] | None = None,
         retry_on_401: bool = True,
     ) -> httpx.Response:
         """Execute an HTTP request with automatic 401 retry and backoff for 429/503.
