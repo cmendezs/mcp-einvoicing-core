@@ -35,6 +35,17 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.19.1] - 2026-08-23
+#### Changed
+- Adopted the country-standard ruff lint config, `select = ["E","F","I","N","W","UP"]` with `ignore = ["N999","E501"]`, matching the pattern already used by `mcp-einvoicing-be` / `mcp-nfe-br`. Core previously ran ruff with no explicit `select` (only ruff's small default ruleset); isort (`I`) and pyupgrade (`UP`) checks were never enforced.
+- 5 enums converted from `(str, Enum)` to `enum.StrEnum` (`UP042`): `AuditAction`, `Syntax`, `EndpointEnvironment`, `AuthMode`, `PeppolEnvironment` — matches the `StrEnum` pattern `mcp-nfe-br` already uses under this same lint config. Only observable behavior change: `str()` of a member now renders the raw value instead of `"ClassName.MEMBER"` (improves one error message in `http_client.py`'s Bearer-token guard; no equality/serialization impact since these were already `str` subclasses).
+- Lifted the `ruff<0.16.0` cap added in 1.18.1-era CI hardening (`91d656a`). With `select` now explicit, a newer ruff's expanding *default* ruleset no longer applies to this package.
+
+#### Fixed
+- Cleared all 316 findings the new select set surfaced: import blocks sorted/grouped across the whole package (`I001`), `Optional[X]`/`Union[X, Y]` modernized to `X | None`/`X | Y` (`UP007`/`UP045`), quoted forward-ref return types unquoted in files carrying `from __future__ import annotations` (`UP037`), `datetime.timezone.utc` replaced with `datetime.UTC` (`UP017`), one unused `typing.Optional` import removed (`F401`).
+
+Not a breaking change; no public API/interface changes. 430/430 core tests pass. All 6 downstream country packages' test suites verified unaffected.
+
 ### [1.19.0] - 2026-08-21
 #### Added
 - Peppol tool plugin (`peppol/tools.py`, `register_peppol_tools(mcp, *, id_adapter=None)`), a mountable `ToolRegistrationFn` registering `peppol_lookup_participant`, `peppol_get_service_endpoint`, `resolve_peppol_dns`, `peppol_send` as FastMCP-native tools over `PeppolSMPClient`/`PeppolTransmitter`, plus a national identifier adapter contract (`IdentifierAdapter`, `default_id_adapter`). Absorbs DE's `peppol_check`/`peppol_send` and BE's `check_peppol_participant_be`; both retirements are queued as separate country-package convergence work.
