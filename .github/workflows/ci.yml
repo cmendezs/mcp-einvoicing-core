@@ -26,20 +26,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
         with:
-          python-version: ${{ matrix.python-version }}
-          cache: pip
+          enable-cache: true
 
-      - name: Install package + dev dependencies (incl. pdf/qr/xslt2 extras for tests)
-        run: pip install -e ".[dev,audit,pdf,qr,xslt2]"
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
 
-      - name: Lint with ruff
-        run: ruff check src/ tests/
+      - name: Install dependencies
+        run: uv sync --all-extras --no-sources
+
+      - name: Ruff check
+        run: uv run ruff check src/ tests/
 
       - name: Run tests
-        run: pytest --tb=short
+        run: uv run pytest --tb=short
 
   # ── Type check ─────────────────────────────────────────────────────────────
   lint:
@@ -49,15 +51,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
         with:
-          python-version: "3.11"
-          cache: pip
+          enable-cache: true
 
-      - name: Install package + dev dependencies (incl. pdf/qr/xslt2 extras)
-        run: pip install -e ".[dev,audit,pdf,qr,xslt2]"
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Install dependencies
+        run: uv sync --all-extras --no-sources
 
       - name: Type-check with mypy
-        run: mypy src/mcp_einvoicing_core/
-        continue-on-error: true  # Non-blocking until type stubs are complete
+        run: uv run mypy src/mcp_einvoicing_core/
+        continue-on-error: true  # Non-blocking: 193 pre-existing type errors, tracked separately
+
+      # ruff format --check is intentionally not enabled here yet: most of
+      # src/ has never been run through `ruff format`, and doing so right
+      # now would touch files that overlap with in-progress, uncommitted
+      # Peppol/EN16931 work. Format + enable this once that work lands.
