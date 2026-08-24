@@ -30,10 +30,16 @@ auditoria de conformidade para que os pacotes por pais compartilhem uma base com
 | `base_server` | `EInvoicingMCPServer`, `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BaseLifecycleManager`, `BasePartyValidator`, `SubmitResult`, `assert_not_read_only`, `scrub` |
 | `http_client` | `BaseEInvoicingClient` (OAuth2, mTLS, bearer, API key, nenhum), `OAuthConfig`, `OAuthValues`, `TokenCache`, `AuthMode` |
 | `peppol` | `PeppolSMPClient`, `PeppolParticipantId`, `PeppolServiceInfo`, `PeppolLookupResult`, `PeppolEnvironment`, `PEPPOL_BIS_BILLING_30`, `resolve_naptr` (diagnostico de DNS U-NAPTR/SML autonomo) |
-| `peppol.tools` | `register_peppol_tools` (plugin FastMCP montavel: lookup de participante, endpoint de servico, diagnostico de DNS, envio AS4, alem de 8 ferramentas de listas de codigos eDEC), `default_id_adapter`, `IdentifierAdapter` (contrato do adaptador de identificador nacional) |
+| `peppol.tools` | `register_peppol_tools` (plugin FastMCP montavel: lookup de participante, endpoint de servico, diagnostico de DNS, envio AS4, busca no Directory, alem de 8 ferramentas de listas de codigos eDEC), `default_id_adapter`, `IdentifierAdapter` (contrato do adaptador de identificador nacional) |
 | `peppol.codelists` | `CodeList`, `CodelistNotConfiguredError`, `load_codelist` e as funcoes de busca eDEC (tipos de documento, processos, esquemas de identificador de participante, perfis de transporte, casos de uso SPIS). Requer `EINVOICING_PEPPOL_CODELIST_DIR`, veja Configuracao abaixo |
-| `peppol.transport` | `AS4MessageEnvelope`, `AS4TransportClient`, `AS4ReceiptHandler`, `PeppolTransmitter`, `AS4Receipt`, `AS4Credentials` (transmissao Peppol AS4 de saida) |
-| `schematron` | `SchematronValidator` (XSLT 1.0), `SaxonSchematronValidator` (XSLT 2.0/3.0, extra opcional `[xslt2]`), `load_schematron_validator` (factory de selecao automatica), `get_xslt_version`, `BaseStructuredValidator`, `BaseXSDValidator`, `BaseJSONValidator`, `ValidationMessage`, `ValidationResult` |
+| `genericode` | `parse_genericode`, `CodeList`, `CodelistNotConfiguredError` — parser compartilhado OASIS Genericode 1.0 (usado por `peppol.codelists` e `en16931_codelists`) |
+| `en16931_codelists` | `en16931_codelist_tools.register_en16931_codelist_tools` (plugin FastMCP montavel: lookup de pais, moeda, ICD, UNCL1001/1153/4461/5305, motivo de desconto/item/encargo, MIME, EAS, VATEX). Requer `EINVOICING_EN16931_CODELIST_DIR`, veja Configuracao abaixo |
+| `peppol.directory` | `PeppolDirectoryClient` (busca REST publica no Peppol Directory, sem autenticacao), `PeppolDirectorySearchResult`, `PeppolBusinessCard`, `PeppolBusinessEntity` |
+| `peppol.transport` | `AS4MessageEnvelope`, `AS4TransportClient`, `AS4ReceiptHandler`, `PeppolTransmitter`, `AS4Receipt`, `AS4Credentials` (transmissao Peppol AS4 de saida, agora com assinatura real de mensagens WS-Security); `AS4InboundHandler`, `AS4InboundMessage`, `AS4InboundError`, `StandardBusinessDocumentHeader` (receptor AS4 de entrada, papel C3); `sign_as4_message`, `verify_as4_signature` (primitivas WS-Security) |
+| `peppol.trust` | `PeppolTrustStore`, `validate_certificate_chain`, `check_revocation`, `verify_smp_signature` — validacao de cadeia/revogacao/assinatura da PKI OpenPeppol. Requer `EINVOICING_PEPPOL_PKI_DIR` (certificados raiz ainda nao publicados pela OpenPeppol nesta versao — apenas a logica, ate que sejam fornecidos) |
+| `peppol.reporting` | `parse_eusr`, `parse_tsr`, `validate_eusr`, `validate_tsr` — modelos e validacao dos relatorios de estatisticas de provedor de servico EUSR/TSR do Peppol (XSD + Schematron empacotados, extra opcional `[xslt2]`) |
+| `peppol.mls` | `parse_mls`, `validate_mls`, `build_mls` — modelo e validacao do Peppol Message Level Status (MLS) (Schematron empacotado, extra opcional `[xslt2]`) |
+| `schematron` | `SchematronValidator` (XSLT 1.0), `SaxonSchematronValidator` (XSLT 2.0/3.0, extra opcional `[xslt2]`), `load_schematron_validator` (factory de selecao automatica), `get_xslt_version`, `BaseStructuredValidator`, `BaseXSDValidator`, `XSDValidator` (validador XSD concreto generico), `BaseJSONValidator`, `ValidationMessage`, `ValidationResult` |
 | `schematron_artifacts` | `en16931_base_schematron_validator` (Schematron base CEN EN16931 compilado e empacotado — apenas regras `BR-*`, sem o overlay Peppol; extra opcional `[xslt2]`) |
 | `digital_signature` | `BaseDocumentSigner`, `XAdESEPESSigner`, `XAdESSignerConfig`, `XMLDSigSigner`, `XMLDSigSignerConfig` |
 | `endpoints` | `BaseEnvironmentEndpoints`, `EndpointSet`, `EndpointEnvironment` (roteamento de URL sandbox/producao) |
@@ -86,6 +92,8 @@ pip install mcp-einvoicing-core[xslt2]
 | Variavel | Usada por | Finalidade |
 |---|---|---|
 | `EINVOICING_PEPPOL_CODELIST_DIR` | `peppol.codelists` (e as ferramentas de listas de codigos em `peppol.tools`) | Diretorio local com sua propria copia das listas de codigos eDEC da OpenPeppol. **Nao incluidas neste pacote**: as listas de codigos eDEC nao possuem concessao de redistribuicao confirmada pela OpenPeppol, entao o core fornece apenas o parser e as ferramentas de busca, nunca os dados em si. Baixe a exportacao "as GeneriCode" de cada artefato (Document Types, Participant Identifier Schemes, Processes, Transport Profiles, SPIS Use Case) em [docs.peppol.eu/edelivery/codelists](https://docs.peppol.eu/edelivery/codelists/index.html) e aponte esta variavel para o diretorio que os contem. Os nomes de arquivo sao reconhecidos por prefixo, entao uma mudanca de versao (ex.: v9.7 para v9.8) nao exige alteracao de codigo. Se nao definida, as ferramentas de listas de codigos retornam um resultado `configured: false` com instrucoes de configuracao, em vez de lancar uma excecao. |
+| `EINVOICING_EN16931_CODELIST_DIR` | `en16931_codelists` (e suas ferramentas FastMCP) | Diretorio local com sua propria copia das listas de codigos semanticas EN 16931 da CEF (pais, moeda, ICD, UNCL1001/1153/4461/5305, motivo de desconto/item/encargo, MIME, EAS, VATEX). **Nao incluidas neste pacote**, mesma postura das listas eDEC acima — baixe o pacote de exportacao "as GeneriCode" da pagina de listas de codigos EN 16931 da CEF. Os nomes de arquivo correspondem exatamente (`Country.gc`, sem prefixo de versao). Se nao definida, as ferramentas retornam `configured: false`. |
+| `EINVOICING_PEPPOL_PKI_DIR` | `peppol.trust` | Diretorio local com subdiretorios `test/` e `prod/` contendo certificados raiz/intermediarios da CA da PKI OpenPeppol codificados em PEM, para validacao da cadeia de assinatura de mensagens AS4 e de respostas SMP. Ainda nao publicados pela OpenPeppol como dados empacotados em nenhum lugar — as funcoes de confianca retornam `trust_anchors_configured: false` ate que isso seja definido. |
 | `EINVOICING_SMP_ALLOWLIST` | `peppol` (`PeppolSMPClient`, `resolve_naptr`) | Sufixos de hostname separados por virgula para estender a lista de permissoes integrada de pontos de acesso Peppol, usada ao validar um hostname SMP resolvido. |
 
 ## Arquitetura
@@ -148,8 +156,12 @@ server.register_plugin(
 ```
 
 Isso registra `peppol_lookup_participant`, `peppol_get_service_endpoint`, `resolve_peppol_dns`,
-`peppol_send` e 8 ferramentas de listas de codigos eDEC da OpenPeppol (veja Configuracao acima
-para `EINVOICING_PEPPOL_CODELIST_DIR`, necessaria para as ferramentas de listas de codigos).
+`peppol_send`, `peppol_directory_search` e 8 ferramentas de listas de codigos eDEC da OpenPeppol
+(veja Configuracao acima para `EINVOICING_PEPPOL_CODELIST_DIR`, necessaria para as ferramentas de
+listas de codigos). Plugins montaveis separados cobrem as listas de codigos semanticas EN 16931
+(`en16931_codelist_tools.register_en16931_codelist_tools`), os relatorios Peppol
+(`peppol.reporting_tools.register_peppol_reporting_tools`) e o MLS
+(`peppol.mls_tools.register_peppol_mls_tools`).
 
 ## Compatibilidade com Claude Desktop / Cursor / Kiro
 

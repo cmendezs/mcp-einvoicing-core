@@ -70,6 +70,7 @@ class TestRegisterPeppolTools:
             "check_process_id_in_codelist",
             "check_participant_id_scheme_in_codelist",
             "get_peppol_codelist_version",
+            "peppol_directory_search",
         }
 
     async def test_lookup_uses_default_adapter_and_rejects_bare_identifier(self) -> None:
@@ -198,3 +199,39 @@ class TestCodelistToolsConfigured:
         check = mcp.registered["check_participant_id_scheme_in_codelist"]("0208")
         assert check["configured"] is True
         assert check["found"] is True
+
+
+class TestPeppolDirectorySearchTool:
+    async def test_requires_a_query_term(self) -> None:
+        mcp = _FakeMCP()
+        register_peppol_tools(mcp)
+        result = await mcp.registered["peppol_directory_search"]()
+        assert "error" in result
+        assert result["matches"] == []
+
+    async def test_searches_and_returns_matches(self, httpx_mock) -> None:
+        httpx_mock.add_response(
+            json={
+                "version": "1.0",
+                "total-result-count": 1,
+                "used-result-count": 1,
+                "result-page-index": 0,
+                "result-page-count": 20,
+                "first-result-index": 0,
+                "last-result-index": 0,
+                "query-terms": "q=acme",
+                "creation-dt": "2026-08-23T00:00:00Z",
+                "matches": [
+                    {
+                        "participantID": {"scheme": "iso6523-actorid-upis", "value": "0208:1"},
+                        "docTypes": [],
+                        "entities": [{"name": [{"name": "Acme"}], "countryCode": "BE"}],
+                    }
+                ],
+            }
+        )
+        mcp = _FakeMCP()
+        register_peppol_tools(mcp)
+        result = await mcp.registered["peppol_directory_search"](q="acme")
+        assert result["total_result_count"] == 1
+        assert result["matches"][0]["entities"][0]["names"][0]["name"] == "Acme"

@@ -474,6 +474,67 @@ class BaseXSDValidator(BaseStructuredValidator):
     """
 
 
+class XSDValidator(BaseXSDValidator):
+    """Generic concrete XSD validator: loads one schema, validates any document.
+
+    For formats that need only stock XML Schema validation with no
+    format-specific behaviour (e.g. no multi-schema resolution). Country
+    packages with more elaborate needs (schema sets that reference each
+    other, custom error mapping) should still subclass `BaseXSDValidator`
+    directly, as documented above.
+
+    Usage:
+        validator = XSDValidator(RESOURCES_DIR / "my-format.xsd")
+        result = validator.validate(xml_bytes, profile="my-format")
+    """
+
+    def __init__(self, xsd_path: Path | str) -> None:
+        """Load and compile an XSD schema.
+
+        Raises:
+            FileNotFoundError: If the file does not exist.
+            ValueError: If lxml cannot parse the XSD.
+        """
+        path = Path(xsd_path)
+        if not path.exists():
+            raise FileNotFoundError(f"XSD schema not found: {path}.")
+        try:
+            self._schema = etree.XMLSchema(etree.parse(str(path), safe_parser(load_dtd=True)))
+        except etree.XMLSchemaParseError as exc:
+            raise ValueError(f"Failed to parse XSD schema {path}: {exc}") from exc
+        self._xsd_path = path
+
+    def validate(self, document: bytes, *, profile: str = "", syntax: str = "") -> ValidationResult:
+        """Validate *document* bytes against the XSD schema.
+
+        Never raises — XML parse errors and schema violations both appear
+        as error-severity `ValidationMessage`s.
+        """
+        try:
+            doc = safe_fromstring(document)
+        except etree.XMLSyntaxError as exc:
+            return ValidationResult(
+                is_valid=False,
+                errors=[ValidationMessage(severity="error", rule_id="XML-PARSE", location="/", text=str(exc))],
+                profile=profile,
+                syntax=syntax,
+            )
+
+        if self._schema.validate(doc):
+            return ValidationResult(is_valid=True, profile=profile, syntax=syntax)
+
+        errors = [
+            ValidationMessage(
+                severity="error",
+                rule_id="XSD",
+                location=f"line {entry.line}",
+                text=entry.message,
+            )
+            for entry in self._schema.error_log
+        ]
+        return ValidationResult(is_valid=False, errors=errors, profile=profile, syntax=syntax)
+
+
 class BaseJSONValidator(BaseStructuredValidator):
     """Abstract base for JSON Schema validators.
 

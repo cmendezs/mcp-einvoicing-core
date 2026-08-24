@@ -210,6 +210,9 @@ class PeppolServiceInfo:
     redirect_url:     SMP redirect target URL (set when the SMP returns a <Redirect>
                       instead of <ServiceInformation>; callers MUST NOT follow more than
                       one hop — SMP 1.4.0 §3.2).
+    signature_verification: Result of `trust.verify_smp_signature`, set only when the
+                      client was constructed with `verify_smp_signatures=True`
+                      (CORE-PEPPOL-TRUST-1). None when verification was not requested.
     """
 
     document_type_id: str
@@ -218,6 +221,7 @@ class PeppolServiceInfo:
     process_id: str | None = None
     certificate: str | None = None
     redirect_url: str | None = None
+    signature_verification: dict | None = None
 
 
 @dataclass
@@ -391,12 +395,15 @@ class PeppolSMPClient:
         self,
         environment: PeppolEnvironment = PeppolEnvironment.PRODUCTION,
         http_timeout: float = 10.0,
+        *,
+        verify_smp_signatures: bool = False,
     ) -> None:
         self._environment = environment
         self._http_timeout = http_timeout
         self._sml_domain = (
             _SML_PRODUCTION if environment == PeppolEnvironment.PRODUCTION else _SML_TEST
         )
+        self._verify_smp_signatures = verify_smp_signatures
 
     # ── Public API ────────────────────────────────────────────────────────────
 
@@ -619,6 +626,14 @@ class PeppolSMPClient:
         For <Redirect>, sets redirect_url and leaves endpoint_url as None.
         Callers must not follow more than one redirect hop (SMP 1.4.0 §3.2).
 
+        When the client was constructed with ``verify_smp_signatures=True``
+        (CORE-PEPPOL-TRUST-1), the enveloped ``ds:Signature`` on the response
+        (busdox ``SignedServiceMetadata``) is verified via
+        ``mcp_einvoicing_core.peppol.trust.verify_smp_signature`` and the
+        result is attached as ``signature_verification``. This never raises
+        or blocks parsing — a failed or unconfigured verification is
+        reported in the result for the caller to act on.
+
         Returns a PeppolServiceInfo.  On parse failure returns a result with
         no endpoint URL so callers can detect the absence cleanly.
         """
@@ -627,6 +642,18 @@ class PeppolSMPClient:
         except etree.XMLSyntaxError as exc:
             logger.warning("SMP service metadata XML parse error: %s", exc)
             return PeppolServiceInfo(document_type_id=document_type_id)
+
+        signature_verification: dict | None = None
+        if self._verify_smp_signatures:
+            from mcp_einvoicing_core.peppol.trust import verify_smp_signature  # noqa: PLC0415
+
+            signature_verification = verify_smp_signature(xml_bytes, environment=self._environment)
+            if not signature_verification.get("signature_valid"):
+                logger.warning(
+                    "SMP SignedServiceMetadata signature verification failed for %s: %s",
+                    document_type_id,
+                    signature_verification.get("error"),
+                )
 
         def find_text(parent: etree._Element, local_name: str) -> str | None:
             for el in parent.iter():
@@ -646,6 +673,7 @@ class PeppolSMPClient:
                 return PeppolServiceInfo(
                     document_type_id=document_type_id,
                     redirect_url=redirect_url,
+                    signature_verification=signature_verification,
                 )
 
         # Normal <ServiceInformation> path
@@ -671,4 +699,5 @@ class PeppolSMPClient:
             transport_profile=transport_profile,
             process_id=process_id,
             certificate=certificate,
+            signature_verification=signature_verification,
         )

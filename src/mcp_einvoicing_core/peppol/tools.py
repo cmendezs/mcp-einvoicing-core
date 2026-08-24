@@ -45,6 +45,7 @@ from mcp_einvoicing_core.peppol import (
     codelists,
     resolve_naptr,
 )
+from mcp_einvoicing_core.peppol.directory import PeppolDirectoryClient
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +112,7 @@ def register_peppol_tools(
         check_process_id_in_codelist:            lookup by (scheme, value)
         check_participant_id_scheme_in_codelist: lookup by ICD code
         get_peppol_codelist_version:      configured eDEC release version(s)
+        peppol_directory_search:          public Peppol Directory participant search
 
     The five list/check tool families require EINVOICING_PEPPOL_CODELIST_DIR
     to be set (a local, deployer-supplied copy of the OpenPeppol eDEC code
@@ -400,6 +402,47 @@ def register_peppol_tools(
         """Report the OpenPeppol eDEC code list release version(s) currently configured locally."""
         return codelists.get_peppol_codelist_version()
 
+    async def peppol_directory_search(
+        q: str | None = None,
+        participant: str | None = None,
+        name: str | None = None,
+        country: str | None = None,
+        doctype: str | None = None,
+        result_page_index: int = 0,
+        result_page_count: int = 20,
+        environment: str = "production",
+    ) -> dict[str, Any]:
+        """Search the Peppol Directory for registered participants.
+
+        Public, unauthenticated search (no relation to SMP lookup). At least
+        one of q/participant/name/country/doctype must be supplied.
+
+        Args:
+            q: General purpose query term, matched across all fields.
+            participant: Exact match on a scheme-qualified participant ID
+                (e.g. "iso6523-actorid-upis::0208:0123456789").
+            name: Partial match on business entity name (min. 3 characters).
+            country: Exact match on ISO 3166-2 country code.
+            doctype: Exact match on a full document type identifier URN.
+            result_page_index: 0-based result page index.
+            result_page_count: Results per page.
+            environment: "production" or "test".
+        """
+        client = PeppolDirectoryClient(environment=_environment_from_str(environment))
+        try:
+            result = await client.search(
+                q=q,
+                participant=participant,
+                name=name,
+                country=country,
+                doctype=doctype,
+                result_page_index=result_page_index,
+                result_page_count=result_page_count,
+            )
+        except ValueError as exc:
+            return {"error": str(exc), "matches": []}
+        return result.model_dump()
+
     mcp.tool()(peppol_lookup_participant)
     mcp.tool()(peppol_get_service_endpoint)
     mcp.tool()(resolve_peppol_dns)
@@ -412,3 +455,4 @@ def register_peppol_tools(
     mcp.tool()(check_process_id_in_codelist)
     mcp.tool()(check_participant_id_scheme_in_codelist)
     mcp.tool()(get_peppol_codelist_version)
+    mcp.tool()(peppol_directory_search)

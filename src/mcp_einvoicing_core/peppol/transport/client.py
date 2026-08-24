@@ -7,16 +7,18 @@ import logging
 import uuid
 
 import httpx
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives import serialization
 from cryptography.x509 import load_pem_x509_certificate
 
 from mcp_einvoicing_core.exceptions import PlatformError
 from mcp_einvoicing_core.peppol.transport.envelope import AS4MessageEnvelope
 from mcp_einvoicing_core.peppol.transport.models import AS4Credentials, AS4Receipt
 from mcp_einvoicing_core.peppol.transport.receipt import AS4ReceiptHandler
+from mcp_einvoicing_core.peppol.transport.wssecurity import SignedAttachment, sign_as4_message
 
 logger = logging.getLogger(__name__)
+
+_ATTACHMENT_CONTENT_ID = "invoice@peppol.eu"
 
 
 class AS4TransportClient:
@@ -52,6 +54,10 @@ class AS4TransportClient:
         soap_bytes = envelope.build()
         compressed_payload = gzip.compress(envelope.payload_xml)
 
+        signed_soap_bytes = self._apply_message_signature(
+            soap_bytes, compressed_payload, credentials
+        )
+
         boundary = f"----=_Part_{uuid.uuid4().hex}"
         content_type = (
             f'multipart/related; type="application/soap+xml"; '
@@ -59,10 +65,8 @@ class AS4TransportClient:
         )
 
         body = self._build_multipart_body(
-            soap_bytes, compressed_payload, boundary
+            signed_soap_bytes, compressed_payload, boundary
         )
-
-        signed_body = self._apply_message_signature(body, credentials)
 
         headers = {
             "Content-Type": content_type,
@@ -75,7 +79,7 @@ class AS4TransportClient:
         async with httpx.AsyncClient(timeout=self._http_timeout) as client:
             response = await client.post(
                 endpoint_url,
-                content=signed_body,
+                content=body,
                 headers=headers,
             )
 
@@ -131,20 +135,17 @@ class AS4TransportClient:
 
     def _apply_message_signature(
         self,
-        body: bytes,
+        soap_bytes: bytes,
+        compressed_payload: bytes,
         credentials: AS4Credentials,
     ) -> bytes:
-        """Apply X.509 message-level signature.
+        """Apply WS-Security X.509 message-level signature to the SOAP envelope.
 
-        Per the Peppol AS4 profile, the message is signed using the sender's
-        private key. In a full implementation this would produce a WS-Security
-        header with ds:Signature. For now, the signature is computed and stored
-        but the body is returned as-is since full WS-Security header construction
-        requires additional XML canonicalization steps that are AP-specific.
-
-        [NEED: Full WS-Security ds:Signature header construction per Peppol AS4
-        profile 2.0 section 5.3. Current implementation computes the digest but
-        does not inject the WS-Security header.]
+        Builds a wsse:Security header (BinarySecurityToken + ds:Signature)
+        covering the SOAP Body, the eb:Messaging header, and the compressed
+        invoice attachment, per the Peppol AS4 Profile 2.0.3 section 4.7.
+        See ``mcp_einvoicing_core.peppol.transport.wssecurity`` for the wire
+        format details.
         """
         cert_bytes = credentials.load_certificate()
         key_bytes = credentials.load_private_key()
@@ -156,14 +157,16 @@ class AS4TransportClient:
         )
 
         private_key = serialization.load_pem_private_key(key_bytes, password=password)
-        _cert = load_pem_x509_certificate(cert_bytes)
+        cert = load_pem_x509_certificate(cert_bytes)
+        cert_der = cert.public_bytes(serialization.Encoding.DER)
 
-        _signature = private_key.sign(  # type: ignore[union-attr]
-            body,
-            padding.PKCS1v15(),
-            hashes.SHA256(),
+        signed_soap_bytes = sign_as4_message(
+            soap_bytes,
+            [SignedAttachment(content_id=_ATTACHMENT_CONTENT_ID, content=compressed_payload)],
+            cert_der,
+            private_key,
         )
 
-        logger.debug("AS4 message signature computed (%d bytes)", len(_signature))
+        logger.debug("AS4 message signed (%d bytes)", len(signed_soap_bytes))
 
-        return body
+        return signed_soap_bytes

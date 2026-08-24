@@ -65,6 +65,7 @@ from mcp_einvoicing_core.en16931 import (
     EN16931PaymentMeans,
     EN16931Tax,
 )
+from mcp_einvoicing_core.en16931_codelist_tools import register_en16931_codelist_tools
 from mcp_einvoicing_core.endpoints import (
     BaseEnvironmentEndpoints,
     EndpointEnvironment,
@@ -111,6 +112,54 @@ from mcp_einvoicing_core.peppol import (
     resolve_naptr,
 )
 from mcp_einvoicing_core.peppol.codelists import CodeList, CodelistNotConfiguredError
+from mcp_einvoicing_core.peppol.directory import (
+    PeppolBusinessCard,
+    PeppolBusinessEntity,
+    PeppolDirectoryClient,
+    PeppolDirectoryContact,
+    PeppolDirectoryDocType,
+    PeppolDirectoryIdentifier,
+    PeppolDirectoryName,
+    PeppolDirectorySearchResult,
+)
+from mcp_einvoicing_core.peppol.mls import (
+    MLS_CUSTOMIZATION_ID,
+    MLS_PROFILE_ID,
+    MessageLevelStatus,
+    MLSDocumentReference,
+    MLSDocumentResponse,
+    MLSEndpoint,
+    MLSLineReference,
+    MLSLineResponse,
+    MLSResponse,
+    MLSStatus,
+    build_mls,
+    load_mls_codelist,
+    mls_schematron_validator,
+    parse_mls,
+    validate_mls,
+)
+from mcp_einvoicing_core.peppol.mls_tools import register_peppol_mls_tools
+from mcp_einvoicing_core.peppol.reporting import (
+    EndUserStatisticsReport,
+    EUSRFullSet,
+    EUSRSubset,
+    ReporterID,
+    ReportHeader,
+    ReportKey,
+    ReportPeriod,
+    TransactionStatisticsReport,
+    TSRSubtotal,
+    TSRTotal,
+    load_eusr_codelist,
+    load_tsr_codelist,
+    parse_eusr,
+    parse_tsr,
+    peppol_reporting_validator,
+    validate_eusr,
+    validate_tsr,
+)
+from mcp_einvoicing_core.peppol.reporting_tools import register_peppol_reporting_tools
 from mcp_einvoicing_core.peppol.tools import (
     IdentifierAdapter,
     default_id_adapter,
@@ -118,11 +167,34 @@ from mcp_einvoicing_core.peppol.tools import (
 )
 from mcp_einvoicing_core.peppol.transport import (
     AS4Credentials,
+    AS4InboundError,
+    AS4InboundHandler,
+    AS4InboundMessage,
     AS4MessageEnvelope,
     AS4Receipt,
     AS4ReceiptHandler,
+    AS4SignatureVerificationResult,
     AS4TransportClient,
+    MimeParseError,
     PeppolTransmitter,
+    SBDHDocumentIdentification,
+    SBDHIdentifier,
+    SBDHScope,
+    SignedAttachment,
+    StandardBusinessDocumentHeader,
+    build_error_envelope,
+    build_receipt_envelope,
+    parse_mime_multipart,
+    sign_as4_message,
+    verify_as4_signature,
+)
+from mcp_einvoicing_core.peppol.trust import (
+    PeppolPKINotConfiguredError,
+    PeppolTrustStore,
+    RevocationCheckResult,
+    check_revocation,
+    validate_certificate_chain,
+    verify_smp_signature,
 )
 from mcp_einvoicing_core.profile_registry import (
     ProfileEntry,
@@ -140,6 +212,7 @@ from mcp_einvoicing_core.schematron import (
     SchematronValidator,
     ValidationMessage,
     ValidationResult,
+    XSDValidator,
     get_xslt_version,
     load_schematron_validator,
 )
@@ -222,6 +295,7 @@ __all__ = [
     "ValidationResult",
     "SchematronValidator",
     "SaxonSchematronValidator",
+    "XSDValidator",
     "get_xslt_version",
     "load_schematron_validator",
     # Peppol SMP client
@@ -239,6 +313,53 @@ __all__ = [
     # Peppol eDEC code lists
     "CodeList",
     "CodelistNotConfiguredError",
+    # EN 16931 semantic code lists
+    "register_en16931_codelist_tools",
+    # Peppol Directory search client
+    "PeppolDirectoryClient",
+    "PeppolDirectorySearchResult",
+    "PeppolBusinessCard",
+    "PeppolBusinessEntity",
+    "PeppolDirectoryIdentifier",
+    "PeppolDirectoryDocType",
+    "PeppolDirectoryName",
+    "PeppolDirectoryContact",
+    # Peppol EUSR/TSR reporting
+    "EndUserStatisticsReport",
+    "EUSRFullSet",
+    "EUSRSubset",
+    "TransactionStatisticsReport",
+    "TSRTotal",
+    "TSRSubtotal",
+    "ReportHeader",
+    "ReportPeriod",
+    "ReporterID",
+    "ReportKey",
+    "parse_eusr",
+    "parse_tsr",
+    "validate_eusr",
+    "validate_tsr",
+    "peppol_reporting_validator",
+    "load_eusr_codelist",
+    "load_tsr_codelist",
+    "register_peppol_reporting_tools",
+    # Peppol MLS (Message Level Status)
+    "MessageLevelStatus",
+    "MLSEndpoint",
+    "MLSStatus",
+    "MLSResponse",
+    "MLSLineReference",
+    "MLSLineResponse",
+    "MLSDocumentReference",
+    "MLSDocumentResponse",
+    "MLS_CUSTOMIZATION_ID",
+    "MLS_PROFILE_ID",
+    "parse_mls",
+    "validate_mls",
+    "mls_schematron_validator",
+    "build_mls",
+    "load_mls_codelist",
+    "register_peppol_mls_tools",
     # Peppol AS4 transport
     "AS4Credentials",
     "AS4MessageEnvelope",
@@ -246,6 +367,31 @@ __all__ = [
     "AS4ReceiptHandler",
     "AS4TransportClient",
     "PeppolTransmitter",
+    # AS4-IN-1 inbound receiver
+    "AS4InboundHandler",
+    "AS4InboundMessage",
+    "AS4InboundError",
+    "MimeParseError",
+    "parse_mime_multipart",
+    "build_receipt_envelope",
+    "build_error_envelope",
+    # SBDH models
+    "StandardBusinessDocumentHeader",
+    "SBDHIdentifier",
+    "SBDHDocumentIdentification",
+    "SBDHScope",
+    # WS-Security signing/verification
+    "SignedAttachment",
+    "sign_as4_message",
+    "verify_as4_signature",
+    "AS4SignatureVerificationResult",
+    # Peppol PKI trust-store validation
+    "PeppolTrustStore",
+    "PeppolPKINotConfiguredError",
+    "RevocationCheckResult",
+    "validate_certificate_chain",
+    "check_revocation",
+    "verify_smp_signature",
     # Profile registry
     "ProfileEntry",
     "ProfileRegistry",

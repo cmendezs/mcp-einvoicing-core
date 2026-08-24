@@ -1,20 +1,108 @@
-"""AS4 receipt (signal message) parser."""
+"""AS4 receipt (signal message) parsing and generation."""
 
 from __future__ import annotations
 
 import logging
+import uuid
 from datetime import UTC, datetime
 
 from lxml import etree
 
 from mcp_einvoicing_core.exceptions import PlatformError
-from mcp_einvoicing_core.peppol.transport.models import AS4Receipt
+from mcp_einvoicing_core.peppol.transport.models import AS4InboundError, AS4Receipt
 from mcp_einvoicing_core.xml_utils import safe_fromstring
 
 logger = logging.getLogger(__name__)
 
 _EBMS_NS = "http://docs.oasis-open.org/ebxml-msg/ebms/v3.0/ns/core/200704/"
 _SOAP_NS = "http://www.w3.org/2003/05/soap-envelope"
+
+_NSMAP = {"S12": _SOAP_NS, "eb": _EBMS_NS}
+
+
+def _qn(ns: str, local: str) -> str:
+    return f"{{{ns}}}{local}"
+
+
+def build_receipt_envelope(
+    ref_to_message_id: str,
+    *,
+    reference_digests: list[tuple[str, str]] | None = None,
+    message_id: str | None = None,
+) -> bytes:
+    """Build an unsigned ebMS3 AS4 receipt (SignalMessage/Receipt) SOAP envelope.
+
+    Args:
+        ref_to_message_id: The ``MessageId`` of the UserMessage being
+            acknowledged.
+        reference_digests: Optional ``(uri, digest_b64)`` pairs to echo back
+            as ``MessagePartNRInformation`` (non-repudiation of receipt),
+            normally the ``ds:Reference`` entries verified from the inbound
+            message's ``wsse:Security`` signature.
+        message_id: MessageId for this receipt signal message. Generated if
+            not supplied.
+
+    Returns:
+        UTF-8 XML bytes of the SOAP envelope. Pass to
+        ``wssecurity.sign_as4_message(receipt_bytes, [], cert_der, key)``
+        to sign it before sending, per the Peppol AS4 Profile's use of the
+        Peppol PKI for all message-level security.
+    """
+    envelope = etree.Element(_qn(_SOAP_NS, "Envelope"), nsmap=_NSMAP)
+    header = etree.SubElement(envelope, _qn(_SOAP_NS, "Header"))
+    messaging = etree.SubElement(header, _qn(_EBMS_NS, "Messaging"))
+    signal = etree.SubElement(messaging, _qn(_EBMS_NS, "SignalMessage"))
+
+    msg_info = etree.SubElement(signal, _qn(_EBMS_NS, "MessageInfo"))
+    ts = etree.SubElement(msg_info, _qn(_EBMS_NS, "Timestamp"))
+    ts.text = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    etree.SubElement(msg_info, _qn(_EBMS_NS, "MessageId")).text = message_id or str(uuid.uuid4())
+    etree.SubElement(msg_info, _qn(_EBMS_NS, "RefToMessageId")).text = ref_to_message_id
+
+    receipt = etree.SubElement(signal, _qn(_EBMS_NS, "Receipt"))
+    if reference_digests:
+        nri = etree.SubElement(receipt, "NonRepudiationInformation")
+        for uri, digest_b64 in reference_digests:
+            mpni = etree.SubElement(nri, "MessagePartNRInformation")
+            ref = etree.SubElement(
+                mpni, "{http://www.w3.org/2000/09/xmldsig#}Reference", nsmap={"ds": "http://www.w3.org/2000/09/xmldsig#"}
+            )
+            ref.set("URI", uri)
+            etree.SubElement(ref, "{http://www.w3.org/2000/09/xmldsig#}DigestValue").text = digest_b64
+
+    etree.SubElement(envelope, _qn(_SOAP_NS, "Body"))
+
+    return etree.tostring(envelope, xml_declaration=True, encoding="UTF-8")
+
+
+def build_error_envelope(error: AS4InboundError, *, message_id: str | None = None) -> bytes:
+    """Build an ebMS3 AS4 Error signal message SOAP envelope.
+
+    Per the Peppol AS4 Profile 2.0.3 section 4.4 ("Feedback when receiver
+    is not serviced"), sent when the addressed participant/document type
+    is not serviced by this Access Point.
+    """
+    envelope = etree.Element(_qn(_SOAP_NS, "Envelope"), nsmap=_NSMAP)
+    header = etree.SubElement(envelope, _qn(_SOAP_NS, "Header"))
+    messaging = etree.SubElement(header, _qn(_EBMS_NS, "Messaging"))
+    signal = etree.SubElement(messaging, _qn(_EBMS_NS, "SignalMessage"))
+
+    msg_info = etree.SubElement(signal, _qn(_EBMS_NS, "MessageInfo"))
+    ts = etree.SubElement(msg_info, _qn(_EBMS_NS, "Timestamp"))
+    ts.text = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    etree.SubElement(msg_info, _qn(_EBMS_NS, "MessageId")).text = message_id or str(uuid.uuid4())
+    if error.ref_to_message_id:
+        etree.SubElement(msg_info, _qn(_EBMS_NS, "RefToMessageId")).text = error.ref_to_message_id
+
+    error_el = etree.SubElement(signal, _qn(_EBMS_NS, "Error"))
+    error_el.set("errorCode", error.error_code)
+    error_el.set("severity", error.severity)
+    error_el.set("shortDescription", error.short_description)
+    etree.SubElement(error_el, _qn(_EBMS_NS, "ErrorDetail")).text = error.error_detail
+
+    etree.SubElement(envelope, _qn(_SOAP_NS, "Body"))
+
+    return etree.tostring(envelope, xml_declaration=True, encoding="UTF-8")
 
 
 class AS4ReceiptHandler:

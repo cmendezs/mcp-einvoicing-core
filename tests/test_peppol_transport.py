@@ -2,15 +2,43 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.x509.oid import NameOID
 from lxml import etree
 
 from mcp_einvoicing_core.exceptions import PlatformError
+from mcp_einvoicing_core.peppol.transport.client import AS4TransportClient
 from mcp_einvoicing_core.peppol.transport.envelope import AS4MessageEnvelope
 from mcp_einvoicing_core.peppol.transport.models import AS4Credentials, AS4Receipt
 from mcp_einvoicing_core.peppol.transport.receipt import AS4ReceiptHandler
+
+
+def _generate_test_pem_cert_and_key() -> tuple[bytes, bytes]:
+    """Return (cert_pem, key_pem) for a self-signed test certificate."""
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    subject = issuer = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "Test AP")])
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(datetime.now(UTC))
+        .not_valid_after(datetime.now(UTC) + timedelta(days=365))
+        .sign(key, hashes.SHA256())
+    )
+    cert_pem = cert.public_bytes(serialization.Encoding.PEM)
+    key_pem = key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+    return cert_pem, key_pem
 
 SAMPLE_INVOICE = b"""<?xml version="1.0" encoding="UTF-8"?>
 <Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2">
@@ -179,3 +207,40 @@ class TestAS4Receipt:
         assert receipt.message_id == "msg-1"
         assert receipt.ref_to_message_id == "ref-1"
         assert receipt.non_repudiation_information is None
+
+
+class TestAS4TransportClientSend:
+    async def test_send_signs_envelope_and_posts_multipart(self, httpx_mock) -> None:
+        cert_pem, key_pem = _generate_test_pem_cert_and_key()
+        credentials = AS4Credentials(certificate_bytes=cert_pem, private_key_bytes=key_pem)
+        envelope = AS4MessageEnvelope(
+            sender_id="POP000001",
+            receiver_id="0204:991-1234512345-06",
+            document_type_id="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice",
+            process_id="urn:fdc:peppol.eu:2017:poacc:billing:01:1.0",
+            payload_xml=SAMPLE_INVOICE,
+            message_id="test-msg-001",
+        )
+
+        httpx_mock.add_response(content=_make_receipt_xml(ref_to="test-msg-001"))
+
+        client = AS4TransportClient()
+        receipt = await client.send(
+            envelope, "https://ap.example.org/as4", credentials
+        )
+
+        assert receipt.ref_to_message_id == "test-msg-001"
+
+        request = httpx_mock.get_requests()[0]
+        content_type = request.headers["Content-Type"]
+        assert content_type.startswith('multipart/related; type="application/soap+xml"')
+        boundary = content_type.split('boundary="', 1)[1].rstrip('"')
+        body = request.content
+
+        soap_part = body.split(f"--{boundary}".encode())[1]
+        soap_xml = soap_part.split(b"\r\n\r\n", 1)[1].rsplit(b"\r\n--", 1)[0]
+        root = etree.fromstring(soap_xml)
+        security = root.find(
+            ".//{http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd}Security"
+        )
+        assert security is not None

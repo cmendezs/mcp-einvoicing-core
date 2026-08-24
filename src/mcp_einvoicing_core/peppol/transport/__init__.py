@@ -11,12 +11,33 @@ References:
 
 from mcp_einvoicing_core.peppol.transport.client import AS4TransportClient
 from mcp_einvoicing_core.peppol.transport.envelope import AS4MessageEnvelope
+from mcp_einvoicing_core.peppol.transport.inbound import (
+    AS4InboundHandler,
+    MimeParseError,
+    parse_mime_multipart,
+)
 from mcp_einvoicing_core.peppol.transport.models import (
     AS4Credentials,
+    AS4InboundError,
+    AS4InboundMessage,
     AS4Receipt,
+    SBDHDocumentIdentification,
+    SBDHIdentifier,
+    SBDHScope,
+    StandardBusinessDocumentHeader,
 )
-from mcp_einvoicing_core.peppol.transport.receipt import AS4ReceiptHandler
+from mcp_einvoicing_core.peppol.transport.receipt import (
+    AS4ReceiptHandler,
+    build_error_envelope,
+    build_receipt_envelope,
+)
 from mcp_einvoicing_core.peppol.transport.transmitter import PeppolTransmitter
+from mcp_einvoicing_core.peppol.transport.wssecurity import (
+    AS4SignatureVerificationResult,
+    SignedAttachment,
+    sign_as4_message,
+    verify_as4_signature,
+)
 
 __all__ = [
     "AS4Credentials",
@@ -25,4 +46,22 @@ __all__ = [
     "AS4ReceiptHandler",
     "AS4TransportClient",
     "PeppolTransmitter",
+    # AS4-IN-1 inbound receiver
+    "AS4InboundHandler",
+    "AS4InboundMessage",
+    "AS4InboundError",
+    "MimeParseError",
+    "parse_mime_multipart",
+    "build_receipt_envelope",
+    "build_error_envelope",
+    # SBDH models
+    "StandardBusinessDocumentHeader",
+    "SBDHIdentifier",
+    "SBDHDocumentIdentification",
+    "SBDHScope",
+    # WS-Security signing/verification
+    "SignedAttachment",
+    "sign_as4_message",
+    "verify_as4_signature",
+    "AS4SignatureVerificationResult",
 ]

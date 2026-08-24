@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ubl:ApplicationResponse
+  xmlns:ubl="urn:oasis:names:specification:ubl:schema:xsd:ApplicationResponse-2"
+  xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+  xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+  <cbc:CustomizationID>urn:peppol:edec:mls:1.0</cbc:CustomizationID>
+  <cbc:ProfileID>urn:peppol:edec:mls</cbc:ProfileID>
+  <cbc:ID>3f64739a-72eb-4d27-b835-5fd1ba504a7b</cbc:ID>
+  <cbc:IssueDate>2025-02-05</cbc:IssueDate>
+  <cbc:IssueTime>23:07:22Z</cbc:IssueTime>
+  
+  <cac:SenderParty>
+    <cbc:EndpointID schemeID="0242">000003</cbc:EndpointID>
+  </cac:SenderParty>
+  
+  <cac:ReceiverParty>
+    <cbc:EndpointID schemeID="0242">000002</cbc:EndpointID>
+  </cac:ReceiverParty>
+  
+  <cac:DocumentResponse>
+    <cac:Response>
+      <cbc:ResponseCode>RE</cbc:ResponseCode>
+      <!-- The overall human readable response text -->
+      <cbc:Description>The document was rejected because it failed validation</cbc:Description>
+    </cac:Response>
+
+    <cac:DocumentReference>
+      <!-- The SBDH envelope InstanceIdentifier of the source message -->
+      <cbc:ID>90f14eff-3705-4869-ad3c-caae270a234e</cbc:ID>
+    </cac:DocumentReference>
+    
+    <cac:LineResponse>
+      <cac:LineReference>
+        <!-- LineID is a mandatory field and the constant "NA" means "not applicable" meaning that
+             no line ID is available. -->
+        <cbc:LineID>NA</cbc:LineID>
+      </cac:LineReference>
+      <cac:Response>
+        <!-- The human readable response text -->
+        <cbc:Description>Invoice tax exclusive amount MUST equal the sum of lines plus allowances and charges on header level</cbc:Description>
+        <cac:Status>
+          <!-- Must be one of "SV" (syntax violation),
+                 "BV" (rule violation fatal) or
+                 "BW" (rule violation warning) or
+                 "FD" (failure of delivery) -->
+          <cbc:StatusReasonCode>BV</cbc:StatusReasonCode>
+        </cac:Status>
+      </cac:Response>
+    </cac:LineResponse>
+    
+    <cac:LineResponse>
+      <cac:LineReference>
+        <!-- LineID is a mandatory field and the constant "NA" means "not applicable" meaning that
+             no line ID is available. -->
+        <cbc:LineID>inv:Invoice/cac:TaxTotal/cac:TaxSubtotal/</cbc:LineID>
+      </cac:LineReference>
+      <cac:Response>
+        <!-- The human readable response text -->
+        <cbc:Description>Document level amounts cannot have more than 2 decimals</cbc:Description>
+        <cac:Status>
+          <!-- Must be one of "SV" (syntax violation),
+                 "BV" (rule violation fatal) or
+                 "BW" (rule violation warning) or
+                 "FD" (failure of delivery) -->
+          <cbc:StatusReasonCode>BV</cbc:StatusReasonCode>
+        </cac:Status>
+      </cac:Response>
+    </cac:LineResponse>
+  </cac:DocumentResponse>
+</ubl:ApplicationResponse>

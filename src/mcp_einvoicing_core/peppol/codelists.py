@@ -32,10 +32,29 @@ from __future__ import annotations
 
 import logging
 import os
-from dataclasses import dataclass, field
 from pathlib import Path
 
-from mcp_einvoicing_core.xml_utils import safe_fromstring
+from mcp_einvoicing_core.genericode import (
+    CodeList,
+    CodelistNotConfiguredError,
+    parse_genericode,
+)
+
+__all__ = [
+    "CodeList",
+    "CodelistNotConfiguredError",
+    "parse_genericode",
+    "load_codelist",
+    "list_document_type_ids",
+    "list_process_ids",
+    "list_participant_id_schemes",
+    "list_transport_profiles",
+    "list_spis_use_case_ids",
+    "check_document_type_id_in_codelist",
+    "check_process_id_in_codelist",
+    "check_participant_id_scheme_in_codelist",
+    "get_peppol_codelist_version",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -50,103 +69,6 @@ _CODELIST_PREFIXES: dict[str, str] = {
     "transport_profiles": "Transport-profiles-",
     "spis_use_case": "SPIS-Use-Case-",
 }
-
-
-class CodelistNotConfiguredError(Exception):
-    """EINVOICING_PEPPOL_CODELIST_DIR is unset, not a directory, or a
-    specific codelist file is not present under it."""
-
-
-@dataclass
-class CodeList:
-    """A parsed OASIS Genericode 1.0 code list."""
-
-    short_name: str
-    version: str
-    canonical_uri: str | None
-    canonical_version_uri: str | None
-    columns: tuple[str, ...]
-    rows: list[dict[str, str | None]] = field(default_factory=list)
-
-
-def _local(tag: str) -> str:
-    return tag.split("}", 1)[1] if "}" in tag else tag
-
-
-def parse_genericode(xml_bytes: bytes) -> CodeList:
-    """Parse an OASIS Genericode 1.0 document into a CodeList.
-
-    Raises:
-        etree.XMLSyntaxError: On malformed XML.
-        ValueError: If the document has no recognizable Identification or
-            ColumnSet element (not a Genericode 1.0 document).
-    """
-    root = safe_fromstring(xml_bytes)
-
-    identification = None
-    column_set = None
-    simple_code_list = None
-    for child in root:
-        local = _local(child.tag)
-        if local == "Identification":
-            identification = child
-        elif local == "ColumnSet":
-            column_set = child
-        elif local == "SimpleCodeList":
-            simple_code_list = child
-
-    if identification is None or column_set is None:
-        raise ValueError(
-            "Not a recognizable Genericode 1.0 document (missing "
-            "Identification or ColumnSet)."
-        )
-
-    def _find_text(parent, local_name: str) -> str | None:
-        for el in parent:
-            if _local(el.tag) == local_name:
-                return (el.text or "").strip() or None
-        return None
-
-    short_name = _find_text(identification, "ShortName") or ""
-    version = _find_text(identification, "Version") or ""
-    canonical_uri = _find_text(identification, "CanonicalUri")
-    canonical_version_uri = _find_text(identification, "CanonicalVersionUri")
-
-    columns: list[str] = []
-    for el in column_set:
-        if _local(el.tag) == "Column":
-            col_id = el.get("Id")
-            if col_id:
-                columns.append(col_id)
-
-    rows: list[dict[str, str | None]] = []
-    if simple_code_list is not None:
-        for row_el in simple_code_list:
-            if _local(row_el.tag) != "Row":
-                continue
-            row: dict[str, str | None] = {}
-            for value_el in row_el:
-                if _local(value_el.tag) != "Value":
-                    continue
-                col_ref = value_el.get("ColumnRef")
-                if not col_ref:
-                    continue
-                simple_value: str | None = None
-                for v_child in value_el:
-                    if _local(v_child.tag) == "SimpleValue":
-                        simple_value = (v_child.text or "").strip()
-                        break
-                row[col_ref] = simple_value
-            rows.append(row)
-
-    return CodeList(
-        short_name=short_name,
-        version=version,
-        canonical_uri=canonical_uri,
-        canonical_version_uri=canonical_version_uri,
-        columns=tuple(columns),
-        rows=rows,
-    )
 
 
 def _codelist_dir() -> Path:

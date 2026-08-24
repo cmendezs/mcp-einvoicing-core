@@ -20,8 +20,10 @@ All files sourced from the OpenPeppol AISBL publications portal (`https://docs.p
 | `Peppol-EDN-Service-Metadata-Locator-1.3.0-2025-02-06.pdf` | SML spec — DNS U-NAPTR discovery flow, `Meta:SMP` service name, management interfaces | 1.3.0 | 2026-05-21 |
 | `Peppol-EDN-Policy-for-use-of-identifiers-4.4.0-2025-02-06.pdf` | Identifier policy — POLICY 7 DNS hash algorithm (Base32-SHA256), participant ID format, document type and process ID schemes | 4.4.0 | 2026-05-21 |
 | `Peppol-EDN-Business-Message-Envelope-2.0.1-2023-08-17.pdf` | BME 2.0.1 spec — AS4 envelope structure (reference only; BME is out of scope for this library) | 2.0.1 | 2026-05-21 |
-| `PEPPOL-EDN-Directory-1.1.1-2020-10-15.pdf` | Peppol Directory spec — REST search API, business-card data model, PD-SML connection. Supersedes the earlier "out of scope" exclusion below now that `[CORE-PEPPOL-DIR-1]` (`roadmap-2026.md`) scopes a Directory search client | 1.1.1 | 2026-08-21 |
-| `PEPPOL-EDN-Policy-for-Transport-Security-1.1.0-2020-04-20.pdf` | TLS/certificate policy for SMP, Directory, and AP actors — supersedes the earlier "out of scope" exclusion below now that `[CORE-PEPPOL-TRUST-1]` scopes trust-store validation | 1.1.0 | 2026-08-21 |
+| `PEPPOL-EDN-Directory-1.1.1-2020-10-15.pdf` | Peppol Directory spec — REST search API, business-card data model, PD-SML connection. Implemented as `peppol.directory.PeppolDirectoryClient` (CORE-PEPPOL-DIR-1, shipped v1.20.0) | 1.1.1 | 2026-08-21 |
+| `PEPPOL-EDN-Policy-for-Transport-Security-1.1.0-2020-04-20.pdf` | TLS/certificate policy for SMP, Directory, and AP actors. Note: covers **TLS** certs only (public-CA-issued, non-self-signed) — it does not publish the separate OpenPeppol application-level PKI root/intermediate certs `peppol.trust` needs; those are the still-pending vendoring item (see `pki/` below) | 1.1.0 | 2026-08-21 |
+| `Peppol-AS4-Profile-2.0.3.pdf` | AS4 Profile — Peppol-specific restrictions on top of [CEFeDeliveryAS4] v1.14 (not vendored): One-Way/Push only, Peppol PKI BST-based signing (§4.7), mandatory SBDH (§4.9), `PEPPOL:NOT_SERVICED` error (§4.4). Implemented as `peppol.transport.wssecurity`/`.inbound` (AS4-SIGN-1/AS4-IN-1, shipped v1.20.0). The exact WS-Security wire format (canonicalization, Reference/Transform shapes) is not in this doc — it defers to [CEFeDeliveryAS4] §3.2.6, not vendored; the implementation follows the stable OASIS WS-Security/SwA-Profile standards directly, flagged `[NEED: verify]` in `wssecurity.py`'s module docstring pending that doc | 2.0.3 | 2026-08-22 |
+| `Peppol-EDN-Business-Message-Envelope-2.0.2-2026-07-02.pdf` | SBDH envelope v2.0.2 — newer than the 2.0.1 PDF and 1.2 XSD already vendored below; bonus artifact from the AS4 supply pass, not yet consumed (2.0.1/1.2 remain the versions the current SBDH parsing in `peppol.transport.inbound`/`models.StandardBusinessDocumentHeader` was verified against, via the MLS example snippets) | 2.0.2 | 2026-08-22 |
 
 **Licensing note (2026-08-21):** every PDF in this table carries an in-file "Statement of copyright"
 granting **Creative Commons BY-NC-ND 4.0** (checked directly across all seven: the three vendored
@@ -71,6 +73,49 @@ targets XSLT 3.0, a strict superset of the XPath 2.0 our `.sch` files declare
 (`queryBinding="xslt2"`), so it compiles them without modification. Only used against
 `CEN-EN16931-UBL-3.0.20.sch` per the licensing note above — never against the Peppol overlay file.
 
+## Peppol Directory business-card schema
+
+| File | Description | Version | Retrieved |
+|---|---|---|---|
+| `directory/peppol-directory-business-card-20180621.xsd` | Peppol Directory business-card XML schema (Apache-2.0, Philip Helger). §5.2.2/§8 of the vendored Directory spec confirm this shape underlies the search response's per-match entity data, resolving the earlier `[NEED]` — no longer speculative. Kept as a local reference only (not bundled in the wheel): `peppol.directory` parses the Directory's JSON search output directly, not this XML shape | 20180621 | 2026-08-22 |
+
+## OpenPeppol eDEC network code lists (deployer-supplied — not bundled)
+
+`codelists/*.gc` (Document types, Participant identifier schemes, Processes, Transport profiles,
+SPIS use case, all v9.7) are OASIS Genericode 1.0 reference copies used only to develop/test
+`peppol.codelists` locally — **not shipped in the published wheel**. The eDEC Code Lists carry no
+in-file redistribution grant (see `core-state.md`'s "Peppol eDEC code lists" section for the full
+licensing investigation); every real deployment supplies its own copy via
+`EINVOICING_PEPPOL_CODELIST_DIR`. The parser (`mcp_einvoicing_core.genericode.parse_genericode`,
+extracted from `peppol.codelists` in v1.20.0) is shared with the EN 16931 semantic code lists at
+`../en16931/codelists/` — see `../en16931/README.md`.
+
+## Peppol reporting (EUSR/TSR) and MLS artifacts — v1.20.0, Apache-2.0, bundled
+
+| Directory | Description | License confirmed |
+|---|---|---|
+| `reporting/eusr/{xsd,schematron,codelist,example}/` | End User Statistics Report v1.1: XSD, compiled Schematron `.xslt` (XSLT 2.0), genericode code lists, official example XMLs | Apache-2.0, 2026-08-22 |
+| `reporting/tsr/{xsd,schematron,codelist,example}/` | Transaction Statistics Report v1.0: same shape as EUSR | Apache-2.0, 2026-08-22 |
+| `mls/{schematron,codelist,example}/` | Message Level Status v1.1.0: compiled Schematron `.xslt` (XSLT 2.0, no bespoke MLS XSD — message syntax is a UBL `ApplicationResponse-2` subset), genericode code lists, official example XMLs (incl. SBDH snippets) | Apache-2.0, 2026-08-22 |
+
+Unlike the CC BY-NC-ND PDFs and the unlicensed Peppol Schematron overlay above, these three
+artifact sets carry a genuine Apache-2.0 grant (confirmed by the user 2026-08-22) and are
+therefore compiled/copied into the published wheel: XSD + compiled `.xslt` + `.gc` under
+`mcp-einvoicing-core/src/mcp_einvoicing_core/resources/{reporting/eusr,reporting/tsr,mls}/`. The
+`.sch` source, PDFs, and `example/` fixtures stay here (spec reference / test fixtures only, not
+shipped). Implemented as `peppol.reporting` (CORE-PEPPOL-REPORT-1) and `peppol.mls`
+(CORE-PEPPOL-MLR-1).
+
+## Peppol PKI trust anchors (`pki/`) — placeholder, not yet supplied
+
+`pki/test/` and `pki/prod/` are empty placeholders for the OpenPeppol application-level PKI
+root/intermediate CA certificates (distinct from the TLS policy above — see the
+Transport-Security PDF row's note). `peppol.trust.PeppolTrustStore` reads
+`EINVOICING_PEPPOL_PKI_DIR/{test,prod}/*.{pem,crt,cer}` and reports
+`trust_anchors_configured: False` until these are populated; chain validation and revocation
+checking logic is implemented and tested (CORE-PEPPOL-TRUST-1, v1.20.0), just unable to run for
+real until the certs land here.
+
 ## Key namespaces
 
 | Prefix | Namespace URI | Used in |
@@ -98,7 +143,6 @@ These changes affect `peppol.py` and are tracked in `context-library/roadmap-202
 | File | Reason excluded |
 |---|---|
 | `peppol-sml-manage-*.wsdl` (both) | SML management SOAP interfaces — for SMP operators registering participants, not for invoice compliance clients. Re-checked 2026-08-21 against `[CORE-PEPPOL-SML-1]`: license is clean (MIT-style OpenPeppol AISBL grant) but the scope reasoning still holds — stays excluded |
-| `peppol-directory-business-card-20180621.xsd` | Peppol Directory business card XSD — license is clean (Apache-2.0, Philip Helger), and it may turn out to be part of the Directory search response shape `[CORE-PEPPOL-DIR-1]` needs, but that is not yet confirmed against the newly-added `PEPPOL-EDN-Directory-1.1.1` spec's actual content. Stays excluded until that's checked — don't vendor speculatively |
 | `2024-01-15 Peppol Reporting - SP Operational Guideline v1.0.2.pdf` | SP operational reporting — separate concern |
 | `OpenPeppol-SP-ID-Scheme 1.0.0.pdf` | SP identification scheme — not relevant to SMP client |
 
