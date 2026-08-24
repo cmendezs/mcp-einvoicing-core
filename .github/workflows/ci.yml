@@ -41,6 +41,9 @@ jobs:
       - name: Ruff check
         run: uv run ruff check src/ tests/
 
+      - name: Ruff format check
+        run: uv run ruff format --check src/ tests/
+
       - name: Run tests
         run: uv run pytest --tb=short
 
@@ -67,8 +70,3 @@ jobs:
       - name: Type-check with mypy
         run: uv run mypy src/mcp_einvoicing_core/
         continue-on-error: true  # Non-blocking: 193 pre-existing type errors, tracked separately
-
-      # ruff format --check is intentionally not enabled here yet: most of
-      # src/ has never been run through `ruff format`, and doing so right
-      # now would touch files that overlap with in-progress, uncommitted
-      # Peppol/EN16931 work. Format + enable this once that work lands.
