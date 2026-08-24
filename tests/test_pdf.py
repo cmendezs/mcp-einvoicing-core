@@ -50,9 +50,7 @@ class TestExtractCanonicalFallback:
         assert result == (canonical_name, _SAMPLE_XML)
 
     def test_returns_none_when_no_canonical_name_present(self) -> None:
-        hybrid = PDFEmbedder.embed(
-            _blank_pdf_bytes(), _SAMPLE_XML, filename="something-else.xml"
-        )
+        hybrid = PDFEmbedder.embed(_blank_pdf_bytes(), _SAMPLE_XML, filename="something-else.xml")
         result = PDFEmbedder.extract(hybrid, filename=None)
         assert result is None
 
@@ -91,7 +89,10 @@ class TestEmbedWritesExtensionSchemaDeclaration:
         )
         xmp = self._xmp_str(hybrid)
         assert "pdfaExtension:schemas" in xmp
-        assert "<pdfaSchema:namespaceURI>urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#</pdfaSchema:namespaceURI>" in xmp
+        assert (
+            "<pdfaSchema:namespaceURI>urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#</pdfaSchema:namespaceURI>"
+            in xmp
+        )
         assert "<pdfaSchema:prefix>fx</pdfaSchema:prefix>" in xmp
 
     def test_identify_still_finds_fx_fields_with_both_blocks_present(self) -> None:

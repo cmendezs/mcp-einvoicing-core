@@ -66,15 +66,13 @@ _BST_VALUE_TYPE = (
     "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-x509-token-profile-1.0#X509v3"
 )
 _BST_ENCODING_TYPE = (
-    "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0"
-    "#Base64Binary"
+    "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary"
 )
 _EXC_C14N_ALG = "http://www.w3.org/2001/10/xml-exc-c14n#"
 _RSA_SHA256_ALG = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"
 _SHA256_DIGEST_ALG = "http://www.w3.org/2001/04/xmlenc#sha256"
 _ATTACHMENT_TRANSFORM = (
-    "http://docs.oasis-open.org/wss/oasis-wss-SwAProfile-1.1"
-    "#Attachment-Content-Signature-Transform"
+    "http://docs.oasis-open.org/wss/oasis-wss-SwAProfile-1.1#Attachment-Content-Signature-Transform"
 )
 
 
@@ -264,7 +262,9 @@ def verify_as4_signature(
     signature_value_el = signature.find(_qn(_DS_NS, "SignatureValue"))
     if signed_info is None or signature_value_el is None:
         return AS4SignatureVerificationResult(
-            False, certificate_der=cert_der, errors=["ds:Signature missing SignedInfo/SignatureValue."]
+            False,
+            certificate_der=cert_der,
+            errors=["ds:Signature missing SignedInfo/SignatureValue."],
         )
 
     attachments_by_cid = {a.content_id: a.content for a in attachments}
@@ -273,7 +273,9 @@ def verify_as4_signature(
     for ref in signed_info.findall(_qn(_DS_NS, "Reference")):
         uri = ref.get("URI", "")
         digest_value_el = ref.find(_qn(_DS_NS, "DigestValue"))
-        expected_digest = (digest_value_el.text or "").strip() if digest_value_el is not None else ""
+        expected_digest = (
+            (digest_value_el.text or "").strip() if digest_value_el is not None else ""
+        )
 
         if uri.startswith("cid:"):
             content_id = uri[len("cid:") :]
@@ -284,9 +286,7 @@ def verify_as4_signature(
             actual_digest = _sha256_b64(content)
         elif uri.startswith("#"):
             target_id = uri[1:]
-            matches = root.xpath(
-                "//*[@wsu:Id=$tid]", namespaces={"wsu": _WSU_NS}, tid=target_id
-            )
+            matches = root.xpath("//*[@wsu:Id=$tid]", namespaces={"wsu": _WSU_NS}, tid=target_id)
             if not matches:
                 errors.append(f"Reference {uri!r}: no element with matching wsu:Id found.")
                 continue
@@ -322,9 +322,7 @@ def verify_as4_signature(
 def _build_key_info(bst_id: str) -> etree._Element:
     """Build a ``ds:KeyInfo`` referencing the ``BinarySecurityToken`` by Id
     (WS-Security X.509 Token Profile "Direct Reference")."""
-    ki = etree.Element(
-        _qn(_DS_NS, "KeyInfo"), nsmap={_DS_PREFIX: _DS_NS, _WSSE_PREFIX: _WSSE_NS}
-    )
+    ki = etree.Element(_qn(_DS_NS, "KeyInfo"), nsmap={_DS_PREFIX: _DS_NS, _WSSE_PREFIX: _WSSE_NS})
     str_el = etree.SubElement(ki, _qn(_WSSE_NS, "SecurityTokenReference"))
     ref = etree.SubElement(str_el, _qn(_WSSE_NS, "Reference"))
     ref.set("URI", f"#{bst_id}")

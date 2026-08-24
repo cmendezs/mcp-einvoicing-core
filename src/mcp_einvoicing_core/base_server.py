@@ -475,9 +475,7 @@ def assert_not_read_only(env_var: str) -> None:
 # boundaries prevents the pattern from running on into surrounding prose.
 _IBAN_INNER = r"[A-Z]{2}\d{2}(?:[A-Z0-9]{11,30}|(?: ?[A-Z0-9]{4}){2,7} ?[A-Z0-9]{0,4})"
 _BIC_INNER = r"[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}(?:[A-Z0-9]{3})?"
-_SCRUB_RE = re.compile(
-    rf"\b(?P<iban>(?i:{_IBAN_INNER}))\b|\b(?P<bic>{_BIC_INNER})\b"
-)
+_SCRUB_RE = re.compile(rf"\b(?P<iban>(?i:{_IBAN_INNER}))\b|\b(?P<bic>{_BIC_INNER})\b")
 
 # Sentinel substitutions — descriptive enough to tell the LLM what was masked.
 _IBAN_PLACEHOLDER = "[IBAN REDACTED]"
@@ -487,8 +485,11 @@ _BIC_PLACEHOLDER = "[BIC REDACTED]"
 def _scrub_match(match: re.Match[str]) -> str:
     return _IBAN_PLACEHOLDER if match.group("iban") else _BIC_PLACEHOLDER
 
+
 _MASKING_ENABLED: bool = os.environ.get("EINVOICING_DISABLE_LLM_MASKING", "").strip() not in {
-    "1", "true", "yes",
+    "1",
+    "true",
+    "yes",
 }
 
 

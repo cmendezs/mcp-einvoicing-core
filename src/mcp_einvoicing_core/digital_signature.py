@@ -132,6 +132,7 @@ class BaseDocumentSigner(ABC):
             ValueError: If the document format is unrecognised or malformed.
         """
 
+
 # XML namespace constants
 _DS = "http://www.w3.org/2000/09/xmldsig#"
 _XADES = "http://uri.etsi.org/01903/v1.3.2#"
@@ -350,16 +351,12 @@ def _build_signed_properties(
         spi = etree.SubElement(ssp, _qn(_XADES, "SignaturePolicyIdentifier"))
         spid = etree.SubElement(spi, _qn(_XADES, "SignaturePolicyId"))
         sig_pol_id = etree.SubElement(spid, _qn(_XADES, "SigPolicyId"))
-        etree.SubElement(sig_pol_id, _qn(_XADES, "Identifier")).text = (
-            config.signature_policy_id
-        )
+        etree.SubElement(sig_pol_id, _qn(_XADES, "Identifier")).text = config.signature_policy_id
         if config.signature_policy_hash:
             sph = etree.SubElement(spid, _qn(_XADES, "SigPolicyHash"))
             hash_dm = etree.SubElement(sph, _qn(_DS, "DigestMethod"))
             hash_dm.set("Algorithm", config.signature_policy_hash_alg)
-            etree.SubElement(sph, _qn(_DS, "DigestValue")).text = (
-                config.signature_policy_hash
-            )
+            etree.SubElement(sph, _qn(_DS, "DigestValue")).text = config.signature_policy_hash
 
     # ClaimedRole (optional)
     if config.claimed_role:
@@ -414,9 +411,9 @@ def _build_key_info(cert_info: _CertInfo) -> etree._Element:
     x509_data = etree.SubElement(ki, _qn(_DS, "X509Data"))
     etree.SubElement(ki, _qn(_DS, "X509Data"))  # placeholder cleared below
     ki.remove(ki[-1])  # remove duplicate
-    etree.SubElement(x509_data, _qn(_DS, "X509Certificate")).text = (
-        base64.b64encode(cert_info.cert_der).decode()
-    )
+    etree.SubElement(x509_data, _qn(_DS, "X509Certificate")).text = base64.b64encode(
+        cert_info.cert_der
+    ).decode()
     return ki
 
 
@@ -476,9 +473,7 @@ class XAdESEPESSigner(BaseDocumentSigner):
 
     def load_credentials(self) -> None:
         """Load the PKCS#12 certificate and private key into memory."""
-        self._cert_info = _load_pkcs12(
-            self._config.cert_path, self._config.cert_password
-        )
+        self._cert_info = _load_pkcs12(self._config.cert_path, self._config.cert_password)
 
     def _get_cert_info(self) -> _CertInfo:
         if self._cert_info is None:
@@ -692,9 +687,7 @@ class XMLDSigSigner(BaseDocumentSigner):
 
     def load_credentials(self) -> None:
         """Load the PKCS#12 certificate and private key into memory."""
-        self._cert_info = _load_pkcs12(
-            self._config.cert_path, self._config.cert_password
-        )
+        self._cert_info = _load_pkcs12(self._config.cert_path, self._config.cert_password)
 
     def _get_cert_info(self) -> _CertInfo:
         if self._cert_info is None:
@@ -751,8 +744,7 @@ class XMLDSigSigner(BaseDocumentSigner):
         target = root.find(f".//{{*}}{self._config.signed_element_local_name}")
         if target is None:
             raise ValueError(
-                f"No <{self._config.signed_element_local_name}> element found "
-                f"in document"
+                f"No <{self._config.signed_element_local_name}> element found in document"
             )
         element_id = target.get(self._config.id_attribute)
         if not element_id:
@@ -846,9 +838,7 @@ class CAdESSigner(BaseDocumentSigner):
 
     def load_credentials(self) -> None:
         """Load the PKCS#12 certificate and private key into memory."""
-        self._cert_info = _load_pkcs12(
-            self._config.cert_path, self._config.cert_password
-        )
+        self._cert_info = _load_pkcs12(self._config.cert_path, self._config.cert_password)
 
     def _get_cert_info(self) -> _CertInfo:
         if self._cert_info is None:

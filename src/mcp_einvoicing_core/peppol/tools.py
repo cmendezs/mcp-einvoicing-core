@@ -78,11 +78,7 @@ def default_id_adapter(identifier: str) -> str:
 
 
 def _environment_from_str(environment: str) -> PeppolEnvironment:
-    return (
-        PeppolEnvironment.TEST
-        if environment == "test"
-        else PeppolEnvironment.PRODUCTION
-    )
+    return PeppolEnvironment.TEST if environment == "test" else PeppolEnvironment.PRODUCTION
 
 
 def register_peppol_tools(
@@ -374,7 +370,10 @@ def register_peppol_tools(
         or removed) document type is still reported as found.
         """
         try:
-            return {"configured": True, **codelists.check_document_type_id_in_codelist(scheme, value)}
+            return {
+                "configured": True,
+                **codelists.check_document_type_id_in_codelist(scheme, value),
+            }
         except codelists.CodelistNotConfiguredError as exc:
             return {"configured": False, "error": str(exc), "found": False}
 

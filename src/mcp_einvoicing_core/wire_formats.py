@@ -155,8 +155,12 @@ class EN16931UBLSerializer:
         # BR-CO-25 does not look at; kept as-is, not a duplicate to remove.
         if invoice.due_date:
             _sub(root, _CBC, "DueDate", _date_ubl(invoice.due_date))
-        _sub(root, _CBC, "InvoiceTypeCode" if not is_credit_note else "CreditNoteTypeCode",
-             invoice.invoice_type_code)
+        _sub(
+            root,
+            _CBC,
+            "InvoiceTypeCode" if not is_credit_note else "CreditNoteTypeCode",
+            invoice.invoice_type_code,
+        )
         _sub_opt(root, _CBC, "Note", invoice.note)
         _sub(root, _CBC, "DocumentCurrencyCode", invoice.currency_code)
         _sub_opt(root, _CBC, "BuyerReference", invoice.buyer_reference)
@@ -177,8 +181,7 @@ class EN16931UBLSerializer:
             inv_doc_ref = _sub(billing_ref, _CAC, "InvoiceDocumentReference")
             _sub(inv_doc_ref, _CBC, "ID", invoice.preceding_invoice_reference)
             if invoice.preceding_invoice_date:
-                _sub(inv_doc_ref, _CBC, "IssueDate",
-                     _date_ubl(invoice.preceding_invoice_date))
+                _sub(inv_doc_ref, _CBC, "IssueDate", _date_ubl(invoice.preceding_invoice_date))
 
         if invoice.contract_reference:
             contract_ref = _sub(root, _CAC, "ContractDocumentReference")
@@ -193,8 +196,7 @@ class EN16931UBLSerializer:
 
         if invoice.delivery_date:
             delivery = _sub(root, _CAC, "Delivery")
-            _sub(delivery, _CBC, "ActualDeliveryDate",
-                 _date_ubl(invoice.delivery_date))
+            _sub(delivery, _CBC, "ActualDeliveryDate", _date_ubl(invoice.delivery_date))
 
         if invoice.payment_means or invoice.due_date:
             self._build_payment_means(
@@ -256,8 +258,9 @@ class EN16931UBLSerializer:
         country = _sub(a, _CAC, "Country")
         _sub(country, _CBC, "IdentificationCode", addr.country_code)
 
-    def _build_payment_means(self, parent: etree._Element, pm: EN16931PaymentMeans,
-                              due_date: date | None, currency: str) -> None:
+    def _build_payment_means(
+        self, parent: etree._Element, pm: EN16931PaymentMeans, due_date: date | None, currency: str
+    ) -> None:
         el = _sub(parent, _CAC, "PaymentMeans")
         _sub(el, _CBC, "PaymentMeansCode", pm.type_code)
         if due_date:
@@ -277,8 +280,9 @@ class EN16931UBLSerializer:
                 payer = _sub(mandate, _CAC, "PayerFinancialAccount")
                 _sub(payer, _CBC, "ID", pm.creditor_id)
 
-    def _build_allowance_charge(self, parent: etree._Element, ac: EN16931AllowanceCharge,
-                                 currency: str) -> None:
+    def _build_allowance_charge(
+        self, parent: etree._Element, ac: EN16931AllowanceCharge, currency: str
+    ) -> None:
         el = _sub(parent, _CAC, "AllowanceCharge")
         _sub(el, _CBC, "ChargeIndicator", "true" if ac.is_charge else "false")
         _sub_opt(el, _CBC, "AllowanceChargeReasonCode", ac.reason_code)
@@ -329,8 +333,14 @@ class EN16931UBLSerializer:
             el = _sub(mt, _CBC, tag, _fmt(value))
             el.set("currencyID", invoice.currency_code)
 
-    def _build_line(self, parent: etree._Element, line: EN16931LineItem,
-                    currency: str, line_tag: str, is_credit_note: bool) -> None:
+    def _build_line(
+        self,
+        parent: etree._Element,
+        line: EN16931LineItem,
+        currency: str,
+        line_tag: str,
+        is_credit_note: bool,
+    ) -> None:
         el = _sub(parent, _CAC, line_tag)
         _sub(el, _CBC, "ID", line.line_id)
         qty_tag = "CreditedQuantity" if is_credit_note else "InvoicedQuantity"
@@ -423,8 +433,10 @@ class EN16931UBLParser:
         invoice_number = get_text("cbc:ID") or ""
         issue_date_str = get_text("cbc:IssueDate") or ""
         issue_date = date.fromisoformat(issue_date_str) if issue_date_str else date.today()
-        type_code = get_text("cbc:InvoiceTypeCode") or get_text("cbc:CreditNoteTypeCode") or (
-            "381" if is_credit_note else "380"
+        type_code = (
+            get_text("cbc:InvoiceTypeCode")
+            or get_text("cbc:CreditNoteTypeCode")
+            or ("381" if is_credit_note else "380")
         )
         currency = get_text("cbc:DocumentCurrencyCode") or "EUR"
 
@@ -463,9 +475,7 @@ class EN16931UBLParser:
             if e:
                 billing_end = date.fromisoformat(e)
 
-        preceding_ref = get_text(
-            "cac:BillingReference/cac:InvoiceDocumentReference/cbc:ID"
-        )
+        preceding_ref = get_text("cac:BillingReference/cac:InvoiceDocumentReference/cbc:ID")
         preceding_date_str = get_text(
             "cac:BillingReference/cac:InvoiceDocumentReference/cbc:IssueDate"
         )
@@ -481,12 +491,8 @@ class EN16931UBLParser:
         # to cac:PaymentMeans/cbc:PaymentDueDate for documents produced by
         # this serializer before the 1.18.1 fix (still emitted there too, for
         # exactly this backward-compatibility reason).
-        due_date_str = get_text("cbc:DueDate") or get_text(
-            "cac:PaymentMeans/cbc:PaymentDueDate"
-        )
-        due_date: date | None = (
-            date.fromisoformat(due_date_str) if due_date_str else None
-        )
+        due_date_str = get_text("cbc:DueDate") or get_text("cac:PaymentMeans/cbc:PaymentDueDate")
+        due_date: date | None = date.fromisoformat(due_date_str) if due_date_str else None
 
         allowances_charges = [
             self._parse_allowance_charge(ac_el) for ac_el in findall("cac:AllowanceCharge")
@@ -532,9 +538,7 @@ class EN16931UBLParser:
         if el is None:
             return EN16931Party(
                 name="",
-                address=EN16931Address(
-                    line_one="", city="", postcode="", country_code="XX"
-                ),
+                address=EN16931Address(line_one="", city="", postcode="", country_code="XX"),
             )
 
         def txt(tag_el: etree._Element | None) -> str | None:
@@ -735,8 +739,7 @@ class EN16931UBLParser:
                 tax_rate = Decimal(pct.text or "0") if pct is not None else Decimal("0")
 
         line_allowances = [
-            self._parse_allowance_charge(ac_el)
-            for ac_el in el.findall(_q(_CAC, "AllowanceCharge"))
+            self._parse_allowance_charge(ac_el) for ac_el in el.findall(_q(_CAC, "AllowanceCharge"))
         ]
 
         return EN16931LineItem(
@@ -827,8 +830,9 @@ class EN16931CIISerializer:
             _sub(prec, _RAM, "IssuerAssignedID", invoice.preceding_invoice_reference)
             if invoice.preceding_invoice_date:
                 prec_dt = _sub(prec, _RAM, "FormattedIssueDateTime")
-                dt = _sub(prec_dt, _QDT, "DateTimeString",
-                          _date_cii(invoice.preceding_invoice_date))
+                dt = _sub(
+                    prec_dt, _QDT, "DateTimeString", _date_cii(invoice.preceding_invoice_date)
+                )
                 dt.set("format", "102")
 
         # ApplicableHeaderTradeDelivery
@@ -842,20 +846,17 @@ class EN16931CIISerializer:
             period = _sub(delivery, _RAM, "DeliverySpecifiedPeriod")
             if invoice.billing_period_start:
                 start = _sub(period, _RAM, "StartDateTime")
-                dt = _sub(start, _UDT, "DateTimeString",
-                          _date_cii(invoice.billing_period_start))
+                dt = _sub(start, _UDT, "DateTimeString", _date_cii(invoice.billing_period_start))
                 dt.set("format", "102")
             if invoice.billing_period_end:
                 end = _sub(period, _RAM, "EndDateTime")
-                dt = _sub(end, _UDT, "DateTimeString",
-                          _date_cii(invoice.billing_period_end))
+                dt = _sub(end, _UDT, "DateTimeString", _date_cii(invoice.billing_period_end))
                 dt.set("format", "102")
 
         # ApplicableHeaderTradeSettlement
         settlement = _sub(txn, _RAM, "ApplicableHeaderTradeSettlement")
         if invoice.payment_means and invoice.payment_means.payment_id:
-            _sub(settlement, _RAM, "PaymentReference",
-                 invoice.payment_means.payment_id)
+            _sub(settlement, _RAM, "PaymentReference", invoice.payment_means.payment_id)
         _sub(settlement, _RAM, "InvoiceCurrencyCode", invoice.currency_code)
 
         if invoice.payment_means:
@@ -878,8 +879,7 @@ class EN16931CIISerializer:
         self._build_monetary_summary(settlement, invoice)
         return root
 
-    def _build_party_cii(self, parent: etree._Element, tag: str,
-                          party: EN16931Party) -> None:
+    def _build_party_cii(self, parent: etree._Element, tag: str, party: EN16931Party) -> None:
         p = _sub(parent, _RAM, tag)
         _sub(p, _RAM, "Name", party.name)
         if party.vat_id:
@@ -910,8 +910,7 @@ class EN16931CIISerializer:
                 em = _sub(contact, _RAM, "EmailURIUniversalCommunication")
                 _sub(em, _RAM, "URIID", party.contact_email)
 
-    def _build_payment_means_cii(self, parent: etree._Element,
-                                  pm: EN16931PaymentMeans) -> None:
+    def _build_payment_means_cii(self, parent: etree._Element, pm: EN16931PaymentMeans) -> None:
         el = _sub(parent, _RAM, "SpecifiedTradeSettlementPaymentMeans")
         _sub(el, _RAM, "TypeCode", pm.type_code)
         if pm.iban:
@@ -935,12 +934,11 @@ class EN16931CIISerializer:
         _sub(tax, _RAM, "CategoryCode", tl.category)
         _sub(tax, _RAM, "RateApplicablePercent", _fmt(tl.rate))
 
-    def _build_allowance_charge_cii(self, parent: etree._Element,
-                                     ac: EN16931AllowanceCharge,
-                                     currency: str) -> None:
+    def _build_allowance_charge_cii(
+        self, parent: etree._Element, ac: EN16931AllowanceCharge, currency: str
+    ) -> None:
         el = _sub(parent, _RAM, "SpecifiedTradeAllowanceCharge")
-        _sub(el, _RAM, "ChargeIndicator",
-             "true" if ac.is_charge else "false")
+        _sub(el, _RAM, "ChargeIndicator", "true" if ac.is_charge else "false")
         if ac.percentage is not None:
             _sub(el, _RAM, "CalculationPercent", _fmt(ac.percentage))
         if ac.base_amount is not None:
@@ -955,8 +953,7 @@ class EN16931CIISerializer:
         _sub(tc, _RAM, "CategoryCode", ac.tax_category)
         _sub(tc, _RAM, "RateApplicablePercent", _fmt(ac.tax_rate))
 
-    def _build_monetary_summary(self, parent: etree._Element,
-                                 invoice: EN16931Invoice) -> None:
+    def _build_monetary_summary(self, parent: etree._Element, invoice: EN16931Invoice) -> None:
         s = _sub(parent, _RAM, "SpecifiedTradeSettlementHeaderMonetarySummation")
         for tag, val, rounding in [
             ("LineTotalAmount", invoice.sum_of_line_net_amounts, ROUND_HALF_UP),
@@ -970,8 +967,7 @@ class EN16931CIISerializer:
         ]:
             _sub(s, _RAM, tag, format_amount(val, rounding_mode=rounding))
 
-    def _build_line(self, parent: etree._Element, line: EN16931LineItem,
-                    currency: str) -> None:
+    def _build_line(self, parent: etree._Element, line: EN16931LineItem, currency: str) -> None:
         el = _sub(parent, _RAM, "IncludedSupplyChainTradeLineItem")
         doc = _sub(el, _RAM, "AssociatedDocumentLineDocument")
         _sub(doc, _RAM, "LineID", line.line_id)
@@ -990,12 +986,10 @@ class EN16931CIISerializer:
 
         agreement = _sub(el, _RAM, "SpecifiedLineTradeAgreement")
         net_price = _sub(agreement, _RAM, "NetPriceProductTradePrice")
-        charge_amt = _sub(net_price, _RAM, "ChargeAmount",
-                          _fmt(line.unit_price, ROUND_HALF_UP))
+        charge_amt = _sub(net_price, _RAM, "ChargeAmount", _fmt(line.unit_price, ROUND_HALF_UP))
         charge_amt.set("currencyID", currency)
         if line.unit_price_base_quantity != Decimal("1"):
-            bq = _sub(net_price, _RAM, "BasisQuantity",
-                      str(line.unit_price_base_quantity))
+            bq = _sub(net_price, _RAM, "BasisQuantity", str(line.unit_price_base_quantity))
             bq.set("unitCode", line.unit_code)
 
         delivery = _sub(el, _RAM, "SpecifiedLineTradeDelivery")
@@ -1004,8 +998,12 @@ class EN16931CIISerializer:
 
         settlement = _sub(el, _RAM, "SpecifiedLineTradeSettlement")
         if line.buyer_accounting_reference:
-            _sub(settlement, _RAM, "ReceivableSpecifiedTradeAccountingAccount",
-                 line.buyer_accounting_reference)
+            _sub(
+                settlement,
+                _RAM,
+                "ReceivableSpecifiedTradeAccountingAccount",
+                line.buyer_accounting_reference,
+            )
         tax = _sub(settlement, _RAM, "ApplicableTradeTax")
         _sub(tax, _RAM, "TypeCode", "VAT")
         _sub(tax, _RAM, "CategoryCode", line.tax_category)
@@ -1058,17 +1056,20 @@ class EN16931CIIParser:
             r = xpath_els(path)
             return r[0] if r else None
 
-        profile = xpath_txt("rsm:ExchangedDocumentContext"
-                            "/ram:GuidelineSpecifiedDocumentContextParameter/ram:ID") or ""
+        profile = (
+            xpath_txt(
+                "rsm:ExchangedDocumentContext/ram:GuidelineSpecifiedDocumentContextParameter/ram:ID"
+            )
+            or ""
+        )
         invoice_number = xpath_txt("rsm:ExchangedDocument/ram:ID") or ""
         type_code = xpath_txt("rsm:ExchangedDocument/ram:TypeCode") or "380"
 
-        date_str = xpath_txt(
-            "rsm:ExchangedDocument/ram:IssueDateTime/udt:DateTimeString"
-        ) or ""
+        date_str = xpath_txt("rsm:ExchangedDocument/ram:IssueDateTime/udt:DateTimeString") or ""
         invoice_date = (
             date.fromisoformat(f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:]}")
-            if len(date_str) == 8 else date.today()
+            if len(date_str) == 8
+            else date.today()
         )
 
         note_el = xpath_el("rsm:ExchangedDocument/ram:IncludedNote/ram:Content")
@@ -1090,15 +1091,9 @@ class EN16931CIIParser:
         purchase_order = xpath_txt(
             f"{agreement}/ram:BuyerOrderReferencedDocument/ram:IssuerAssignedID"
         )
-        contract_ref = xpath_txt(
-            f"{agreement}/ram:ContractReferencedDocument/ram:IssuerAssignedID"
-        )
-        project_ref = xpath_txt(
-            f"{agreement}/ram:SpecifiedProcuringProject/ram:ID"
-        )
-        preceding_ref = xpath_txt(
-            f"{agreement}/ram:InvoiceReferencedDocument/ram:IssuerAssignedID"
-        )
+        contract_ref = xpath_txt(f"{agreement}/ram:ContractReferencedDocument/ram:IssuerAssignedID")
+        project_ref = xpath_txt(f"{agreement}/ram:SpecifiedProcuringProject/ram:ID")
+        preceding_ref = xpath_txt(f"{agreement}/ram:InvoiceReferencedDocument/ram:IssuerAssignedID")
         preceding_date_str = xpath_txt(
             f"{agreement}/ram:InvoiceReferencedDocument"
             "/ram:FormattedIssueDateTime/qdt:DateTimeString"
@@ -1145,18 +1140,14 @@ class EN16931CIIParser:
             f"{settlement}/ram:SpecifiedTradePaymentTerms/ram:Description"
         )
         due_str = xpath_txt(
-            f"{settlement}/ram:SpecifiedTradePaymentTerms"
-            "/ram:DueDateDateTime/udt:DateTimeString"
+            f"{settlement}/ram:SpecifiedTradePaymentTerms/ram:DueDateDateTime/udt:DateTimeString"
         )
         due_date: date | None = None
         if due_str and len(due_str) == 8:
-            due_date = date.fromisoformat(
-                f"{due_str[:4]}-{due_str[4:6]}-{due_str[6:]}"
-            )
+            due_date = date.fromisoformat(f"{due_str[:4]}-{due_str[4:6]}-{due_str[6:]}")
 
         tax_lines = [
-            self._parse_tax_cii(t)
-            for t in xpath_els(f"{settlement}/ram:ApplicableTradeTax")
+            self._parse_tax_cii(t) for t in xpath_els(f"{settlement}/ram:ApplicableTradeTax")
         ]
 
         allowances_charges = [
@@ -1180,9 +1171,7 @@ class EN16931CIIParser:
 
         line_items = [
             self._parse_line_cii(le)
-            for le in xpath_els(
-                f"{txn}/ram:IncludedSupplyChainTradeLineItem"
-            )
+            for le in xpath_els(f"{txn}/ram:IncludedSupplyChainTradeLineItem")
         ]
 
         return EN16931Invoice(
@@ -1234,8 +1223,7 @@ class EN16931CIIParser:
         name = txt("ram:Name")
         vat_id = txt("ram:SpecifiedTaxRegistration/ram:ID")
 
-        ep_el_list = el.xpath("ram:URIUniversalCommunication/ram:URIID",
-                              namespaces={"ram": _RAM})
+        ep_el_list = el.xpath("ram:URIUniversalCommunication/ram:URIID", namespaces={"ram": _RAM})
         endpoint = None
         scheme = None
         if ep_el_list:
@@ -1251,16 +1239,14 @@ class EN16931CIIParser:
         contact_el = contact_el_list[0] if contact_el_list else None
         contact_name = contact_phone = contact_email = None
         if contact_el is not None:
+
             def ctxt(path: str) -> str | None:
                 r = contact_el.xpath(path + "/text()", namespaces={"ram": _RAM})
                 return str(r[0]).strip() if r else None
+
             contact_name = ctxt("ram:PersonName")
-            contact_phone = ctxt(
-                "ram:TelephoneUniversalCommunication/ram:CompleteNumber"
-            )
-            contact_email = ctxt(
-                "ram:EmailURIUniversalCommunication/ram:URIID"
-            )
+            contact_phone = ctxt("ram:TelephoneUniversalCommunication/ram:CompleteNumber")
+            contact_email = ctxt("ram:EmailURIUniversalCommunication/ram:URIID")
 
         return EN16931Party(
             name=name or "",
@@ -1316,9 +1302,7 @@ class EN16931CIIParser:
             iban_el = acc_el.find(_q(_RAM, "IBANID"))
             iban = iban_el.text.strip() if iban_el is not None and iban_el.text else None
             name_el = acc_el.find(_q(_RAM, "AccountName"))
-            account_name = (
-                name_el.text.strip() if name_el is not None and name_el.text else None
-            )
+            account_name = name_el.text.strip() if name_el is not None and name_el.text else None
         fi_el = el.find(_q(_RAM, "PayeeSpecifiedCreditorFinancialInstitution"))
         if fi_el is not None:
             bic_el = fi_el.find(_q(_RAM, "BICID"))
@@ -1381,9 +1365,7 @@ class EN16931CIIParser:
         global_els = el.xpath("ram:SpecifiedTradeProduct/ram:GlobalID", namespaces=ns)
         std_scheme = global_els[0].get("schemeID") if global_els else None
 
-        qty_els = el.xpath(
-            "ram:SpecifiedLineTradeDelivery/ram:BilledQuantity", namespaces=ns
-        )
+        qty_els = el.xpath("ram:SpecifiedLineTradeDelivery/ram:BilledQuantity", namespaces=ns)
         quantity = Decimal("1")
         unit_code = "C62"
         if qty_els:
@@ -1391,15 +1373,13 @@ class EN16931CIIParser:
             unit_code = qty_els[0].get("unitCode", "C62")
 
         price_els = el.xpath(
-            "ram:SpecifiedLineTradeAgreement/ram:NetPriceProductTradePrice"
-            "/ram:ChargeAmount",
+            "ram:SpecifiedLineTradeAgreement/ram:NetPriceProductTradePrice/ram:ChargeAmount",
             namespaces=ns,
         )
         unit_price = Decimal(price_els[0].text or "0") if price_els else Decimal("0")
 
         bq_els = el.xpath(
-            "ram:SpecifiedLineTradeAgreement/ram:NetPriceProductTradePrice"
-            "/ram:BasisQuantity",
+            "ram:SpecifiedLineTradeAgreement/ram:NetPriceProductTradePrice/ram:BasisQuantity",
             namespaces=ns,
         )
         unit_price_base = Decimal(bq_els[0].text or "1") if bq_els else Decimal("1")
@@ -1412,8 +1392,7 @@ class EN16931CIIParser:
         line_net = Decimal(total_els[0].text or "0") if total_els else Decimal("0")
 
         acc_ref = txt(
-            "ram:SpecifiedLineTradeSettlement"
-            "/ram:ReceivableSpecifiedTradeAccountingAccount"
+            "ram:SpecifiedLineTradeSettlement/ram:ReceivableSpecifiedTradeAccountingAccount"
         )
 
         tax_cat_els = el.xpath(
@@ -1423,13 +1402,10 @@ class EN16931CIIParser:
         tax_category = tax_cat_els[0].text.strip() if tax_cat_els and tax_cat_els[0].text else "S"
 
         tax_rate_els = el.xpath(
-            "ram:SpecifiedLineTradeSettlement"
-            "/ram:ApplicableTradeTax/ram:RateApplicablePercent",
+            "ram:SpecifiedLineTradeSettlement/ram:ApplicableTradeTax/ram:RateApplicablePercent",
             namespaces=ns,
         )
-        tax_rate = (
-            Decimal(tax_rate_els[0].text or "0") if tax_rate_els else Decimal("0")
-        )
+        tax_rate = Decimal(tax_rate_els[0].text or "0") if tax_rate_els else Decimal("0")
 
         line_ac_els = el.xpath(
             "ram:SpecifiedLineTradeSettlement/ram:SpecifiedTradeAllowanceCharge",

@@ -47,9 +47,7 @@ def _generate_test_p12(path: Path, password: bytes | None = b"test") -> None:
     from cryptography.x509.oid import NameOID
 
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    subject = issuer = x509.Name(
-        [x509.NameAttribute(NameOID.COMMON_NAME, "Test JWS Client")]
-    )
+    subject = issuer = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "Test JWS Client")])
     cert = (
         x509.CertificateBuilder()
         .subject_name(subject)
@@ -57,9 +55,7 @@ def _generate_test_p12(path: Path, password: bytes | None = b"test") -> None:
         .public_key(key.public_key())
         .serial_number(x509.random_serial_number())
         .not_valid_before(datetime.datetime.now(datetime.UTC))
-        .not_valid_after(
-            datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=365)
-        )
+        .not_valid_after(datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=365))
         .sign(key, hashes.SHA256())
     )
     p12_bytes = pkcs12.serialize_key_and_certificates(
@@ -94,10 +90,12 @@ class TestSignJwsToken:
 
         cert_info = _load_pkcs12(str(p12_path), "test")
         now = int(time.time())
-        token = _sign_jws_token(
-            cert_info, "RS256", {}, {"iat": now, "exp": now + 300}
+        token = _sign_jws_token(cert_info, "RS256", {}, {"iat": now, "exp": now + 300})
+        decoded = jose_jwt.decode(
+            token,
+            RSAKey.import_key(cert_info.private_key.public_key()),
+            registry=_decode_registry(),
         )
-        decoded = jose_jwt.decode(token, RSAKey.import_key(cert_info.private_key.public_key()), registry=_decode_registry())
         assert decoded.header["typ"] == "JWT"
         assert decoded.header["alg"] == "RS256"
         assert decoded.header["x5c"] == [base64.b64encode(cert_info.cert_der).decode("ascii")]
@@ -109,7 +107,11 @@ class TestSignJwsToken:
         now = int(time.time())
         claims = {"iat": now, "exp": now + 300, "username": "abc123"}
         token = _sign_jws_token(cert_info, "RS256", {}, claims)
-        decoded = jose_jwt.decode(token, RSAKey.import_key(cert_info.private_key.public_key()), registry=_decode_registry())
+        decoded = jose_jwt.decode(
+            token,
+            RSAKey.import_key(cert_info.private_key.public_key()),
+            registry=_decode_registry(),
+        )
         assert decoded.claims["username"] == "abc123"
         assert decoded.claims["iat"] == now
         assert decoded.claims["exp"] == now + 300
@@ -119,7 +121,11 @@ class TestSignJwsToken:
 
         cert_info = _load_pkcs12(str(p12_path), "test")
         token = _sign_jws_token(cert_info, "RS256", {"kid": "test-kid"}, {"iat": 1, "exp": 2})
-        decoded = jose_jwt.decode(token, RSAKey.import_key(cert_info.private_key.public_key()), registry=_decode_registry())
+        decoded = jose_jwt.decode(
+            token,
+            RSAKey.import_key(cert_info.private_key.public_key()),
+            registry=_decode_registry(),
+        )
         assert decoded.header["kid"] == "test-kid"
 
     def test_signature_verifiable(self, p12_path: Path) -> None:
@@ -131,7 +137,11 @@ class TestSignJwsToken:
         token = _sign_jws_token(cert_info, "RS256", {}, {"iat": 1, "exp": 2})
         tampered = token[:-4] + ("A" if token[-4] != "A" else "B") + token[-3:]
         with pytest.raises(BadSignatureError):
-            jose_jwt.decode(tampered, RSAKey.import_key(cert_info.private_key.public_key()), registry=_decode_registry())
+            jose_jwt.decode(
+                tampered,
+                RSAKey.import_key(cert_info.private_key.public_key()),
+                registry=_decode_registry(),
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -177,9 +187,7 @@ class TestBaseEInvoicingClientJws:
         assert client._jws_config is config
 
     @pytest.mark.asyncio
-    async def test_headers_authorization_bearer_in_process_fallback(
-        self, p12_path: Path
-    ) -> None:
+    async def test_headers_authorization_bearer_in_process_fallback(self, p12_path: Path) -> None:
         """When the signer microservice is not configured, mint in-process."""
         from joserfc import jwt as jose_jwt
 
@@ -197,7 +205,11 @@ class TestBaseEInvoicingClientJws:
         assert headers["Authorization"].startswith("Bearer ")
         token = headers["Authorization"].removeprefix("Bearer ")
         cert_info = _load_pkcs12(str(p12_path), "test")
-        decoded = jose_jwt.decode(token, RSAKey.import_key(cert_info.private_key.public_key()), registry=_decode_registry())
+        decoded = jose_jwt.decode(
+            token,
+            RSAKey.import_key(cert_info.private_key.public_key()),
+            registry=_decode_registry(),
+        )
         assert decoded.header["alg"] == "RS256"
         assert "x5c" in decoded.header
 
@@ -212,9 +224,7 @@ class TestBaseEInvoicingClientJws:
             "mcp_einvoicing_core.signer_client.SignerClient.is_configured",
             return_value=False,
         ):
-            with patch.object(
-                client, "_mint_jws_token", wraps=client._mint_jws_token
-            ) as mint_spy:
+            with patch.object(client, "_mint_jws_token", wraps=client._mint_jws_token) as mint_spy:
                 token1 = await client._get_bearer_token()
                 token2 = await client._get_bearer_token()
 
@@ -222,9 +232,7 @@ class TestBaseEInvoicingClientJws:
         mint_spy.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_routes_through_signer_client_when_configured(
-        self, p12_path: Path
-    ) -> None:
+    async def test_routes_through_signer_client_when_configured(self, p12_path: Path) -> None:
         config = JWSConfig(
             cert_path=str(p12_path),
             cert_password="test",

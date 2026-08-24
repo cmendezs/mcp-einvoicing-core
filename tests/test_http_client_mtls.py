@@ -29,9 +29,7 @@ def _generate_test_p12(path: Path, password: bytes | None = b"test") -> None:
     from cryptography.x509.oid import NameOID
 
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    subject = issuer = x509.Name(
-        [x509.NameAttribute(NameOID.COMMON_NAME, "Test MTLS Client")]
-    )
+    subject = issuer = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "Test MTLS Client")])
     cert = (
         x509.CertificateBuilder()
         .subject_name(subject)
@@ -39,10 +37,7 @@ def _generate_test_p12(path: Path, password: bytes | None = b"test") -> None:
         .public_key(key.public_key())
         .serial_number(x509.random_serial_number())
         .not_valid_before(datetime.datetime.now(datetime.UTC))
-        .not_valid_after(
-            datetime.datetime.now(datetime.UTC)
-            + datetime.timedelta(days=365)
-        )
+        .not_valid_after(datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=365))
         .sign(key, hashes.SHA256())
     )
     p12_bytes = pkcs12.serialize_key_and_certificates(

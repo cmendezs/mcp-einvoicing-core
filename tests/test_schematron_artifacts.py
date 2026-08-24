@@ -20,9 +20,7 @@ _SAXON_AVAILABLE = importlib.util.find_spec("saxonche") is not None
 
 pytestmark = pytest.mark.skipif(not _SAXON_AVAILABLE, reason="saxonche extra not installed")
 
-_EXAMPLES_ZIP = (
-    Path(__file__).parent.parent / "specs" / "peppol" / "BIS-Billing3-Examples.zip"
-)
+_EXAMPLES_ZIP = Path(__file__).parent.parent / "specs" / "peppol" / "BIS-Billing3-Examples.zip"
 _GOLDEN_MEMBER = "rules/examples/base-example.xml"
 
 
@@ -52,18 +50,14 @@ class TestEn16931BaseSchematronValidator:
 
         assert isinstance(validator, SaxonSchematronValidator)
 
-    @pytest.mark.skipif(
-        not _EXAMPLES_ZIP.exists(), reason="BIS-Billing3-Examples.zip not present"
-    )
+    @pytest.mark.skipif(not _EXAMPLES_ZIP.exists(), reason="BIS-Billing3-Examples.zip not present")
     def test_golden_invoice_validates_clean(self, validator):
         xml_bytes = _read_golden_invoice()
         result = validator.validate(xml_bytes, profile="peppol-bis-3", syntax="UBL")
         assert result.is_valid is True
         assert result.errors == []
 
-    @pytest.mark.skipif(
-        not _EXAMPLES_ZIP.exists(), reason="BIS-Billing3-Examples.zip not present"
-    )
+    @pytest.mark.skipif(not _EXAMPLES_ZIP.exists(), reason="BIS-Billing3-Examples.zip not present")
     def test_missing_due_date_and_payment_terms_trips_br_co_25(self, validator):
         broken = _break_br_co_25(_read_golden_invoice())
         result = validator.validate(broken, profile="peppol-bis-3", syntax="UBL")

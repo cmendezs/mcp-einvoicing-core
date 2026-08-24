@@ -40,6 +40,7 @@ def _generate_test_pem_cert_and_key() -> tuple[bytes, bytes]:
     )
     return cert_pem, key_pem
 
+
 SAMPLE_INVOICE = b"""<?xml version="1.0" encoding="UTF-8"?>
 <Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2">
   <ID>INV-001</ID>
@@ -225,9 +226,7 @@ class TestAS4TransportClientSend:
         httpx_mock.add_response(content=_make_receipt_xml(ref_to="test-msg-001"))
 
         client = AS4TransportClient()
-        receipt = await client.send(
-            envelope, "https://ap.example.org/as4", credentials
-        )
+        receipt = await client.send(envelope, "https://ap.example.org/as4", credentials)
 
         assert receipt.ref_to_message_id == "test-msg-001"
 

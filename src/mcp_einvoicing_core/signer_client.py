@@ -59,14 +59,13 @@ class SignerClient:
     def is_configured(cls) -> bool:
         """Return True if both signer env vars are set (non-empty)."""
         return bool(
-            os.environ.get("EINVOICING_SIGNER_SOCKET")
-            and os.environ.get("EINVOICING_SIGNER_TOKEN")
+            os.environ.get("EINVOICING_SIGNER_SOCKET") and os.environ.get("EINVOICING_SIGNER_TOKEN")
         )
 
     async def _call(self, method: str, params: dict[str, Any]) -> dict[str, Any]:
-        request = json.dumps(
-            {"token": self._token, "method": method, "params": params}
-        ).encode() + b"\n"
+        request = (
+            json.dumps({"token": self._token, "method": method, "params": params}).encode() + b"\n"
+        )
 
         try:
             reader, writer = await asyncio.open_unix_connection(self._socket_path)

@@ -48,20 +48,80 @@ _ES_NIF_LETTERS = "TRWAGMYFPDXBNJZSQVHLCKE"
 _ES_CIF_CONTROL_LETTERS = "JABCDEFGHI"
 
 _IT_CF_ODD_MAP: dict[str, int] = {
-    "0": 1, "1": 0, "2": 5, "3": 7, "4": 9, "5": 13, "6": 15, "7": 17,
-    "8": 19, "9": 21,
-    "A": 1, "B": 0, "C": 5, "D": 7, "E": 9, "F": 13, "G": 15, "H": 17,
-    "I": 19, "J": 21, "K": 2, "L": 4, "M": 18, "N": 20, "O": 11, "P": 3,
-    "Q": 6, "R": 8, "S": 12, "T": 14, "U": 16, "V": 10, "W": 22, "X": 25,
-    "Y": 24, "Z": 23,
+    "0": 1,
+    "1": 0,
+    "2": 5,
+    "3": 7,
+    "4": 9,
+    "5": 13,
+    "6": 15,
+    "7": 17,
+    "8": 19,
+    "9": 21,
+    "A": 1,
+    "B": 0,
+    "C": 5,
+    "D": 7,
+    "E": 9,
+    "F": 13,
+    "G": 15,
+    "H": 17,
+    "I": 19,
+    "J": 21,
+    "K": 2,
+    "L": 4,
+    "M": 18,
+    "N": 20,
+    "O": 11,
+    "P": 3,
+    "Q": 6,
+    "R": 8,
+    "S": 12,
+    "T": 14,
+    "U": 16,
+    "V": 10,
+    "W": 22,
+    "X": 25,
+    "Y": 24,
+    "Z": 23,
 }
 _IT_CF_EVEN_MAP: dict[str, int] = {
-    "0": 0, "1": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7,
-    "8": 8, "9": 9,
-    "A": 0, "B": 1, "C": 2, "D": 3, "E": 4, "F": 5, "G": 6, "H": 7,
-    "I": 8, "J": 9, "K": 10, "L": 11, "M": 12, "N": 13, "O": 14, "P": 15,
-    "Q": 16, "R": 17, "S": 18, "T": 19, "U": 20, "V": 21, "W": 22, "X": 23,
-    "Y": 24, "Z": 25,
+    "0": 0,
+    "1": 1,
+    "2": 2,
+    "3": 3,
+    "4": 4,
+    "5": 5,
+    "6": 6,
+    "7": 7,
+    "8": 8,
+    "9": 9,
+    "A": 0,
+    "B": 1,
+    "C": 2,
+    "D": 3,
+    "E": 4,
+    "F": 5,
+    "G": 6,
+    "H": 7,
+    "I": 8,
+    "J": 9,
+    "K": 10,
+    "L": 11,
+    "M": 12,
+    "N": 13,
+    "O": 14,
+    "P": 15,
+    "Q": 16,
+    "R": 17,
+    "S": 18,
+    "T": 19,
+    "U": 20,
+    "V": 21,
+    "W": 22,
+    "X": 23,
+    "Y": 24,
+    "Z": 25,
 }
 
 
@@ -326,7 +386,6 @@ class TaxIdentifier(BaseModel):
 
     # --- Spain ---
 
-
     @staticmethod
     def validate_es_nif(identifier: str) -> tuple[bool, str]:
         """Validate a Spanish NIF (Numero de Identificacion Fiscal) for individuals.
@@ -398,7 +457,10 @@ class TaxIdentifier(BaseModel):
         """
         cleaned = identifier.strip().upper()
         if not re.match(r"^[ABCDEFGHJNPQRSUVW]\d{7}[0-9A-J]$", cleaned):
-            return False, "CIF must be 1 org letter + 7 digits + 1 control character (digit or A-J)."
+            return (
+                False,
+                "CIF must be 1 org letter + 7 digits + 1 control character (digit or A-J).",
+            )
         org_letter = cleaned[0]
         digits_part = cleaned[1:8]
         control = cleaned[8]
@@ -511,14 +573,20 @@ class TaxIdentifier(BaseModel):
         if cleaned.startswith("FR"):
             cleaned = cleaned[2:]
         if len(cleaned) != 11:
-            return False, "TVA intracommunautaire must be 11 characters after FR prefix (2 check digits + 9-digit SIREN)."
+            return (
+                False,
+                "TVA intracommunautaire must be 11 characters after FR prefix (2 check digits + 9-digit SIREN).",
+            )
         if not cleaned.isdigit():
             return False, "TVA intracommunautaire must contain only digits after FR prefix."
         check_digits = int(cleaned[:2])
         siren = int(cleaned[2:])
         expected = (12 + 3 * (siren % 97)) % 97
         if check_digits != expected:
-            return False, f"TVA check key mismatch: expected {expected:02d}, got {check_digits:02d}."
+            return (
+                False,
+                f"TVA check key mismatch: expected {expected:02d}, got {check_digits:02d}.",
+            )
         return True, ""
 
     # --- Italy ---

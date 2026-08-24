@@ -437,7 +437,10 @@ def verify_smp_signature(
     digest_method = _find_child(reference, "DigestMethod")
     digest_value_el = _find_child(reference, "DigestValue")
     if digest_method is None or digest_value_el is None:
-        return {"signature_valid": False, "error": "ds:Reference is missing DigestMethod/DigestValue."}
+        return {
+            "signature_valid": False,
+            "error": "ds:Reference is missing DigestMethod/DigestValue.",
+        }
 
     digest_alg = digest_method.get("Algorithm", "")
     digest_hash_cls = _DIGEST_HASH_NAMES.get(digest_alg)

@@ -143,7 +143,9 @@ class TestCodelistToolsUnconfigured:
     """Without EINVOICING_PEPPOL_CODELIST_DIR, every codelist tool must
     return a clear configured=False result rather than raising."""
 
-    def test_list_and_check_tools_report_not_configured(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_list_and_check_tools_report_not_configured(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.delenv("EINVOICING_PEPPOL_CODELIST_DIR", raising=False)
         mcp = _FakeMCP()
         register_peppol_tools(mcp)
@@ -154,9 +156,13 @@ class TestCodelistToolsUnconfigured:
         assert mcp.registered["list_spis_use_case_ids"]()["configured"] is False
         assert mcp.registered["check_document_type_id_in_codelist"]("s", "v")["configured"] is False
         assert mcp.registered["check_process_id_in_codelist"]("s", "v")["configured"] is False
-        assert mcp.registered["check_participant_id_scheme_in_codelist"]("0208")["configured"] is False
+        assert (
+            mcp.registered["check_participant_id_scheme_in_codelist"]("0208")["configured"] is False
+        )
 
-    def test_get_version_reports_all_errors_when_unconfigured(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_get_version_reports_all_errors_when_unconfigured(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.delenv("EINVOICING_PEPPOL_CODELIST_DIR", raising=False)
         mcp = _FakeMCP()
         register_peppol_tools(mcp)

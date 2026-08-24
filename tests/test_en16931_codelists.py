@@ -103,9 +103,7 @@ class TestUnconfigured:
         with pytest.raises(codelists.CodelistNotConfiguredError):
             codelists.check_country_code("FR")
 
-    def test_get_version_reports_errors_when_unset(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_get_version_reports_errors_when_unset(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("EINVOICING_EN16931_CODELIST_DIR", raising=False)
         result = codelists.get_en16931_codelist_version()
         assert result["versions"] == {}
@@ -166,7 +164,9 @@ class TestConfigured:
         assert result["versions"]["country"] == "2026-05-15"
         assert result["errors"] == {}
 
-    def test_missing_single_file_raises(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_missing_single_file_raises(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setenv("EINVOICING_EN16931_CODELIST_DIR", str(tmp_path))
         with pytest.raises(codelists.CodelistNotConfiguredError):
             codelists.load_codelist("country")

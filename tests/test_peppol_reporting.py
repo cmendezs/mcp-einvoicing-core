@@ -55,7 +55,9 @@ def tsr_xml() -> bytes:
 class TestParseEusr:
     def test_parses_header_and_full_set(self, eusr_full_xml: bytes) -> None:
         report = parse_eusr(eusr_full_xml)
-        assert report.customization_id == "urn:fdc:peppol.eu:edec:trns:end-user-statistics-report:1.1"
+        assert (
+            report.customization_id == "urn:fdc:peppol.eu:edec:trns:end-user-statistics-report:1.1"
+        )
         assert report.header.reporter_id.value == "POP000360"
         assert report.header.report_period.start_date == "2022-01-01"
         assert report.full_set.sending_end_users == 5

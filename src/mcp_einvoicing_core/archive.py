@@ -25,9 +25,13 @@ class ArchiveMetadata(BaseModel):
     document_id: str = Field(description="Unique identifier assigned by the archive provider.")
     document_hash: str = Field(description="SHA-256 hex digest of the archived document bytes.")
     archive_timestamp: datetime = Field(description="UTC timestamp when the document was archived.")
-    retention_until: datetime = Field(description="UTC timestamp until which the document must be retained.")
+    retention_until: datetime = Field(
+        description="UTC timestamp until which the document must be retained."
+    )
     format_id: str = Field(description="Format identifier (e.g. 'FatturaPA-1.2.3', 'NF-e-4.00').")
-    signer_id: str | None = Field(default=None, description="Identifier of the signer, if the document was signed.")
+    signer_id: str | None = Field(
+        default=None, description="Identifier of the signer, if the document was signed."
+    )
     raw: dict = Field(default_factory=dict, description="Full provider-specific response.")
 
 
@@ -40,9 +44,7 @@ class BaseArchiveProvider(ABC):
     """
 
     @abstractmethod
-    async def archive_document(
-        self, document: bytes, metadata: dict
-    ) -> ArchiveMetadata:
+    async def archive_document(self, document: bytes, metadata: dict) -> ArchiveMetadata:
         """Archive *document* and return its metadata.
 
         Args:
@@ -55,9 +57,7 @@ class BaseArchiveProvider(ABC):
         """
 
     @abstractmethod
-    async def retrieve_document(
-        self, document_id: str
-    ) -> tuple[bytes, ArchiveMetadata]:
+    async def retrieve_document(self, document_id: str) -> tuple[bytes, ArchiveMetadata]:
         """Retrieve an archived document by its ID.
 
         Args:
@@ -68,9 +68,7 @@ class BaseArchiveProvider(ABC):
         """
 
     @abstractmethod
-    async def list_documents(
-        self, criteria: dict
-    ) -> list[ArchiveMetadata]:
+    async def list_documents(self, criteria: dict) -> list[ArchiveMetadata]:
         """Query archived documents matching *criteria*.
 
         Args:

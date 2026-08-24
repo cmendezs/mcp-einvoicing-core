@@ -94,11 +94,15 @@ def parse_mime_multipart(content_type: str, body: bytes) -> tuple[bytes, dict[st
     message: Message = email.message_from_bytes(header_bytes + body, policy=HTTP)
 
     if not message.is_multipart():
-        raise MimeParseError(status_code=0, message="AS4 inbound body is not a MIME multipart message.")
+        raise MimeParseError(
+            status_code=0, message="AS4 inbound body is not a MIME multipart message."
+        )
 
     parts = list(message.iter_parts())
     if not parts:
-        raise MimeParseError(status_code=0, message="AS4 inbound MIME multipart message has no parts.")
+        raise MimeParseError(
+            status_code=0, message="AS4 inbound MIME multipart message has no parts."
+        )
 
     soap_bytes = parts[0].get_payload(decode=True)
     if soap_bytes is None:
@@ -221,7 +225,9 @@ class AS4InboundHandler:
         try:
             root = safe_fromstring(soap_bytes)
         except etree.XMLSyntaxError as exc:
-            raise PlatformError(status_code=0, message=f"AS4 SOAP envelope XML parse error: {exc}") from exc
+            raise PlatformError(
+                status_code=0, message=f"AS4 SOAP envelope XML parse error: {exc}"
+            ) from exc
 
         user_message = _find(root, _EBMS_NS, "UserMessage")
         if user_message is None:

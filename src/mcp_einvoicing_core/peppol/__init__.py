@@ -85,17 +85,19 @@ _NAPTR_URI_RE = re.compile(r"!([^!]*)!([^!]+)!")
 # Known Peppol SMP hostname suffixes (P1.11).
 # Sources: OpenPeppol AP registry, published SML production participants.
 # Override at deployment time via EINVOICING_SMP_ALLOWLIST (comma-separated suffixes).
-_SMP_ALLOWLIST_DEFAULT: frozenset[str] = frozenset({
-    ".edelivery.tech.ec.europa.eu",   # OpenPeppol SML production
-    ".acc.edelivery.tech.ec.europa.eu",  # OpenPeppol SML test
-    ".smp.acube.io",
-    ".b2brouter.net",
-    ".galaxygw.com",
-    ".peppolap.com",
-    ".einvoiceservice.eu",
-    ".openpeppol.org",
-    ".digitaldocuments.eu",
-})
+_SMP_ALLOWLIST_DEFAULT: frozenset[str] = frozenset(
+    {
+        ".edelivery.tech.ec.europa.eu",  # OpenPeppol SML production
+        ".acc.edelivery.tech.ec.europa.eu",  # OpenPeppol SML test
+        ".smp.acube.io",
+        ".b2brouter.net",
+        ".galaxygw.com",
+        ".peppolap.com",
+        ".einvoiceservice.eu",
+        ".openpeppol.org",
+        ".digitaldocuments.eu",
+    }
+)
 
 # Peppol BIS Billing 3.0 document type identifier
 PEPPOL_BIS_BILLING_30 = (
@@ -407,9 +409,7 @@ class PeppolSMPClient:
 
     # ── Public API ────────────────────────────────────────────────────────────
 
-    async def lookup_participant(
-        self, participant_id: PeppolParticipantId
-    ) -> PeppolLookupResult:
+    async def lookup_participant(self, participant_id: PeppolParticipantId) -> PeppolLookupResult:
         """Check whether a participant is registered and list their document types.
 
         Performs:
@@ -483,15 +483,11 @@ class PeppolSMPClient:
                 )
 
         smp_base_url = f"https://{smp_hostname}"
-        return await self._fetch_service_metadata(
-            smp_base_url, participant_id, document_type_id
-        )
+        return await self._fetch_service_metadata(smp_base_url, participant_id, document_type_id)
 
     # ── Protected helpers — override in subclasses ────────────────────────────
 
-    async def _resolve_smp_hostname(
-        self, participant_id: PeppolParticipantId
-    ) -> str | None:
+    async def _resolve_smp_hostname(self, participant_id: PeppolParticipantId) -> str | None:
         """Resolve the SMP hostname for a participant via DNS-over-HTTPS U-NAPTR lookup.
 
         Returns the SMP hostname string (netloc of the NAPTR URI), or None if no
@@ -564,10 +560,7 @@ class PeppolSMPClient:
         more than one redirect hop (SMP 1.4.0 §3.2).
         """
         encoded_doc_type = urllib.parse.quote(document_type_id, safe="")
-        url = (
-            f"{smp_base_url}/{participant_id.smp_path_segment()}"
-            f"/services/{encoded_doc_type}"
-        )
+        url = f"{smp_base_url}/{participant_id.smp_path_segment()}/services/{encoded_doc_type}"
         logger.debug("SMP service metadata: GET %s", url)
 
         async with httpx.AsyncClient(timeout=self._http_timeout) as client:
@@ -609,9 +602,7 @@ class PeppolSMPClient:
 
         return doc_types
 
-    def _parse_service_metadata(
-        self, xml_bytes: bytes, document_type_id: str
-    ) -> PeppolServiceInfo:
+    def _parse_service_metadata(self, xml_bytes: bytes, document_type_id: str) -> PeppolServiceInfo:
         """Extract endpoint information from an SMP service metadata XML response.
 
         Handles both the normal case (<ServiceInformation>) and the redirect case
@@ -667,9 +658,7 @@ class PeppolSMPClient:
             local = etree.QName(el.tag).localname if "{" in el.tag else el.tag
             if local == "Redirect":
                 redirect_url = el.get("href") or None
-                logger.debug(
-                    "SMP returned Redirect for %s: %s", document_type_id, redirect_url
-                )
+                logger.debug("SMP returned Redirect for %s: %s", document_type_id, redirect_url)
                 return PeppolServiceInfo(
                     document_type_id=document_type_id,
                     redirect_url=redirect_url,

@@ -22,13 +22,13 @@ from mcp_einvoicing_core.audit import (
 
 
 class TestCheckKnownSharedHelpers:
-
     def test_clean_package_passes(self, tmp_path: Path) -> None:
         src = tmp_path / "src"
         src.mkdir()
         (src / "tools.py").write_text("def my_custom_tool(): pass\n")
         result = run_check_known_shared_helpers(
-            source_dir=src, package_label="test-pkg",
+            source_dir=src,
+            package_label="test-pkg",
         )
         assert result.passed
         assert any(f.severity == SEVERITY_OK for f in result.findings)
@@ -38,7 +38,8 @@ class TestCheckKnownSharedHelpers:
         src.mkdir()
         (src / "utils.py").write_text("def format_amount(x): return str(x)\n")
         result = run_check_known_shared_helpers(
-            source_dir=src, package_label="test-pkg",
+            source_dir=src,
+            package_label="test-pkg",
         )
         assert not result.passed
         blocking = [f for f in result.findings if f.severity == SEVERITY_BLOCKING]
@@ -48,11 +49,10 @@ class TestCheckKnownSharedHelpers:
     def test_multiple_reimplementations(self, tmp_path: Path) -> None:
         src = tmp_path / "src"
         src.mkdir()
-        (src / "helpers.py").write_text(
-            "def format_amount(x): pass\ndef xml_escape(s): pass\n"
-        )
+        (src / "helpers.py").write_text("def format_amount(x): pass\ndef xml_escape(s): pass\n")
         result = run_check_known_shared_helpers(
-            source_dir=src, package_label="test-pkg",
+            source_dir=src,
+            package_label="test-pkg",
         )
         blocking = [f for f in result.findings if f.severity == SEVERITY_BLOCKING]
         assert len(blocking) == 2
@@ -62,7 +62,8 @@ class TestCheckKnownSharedHelpers:
         nested.mkdir(parents=True)
         (nested / "util.py").write_text("def scrub(v): return v\n")
         result = run_check_known_shared_helpers(
-            source_dir=tmp_path / "src", package_label="test-pkg",
+            source_dir=tmp_path / "src",
+            package_label="test-pkg",
         )
         blocking = [f for f in result.findings if f.severity == SEVERITY_BLOCKING]
         assert len(blocking) == 1
@@ -82,7 +83,8 @@ class TestCheckKnownSharedHelpers:
 
     def test_missing_source_dir_skips(self, tmp_path: Path) -> None:
         result = run_check_known_shared_helpers(
-            source_dir=tmp_path / "nonexistent", package_label="test-pkg",
+            source_dir=tmp_path / "nonexistent",
+            package_label="test-pkg",
         )
         assert result.skipped
 
@@ -91,7 +93,8 @@ class TestCheckKnownSharedHelpers:
         src.mkdir()
         (src / "x.py").write_text("def _format_amount(x): pass\n")
         result = run_check_known_shared_helpers(
-            source_dir=src, package_label="test-pkg",
+            source_dir=src,
+            package_label="test-pkg",
         )
         assert result.passed
 
@@ -105,10 +108,10 @@ class TestCheckKnownSharedHelpers:
 
 
 class TestLoadRates:
-
     def test_valid_rates_toml(self, tmp_path: Path) -> None:
         toml = tmp_path / "rates.toml"
-        toml.write_text(textwrap.dedent("""\
+        toml.write_text(
+            textwrap.dedent("""\
             [rates.standard]
             value = "0.22"
             effective_from = "2013-10-01"
@@ -119,7 +122,8 @@ class TestLoadRates:
             effective_from = "2020-01-01"
             source = "https://example.com/reduced.pdf"
             category = "food"
-        """))
+        """)
+        )
         rates = load_rates(toml)
         assert len(rates) == 2
         assert isinstance(rates[0], TaxRate)
@@ -132,10 +136,12 @@ class TestLoadRates:
 
     def test_missing_required_field_raises(self, tmp_path: Path) -> None:
         toml = tmp_path / "rates.toml"
-        toml.write_text(textwrap.dedent("""\
+        toml.write_text(
+            textwrap.dedent("""\
             [rates.bad]
             value = "0.19"
-        """))
+        """)
+        )
         with pytest.raises(ValueError, match="missing required fields"):
             load_rates(toml)
 

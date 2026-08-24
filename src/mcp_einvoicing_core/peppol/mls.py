@@ -187,9 +187,7 @@ def parse_mls(xml_bytes: bytes) -> MessageLevelStatus:
         line_ref_el = _find(line_response_el, "LineReference")
         line_ref = MLSLineReference(line_id=_text(line_ref_el, "LineID") or "")
         responses = [
-            _parse_response(r_el)
-            for r_el in line_response_el
-            if _local(r_el.tag) == "Response"
+            _parse_response(r_el) for r_el in line_response_el if _local(r_el.tag) == "Response"
         ]
         line_responses.append(MLSLineResponse(line_reference=line_ref, responses=responses))
 
@@ -294,7 +292,9 @@ def build_mls(
     for line_response in document_response.line_responses:
         line_response_el = etree.SubElement(doc_response_el, f"{{{_CAC_NS}}}LineResponse")
         line_ref_el = etree.SubElement(line_response_el, f"{{{_CAC_NS}}}LineReference")
-        etree.SubElement(line_ref_el, f"{{{_CBC_NS}}}LineID").text = line_response.line_reference.line_id
+        etree.SubElement(
+            line_ref_el, f"{{{_CBC_NS}}}LineID"
+        ).text = line_response.line_reference.line_id
         for response in line_response.responses:
             _append_response(line_response_el, response)
 
@@ -311,4 +311,6 @@ def _append_response(parent, response: MLSResponse) -> None:
         etree.SubElement(response_el, f"{{{_CBC_NS}}}Description").text = response.description
     if response.status:
         status_el = etree.SubElement(response_el, f"{{{_CAC_NS}}}Status")
-        etree.SubElement(status_el, f"{{{_CBC_NS}}}StatusReasonCode").text = response.status.reason_code
+        etree.SubElement(
+            status_el, f"{{{_CBC_NS}}}StatusReasonCode"
+        ).text = response.status.reason_code

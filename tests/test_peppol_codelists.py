@@ -67,7 +67,11 @@ class TestParseGenericode:
             columns=["protocol", "profile-id", "state"],
             rows=[
                 {"protocol": "AS4", "profile-id": "peppol-transport-as4-v2_0", "state": "active"},
-                {"protocol": "AS2", "profile-id": "busdox-transport-as2-ver1p0", "state": "removed"},
+                {
+                    "protocol": "AS2",
+                    "profile-id": "busdox-transport-as2-ver1p0",
+                    "state": "removed",
+                },
             ],
         )
         cl = codelists.parse_genericode(path.read_bytes())
@@ -94,15 +98,21 @@ class TestParseGenericode:
 class TestCodelistDirConfiguration:
     def test_raises_when_env_var_unset(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("EINVOICING_PEPPOL_CODELIST_DIR", raising=False)
-        with pytest.raises(codelists.CodelistNotConfiguredError, match="EINVOICING_PEPPOL_CODELIST_DIR"):
+        with pytest.raises(
+            codelists.CodelistNotConfiguredError, match="EINVOICING_PEPPOL_CODELIST_DIR"
+        ):
             codelists.load_codelist("transport_profiles")
 
-    def test_raises_when_dir_does_not_exist(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    def test_raises_when_dir_does_not_exist(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
         monkeypatch.setenv("EINVOICING_PEPPOL_CODELIST_DIR", str(tmp_path / "nonexistent"))
         with pytest.raises(codelists.CodelistNotConfiguredError, match="is not a directory"):
             codelists.load_codelist("transport_profiles")
 
-    def test_raises_when_specific_file_missing(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    def test_raises_when_specific_file_missing(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
         monkeypatch.setenv("EINVOICING_PEPPOL_CODELIST_DIR", str(tmp_path))
         with pytest.raises(codelists.CodelistNotConfiguredError, match="No file matching"):
             codelists.load_codelist("document_types")
@@ -124,12 +134,20 @@ class TestCodelistDirConfiguration:
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
         _write_gc(
-            tmp_path, "Transport-profiles-v9.6.gc", short_name="old", version="9.6",
-            columns=["state"], rows=[{"state": "active"}],
+            tmp_path,
+            "Transport-profiles-v9.6.gc",
+            short_name="old",
+            version="9.6",
+            columns=["state"],
+            rows=[{"state": "active"}],
         )
         _write_gc(
-            tmp_path, "Transport-profiles-v9.7.gc", short_name="new", version="9.7",
-            columns=["state"], rows=[{"state": "active"}],
+            tmp_path,
+            "Transport-profiles-v9.7.gc",
+            short_name="new",
+            version="9.7",
+            columns=["state"],
+            rows=[{"state": "active"}],
         )
         monkeypatch.setenv("EINVOICING_PEPPOL_CODELIST_DIR", str(tmp_path))
         cl = codelists.load_codelist("transport_profiles")
@@ -139,7 +157,10 @@ class TestCodelistDirConfiguration:
 @pytest.fixture
 def configured_dir(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     _write_gc(
-        tmp_path, "Document-types-v9.7.gc", short_name="doctypes", version="9.7",
+        tmp_path,
+        "Document-types-v9.7.gc",
+        short_name="doctypes",
+        version="9.7",
         columns=["scheme", "value", "state"],
         rows=[
             {"scheme": "busdox-docid-qns", "value": "urn:invoice", "state": "active"},
@@ -147,22 +168,34 @@ def configured_dir(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
         ],
     )
     _write_gc(
-        tmp_path, "Processes-v9.7.gc", short_name="processes", version="9.7",
+        tmp_path,
+        "Processes-v9.7.gc",
+        short_name="processes",
+        version="9.7",
         columns=["scheme", "value", "state"],
         rows=[{"scheme": "cenbii-procid-ubl", "value": "urn:proc1", "state": "active"}],
     )
     _write_gc(
-        tmp_path, "Participant-identifier-schemes-v9.7.gc", short_name="schemes", version="9.7",
+        tmp_path,
+        "Participant-identifier-schemes-v9.7.gc",
+        short_name="schemes",
+        version="9.7",
         columns=["schemeid", "iso6523", "state"],
         rows=[{"schemeid": "BE:EN", "iso6523": "0208", "state": "active"}],
     )
     _write_gc(
-        tmp_path, "Transport-profiles-v9.7.gc", short_name="transport", version="9.7",
+        tmp_path,
+        "Transport-profiles-v9.7.gc",
+        short_name="transport",
+        version="9.7",
         columns=["protocol", "state"],
         rows=[{"protocol": "AS4", "state": "active"}],
     )
     _write_gc(
-        tmp_path, "SPIS-Use-Case-v9.7.gc", short_name="spis", version="9.7",
+        tmp_path,
+        "SPIS-Use-Case-v9.7.gc",
+        short_name="spis",
+        version="9.7",
         columns=["use-case-id", "state"],
         rows=[{"use-case-id": "MLS", "state": "active"}],
     )
@@ -208,10 +241,15 @@ class TestCheckFunctions:
         assert result == {"found": False, "scheme": "bogus", "value": "bogus"}
 
     def test_check_process_id(self, configured_dir: Path) -> None:
-        assert codelists.check_process_id_in_codelist("cenbii-procid-ubl", "urn:proc1")["found"] is True
+        assert (
+            codelists.check_process_id_in_codelist("cenbii-procid-ubl", "urn:proc1")["found"]
+            is True
+        )
         assert codelists.check_process_id_in_codelist("x", "y")["found"] is False
 
-    def test_check_participant_id_scheme_matches_iso6523_not_schemeid(self, configured_dir: Path) -> None:
+    def test_check_participant_id_scheme_matches_iso6523_not_schemeid(
+        self, configured_dir: Path
+    ) -> None:
         # Must match against the numeric ICD (iso6523), not the mnemonic (schemeid).
         found = codelists.check_participant_id_scheme_in_codelist("0208")
         assert found["found"] is True
@@ -236,8 +274,12 @@ class TestGetVersion:
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
         _write_gc(
-            tmp_path, "Transport-profiles-v9.7.gc", short_name="t", version="9.7",
-            columns=["state"], rows=[{"state": "active"}],
+            tmp_path,
+            "Transport-profiles-v9.7.gc",
+            short_name="t",
+            version="9.7",
+            columns=["state"],
+            rows=[{"state": "active"}],
         )
         monkeypatch.setenv("EINVOICING_PEPPOL_CODELIST_DIR", str(tmp_path))
         result = codelists.get_peppol_codelist_version()

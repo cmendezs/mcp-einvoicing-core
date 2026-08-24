@@ -163,9 +163,7 @@ def main() -> int:
     print("mcp-einvoicing-download-rules")
     print()
 
-    discovered = sorted(
-        entry_points(group="mcp_einvoicing.download_rules"), key=lambda e: e.name
-    )
+    discovered = sorted(entry_points(group="mcp_einvoicing.download_rules"), key=lambda e: e.name)
 
     if discovered:
         print("Available country download commands (installed packages):")

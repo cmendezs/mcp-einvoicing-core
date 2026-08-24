@@ -248,12 +248,8 @@ class TestSafeParser:
         # The text of <root> must NOT contain anything from /etc/passwd.
         # On a typical system the file starts with "root:"; we check for ":"
         # as a quick signal that the file was not read.
-        text = (root.text or "") + "".join(
-            (c.text or "") + (c.tail or "") for c in root
-        )
-        assert ":" not in text, (
-            "XXE protection failed: entity was expanded and file content leaked"
-        )
+        text = (root.text or "") + "".join((c.text or "") + (c.tail or "") for c in root)
+        assert ":" not in text, "XXE protection failed: entity was expanded and file content leaked"
 
     def test_billion_laughs_is_blocked(self) -> None:
         # With resolve_entities=False entities are NOT expanded so the
@@ -268,9 +264,7 @@ class TestSafeParser:
         root = safe_fromstring(billion_laughs)
         # Entity unexpanded: text content should NOT be the repeated string.
         text = root.text or ""
-        assert "lollol" not in text, (
-            "Billion-laughs protection failed: entity was expanded"
-        )
+        assert "lollol" not in text, "Billion-laughs protection failed: entity was expanded"
 
     def test_size_limit_enforced(self) -> None:
         oversized = b"<r>" + b"x" * (MAX_XML_BYTES + 1) + b"</r>"

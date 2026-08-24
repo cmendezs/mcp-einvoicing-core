@@ -69,8 +69,7 @@ def parse_genericode(xml_bytes: bytes) -> CodeList:
 
     if identification is None or column_set is None:
         raise ValueError(
-            "Not a recognizable Genericode 1.0 document (missing "
-            "Identification or ColumnSet)."
+            "Not a recognizable Genericode 1.0 document (missing Identification or ColumnSet)."
         )
 
     def _find_text(parent, local_name: str) -> str | None:

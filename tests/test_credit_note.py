@@ -22,7 +22,9 @@ from mcp_einvoicing_core.wire_formats import (
 
 
 def _make_address() -> EN16931Address:
-    return EN16931Address(line_one="1 Rue de Test", city="Paris", postcode="75001", country_code="FR")
+    return EN16931Address(
+        line_one="1 Rue de Test", city="Paris", postcode="75001", country_code="FR"
+    )
 
 
 def _make_credit_note(**overrides: object) -> EN16931CreditNote:
@@ -45,15 +47,21 @@ def _make_credit_note(**overrides: object) -> EN16931CreditNote:
         "amount_due": Decimal("120.00"),
         "tax_lines": [
             EN16931Tax(
-                category="S", rate=Decimal("20"), taxable_amount=Decimal("100.00"),
+                category="S",
+                rate=Decimal("20"),
+                taxable_amount=Decimal("100.00"),
                 tax_amount=Decimal("20.00"),
             )
         ],
         "line_items": [
             EN16931LineItem(
-                line_id="1", name="Widget", quantity=Decimal("5"),
-                unit_code="C62", unit_price=Decimal("20.00"),
-                line_net_amount=Decimal("100.00"), tax_category="S",
+                line_id="1",
+                name="Widget",
+                quantity=Decimal("5"),
+                unit_code="C62",
+                unit_price=Decimal("20.00"),
+                line_net_amount=Decimal("100.00"),
+                tax_category="S",
                 tax_rate=Decimal("20"),
             )
         ],

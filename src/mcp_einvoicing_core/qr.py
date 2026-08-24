@@ -53,9 +53,7 @@ def generate_qr_png_base64(
         "H": qrcode.ERROR_CORRECT_H,
     }
     if error_correction not in ec_levels:
-        raise ValueError(
-            f"error_correction must be one of L, M, Q, H; got {error_correction!r}"
-        )
+        raise ValueError(f"error_correction must be one of L, M, Q, H; got {error_correction!r}")
 
     # box_size sets pixels per module; 33 is a conservative estimate for
     # the typical module count of a v2-v4 QR used in e-invoicing URLs.

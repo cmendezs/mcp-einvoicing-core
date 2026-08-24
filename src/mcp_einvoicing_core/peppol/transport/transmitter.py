@@ -17,9 +17,7 @@ from mcp_einvoicing_core.peppol.transport.models import AS4Credentials, AS4Recei
 
 logger = logging.getLogger(__name__)
 
-_PEPPOL_BIS_PROCESS = (
-    "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0"
-)
+_PEPPOL_BIS_PROCESS = "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0"
 
 
 class PeppolTransmitter:
@@ -110,10 +108,7 @@ class PeppolTransmitter:
         if not service_info.endpoint_url:
             raise PlatformError(
                 status_code=0,
-                message=(
-                    f"No AS4 endpoint found for {recipient_id} with "
-                    f"document type {doc_type}"
-                ),
+                message=(f"No AS4 endpoint found for {recipient_id} with document type {doc_type}"),
             )
 
         envelope = AS4MessageEnvelope(

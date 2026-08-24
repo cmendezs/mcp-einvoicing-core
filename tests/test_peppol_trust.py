@@ -86,7 +86,9 @@ def root_ca() -> tuple[rsa.RSAPrivateKey, x509.Certificate]:
 
 
 @pytest.fixture()
-def leaf(root_ca: tuple[rsa.RSAPrivateKey, x509.Certificate]) -> tuple[rsa.RSAPrivateKey, x509.Certificate]:
+def leaf(
+    root_ca: tuple[rsa.RSAPrivateKey, x509.Certificate],
+) -> tuple[rsa.RSAPrivateKey, x509.Certificate]:
     root_key, root_cert = root_ca
     return _build_leaf(root_key, root_cert)
 
@@ -100,9 +102,7 @@ def pki_dir(
     _, root_cert = root_ca
     (tmp_path / "test").mkdir()
     (tmp_path / "prod").mkdir()
-    (tmp_path / "test" / "root.pem").write_bytes(
-        root_cert.public_bytes(serialization.Encoding.PEM)
-    )
+    (tmp_path / "test" / "root.pem").write_bytes(root_cert.public_bytes(serialization.Encoding.PEM))
     monkeypatch.setenv("EINVOICING_PEPPOL_PKI_DIR", str(tmp_path))
     return tmp_path
 
@@ -290,9 +290,7 @@ def _qn(ns: str, local: str) -> str:
     return f"{{{ns}}}{local}"
 
 
-def _build_signed_service_metadata(
-    private_key: rsa.RSAPrivateKey, cert_der: bytes
-) -> bytes:
+def _build_signed_service_metadata(private_key: rsa.RSAPrivateKey, cert_der: bytes) -> bytes:
     root = etree.Element(_qn(_SMD_NS, "SignedServiceMetadata"), nsmap={"smd": _SMD_NS})
     sm = etree.SubElement(root, _qn(_SMD_NS, "ServiceMetadata"))
     si = etree.SubElement(sm, _qn(_SMD_NS, "ServiceInformation"))
@@ -326,16 +324,18 @@ def _build_signed_service_metadata(
     # mcp_einvoicing_core.peppol.trust.verify_smp_signature's recomputation.
     root.append(signature)
 
-    signed_info_c14n = etree.tostring(signed_info, method="c14n", exclusive=False, with_comments=False)
+    signed_info_c14n = etree.tostring(
+        signed_info, method="c14n", exclusive=False, with_comments=False
+    )
     signature_bytes = private_key.sign(signed_info_c14n, padding.PKCS1v15(), hashes.SHA256())
     sv = etree.SubElement(signature, _qn(_DS_NS, "SignatureValue"))
     sv.text = base64.b64encode(signature_bytes).decode()
 
     key_info = etree.SubElement(signature, _qn(_DS_NS, "KeyInfo"))
     x509_data = etree.SubElement(key_info, _qn(_DS_NS, "X509Data"))
-    etree.SubElement(x509_data, _qn(_DS_NS, "X509Certificate")).text = (
-        base64.b64encode(cert_der).decode()
-    )
+    etree.SubElement(x509_data, _qn(_DS_NS, "X509Certificate")).text = base64.b64encode(
+        cert_der
+    ).decode()
 
     return etree.tostring(root, xml_declaration=True, encoding="UTF-8")
 
@@ -350,9 +350,7 @@ class TestVerifySmpSignature:
         assert result["signature_valid"] is True
         assert result["error"] is None
 
-    def test_tampered_content_fails(
-        self, leaf: tuple[rsa.RSAPrivateKey, x509.Certificate]
-    ) -> None:
+    def test_tampered_content_fails(self, leaf: tuple[rsa.RSAPrivateKey, x509.Certificate]) -> None:
         key, cert = leaf
         cert_der = cert.public_bytes(serialization.Encoding.DER)
         signed_xml = _build_signed_service_metadata(key, cert_der)

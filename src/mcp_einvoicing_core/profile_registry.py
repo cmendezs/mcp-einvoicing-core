@@ -81,14 +81,15 @@ class ProfileRegistry:
         self._data.setdefault(country, {}).setdefault(profile_name, {})[syntax] = guideline_id
         logger.debug(
             "ProfileRegistry: registered %s/%s/%s → %s",
-            country, profile_name, syntax, guideline_id,
+            country,
+            profile_name,
+            syntax,
+            guideline_id,
         )
 
     # ── Queries ───────────────────────────────────────────────────────────────
 
-    def get_guideline_id(
-        self, country: str, profile_name: str, syntax: str
-    ) -> str | None:
+    def get_guideline_id(self, country: str, profile_name: str, syntax: str) -> str | None:
         """Return the GuidelineID URN for a given (country, profile, syntax), or None."""
         return self._data.get(country, {}).get(profile_name, {}).get(syntax)
 
@@ -134,7 +135,9 @@ class ProfileRegistry:
                 continue
             for p, syntaxes in profiles.items():
                 for s, gid in syntaxes.items():
-                    result.append(ProfileEntry(country=c, profile_name=p, syntax=s, guideline_id=gid))
+                    result.append(
+                        ProfileEntry(country=c, profile_name=p, syntax=s, guideline_id=gid)
+                    )
         return result
 
 

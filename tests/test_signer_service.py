@@ -36,9 +36,7 @@ def _generate_test_p12(path: Path, password: bytes | None = b"test") -> None:
         .public_key(key.public_key())
         .serial_number(x509.random_serial_number())
         .not_valid_before(datetime.datetime.now(datetime.UTC))
-        .not_valid_after(
-            datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=365)
-        )
+        .not_valid_after(datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=365))
         .sign(key, hashes.SHA256())
     )
     p12_bytes = pkcs12.serialize_key_and_certificates(
@@ -76,7 +74,10 @@ async def test_mtls_submit_no_retry_on_success(signer: _SignerService) -> None:
     mock_post = AsyncMock(return_value=_response(200))
     with patch("httpx.AsyncClient.post", mock_post), patch("asyncio.sleep", AsyncMock()):
         result = await signer._do_mtls_submit(
-            {"url": "https://example.test/submit", "payload_b64": base64.b64encode(b"<xml/>").decode()}
+            {
+                "url": "https://example.test/submit",
+                "payload_b64": base64.b64encode(b"<xml/>").decode(),
+            }
         )
 
     assert result["result"]["status_code"] == 200
@@ -89,7 +90,10 @@ async def test_mtls_submit_retries_on_503_then_succeeds(signer: _SignerService) 
     sleep_mock = AsyncMock()
     with patch("httpx.AsyncClient.post", mock_post), patch("asyncio.sleep", sleep_mock):
         result = await signer._do_mtls_submit(
-            {"url": "https://example.test/submit", "payload_b64": base64.b64encode(b"<xml/>").decode()}
+            {
+                "url": "https://example.test/submit",
+                "payload_b64": base64.b64encode(b"<xml/>").decode(),
+            }
         )
 
     assert result["result"]["status_code"] == 200
@@ -105,7 +109,10 @@ async def test_mtls_submit_retries_on_429_respects_retry_after(signer: _SignerSe
     sleep_mock = AsyncMock()
     with patch("httpx.AsyncClient.post", mock_post), patch("asyncio.sleep", sleep_mock):
         result = await signer._do_mtls_submit(
-            {"url": "https://example.test/submit", "payload_b64": base64.b64encode(b"<xml/>").decode()}
+            {
+                "url": "https://example.test/submit",
+                "payload_b64": base64.b64encode(b"<xml/>").decode(),
+            }
         )
 
     assert result["result"]["status_code"] == 200
@@ -120,7 +127,10 @@ async def test_mtls_submit_returns_last_response_when_retries_exhausted(
     mock_post = AsyncMock(return_value=_response(503))
     with patch("httpx.AsyncClient.post", mock_post), patch("asyncio.sleep", AsyncMock()):
         result = await signer._do_mtls_submit(
-            {"url": "https://example.test/submit", "payload_b64": base64.b64encode(b"<xml/>").decode()}
+            {
+                "url": "https://example.test/submit",
+                "payload_b64": base64.b64encode(b"<xml/>").decode(),
+            }
         )
 
     assert result["result"]["status_code"] == 503
@@ -154,7 +164,10 @@ async def test_mtls_submit_does_not_retry_on_other_error_codes(signer: _SignerSe
     mock_post = AsyncMock(return_value=_response(400))
     with patch("httpx.AsyncClient.post", mock_post), patch("asyncio.sleep", AsyncMock()):
         result = await signer._do_mtls_submit(
-            {"url": "https://example.test/submit", "payload_b64": base64.b64encode(b"<xml/>").decode()}
+            {
+                "url": "https://example.test/submit",
+                "payload_b64": base64.b64encode(b"<xml/>").decode(),
+            }
         )
 
     assert result["result"]["status_code"] == 400

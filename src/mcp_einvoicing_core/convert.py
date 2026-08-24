@@ -56,8 +56,7 @@ def convert_wire_format(xml_bytes: bytes, *, target: Syntax) -> bytes:
     source = _detect_syntax(xml_bytes)
     if source == target:
         raise ValueError(
-            f"Source document is already in {target.value} syntax. "
-            "No conversion needed."
+            f"Source document is already in {target.value} syntax. No conversion needed."
         )
 
     if source == Syntax.CII:

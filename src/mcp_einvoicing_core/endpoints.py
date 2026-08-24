@@ -69,8 +69,7 @@ class BaseEnvironmentEndpoints:
         """
         if name not in self._endpoints:
             raise KeyError(
-                f"Unknown endpoint {name!r}. "
-                f"Registered endpoints: {sorted(self._endpoints)}"
+                f"Unknown endpoint {name!r}. Registered endpoints: {sorted(self._endpoints)}"
             )
         return self._endpoints[name].resolve(env)
 

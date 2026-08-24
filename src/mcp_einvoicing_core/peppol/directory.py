@@ -163,9 +163,7 @@ def _parse_match(raw: dict[str, Any]) -> PeppolBusinessCard:
         for d in raw.get("docTypes", [])
     ]
     entities = [_parse_entity(e) for e in raw.get("entities", [])]
-    return PeppolBusinessCard(
-        participant_id=participant_id, doc_types=doc_types, entities=entities
-    )
+    return PeppolBusinessCard(participant_id=participant_id, doc_types=doc_types, entities=entities)
 
 
 def parse_directory_search_response(payload: dict[str, Any]) -> PeppolDirectorySearchResult:
@@ -318,7 +316,9 @@ class PeppolDirectoryClient:
             while attempt <= self._max_retries:
                 await self._throttle()
                 logger.debug("Peppol Directory search: GET %s params=%s", url, params)
-                response = await client.get(url, params=params, headers={"Accept": "application/json"})
+                response = await client.get(
+                    url, params=params, headers={"Accept": "application/json"}
+                )
                 if response.is_success:
                     return response.json()
                 if response.status_code in (429, 503) and attempt < self._max_retries:

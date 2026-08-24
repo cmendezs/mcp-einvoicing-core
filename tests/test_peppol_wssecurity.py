@@ -202,9 +202,7 @@ class TestVerifyAs4Signature:
         assert result.signature_valid is False
         assert "wsse:Security" in result.error
 
-    def test_tampered_attachment_fails(
-        self, key_and_cert: tuple[rsa.RSAPrivateKey, bytes]
-    ) -> None:
+    def test_tampered_attachment_fails(self, key_and_cert: tuple[rsa.RSAPrivateKey, bytes]) -> None:
         key, cert_der = key_and_cert
         attachments = [SignedAttachment(content_id="invoice@peppol.eu", content=b"payload-bytes")]
 
@@ -224,18 +222,14 @@ class TestVerifyAs4Signature:
         signed = sign_as4_message(_SAMPLE_SOAP, attachments, cert_der, key)
         root = etree.fromstring(signed)
         messaging = root.find(f".//{{{_EBMS_NS}}}Messaging")
-        message_id_el = messaging.find(
-            f".//{{{_EBMS_NS}}}MessageId"
-        )
+        message_id_el = messaging.find(f".//{{{_EBMS_NS}}}MessageId")
         message_id_el.text = "tampered-message-id"
         tampered_signed = etree.tostring(root)
 
         result = verify_as4_signature(tampered_signed, attachments)
         assert result.signature_valid is False
 
-    def test_missing_attachment_fails(
-        self, key_and_cert: tuple[rsa.RSAPrivateKey, bytes]
-    ) -> None:
+    def test_missing_attachment_fails(self, key_and_cert: tuple[rsa.RSAPrivateKey, bytes]) -> None:
         key, cert_der = key_and_cert
         attachments = [SignedAttachment(content_id="invoice@peppol.eu", content=b"payload-bytes")]
         signed = sign_as4_message(_SAMPLE_SOAP, attachments, cert_der, key)

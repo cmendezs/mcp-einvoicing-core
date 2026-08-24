@@ -13,9 +13,7 @@ _WSA_NS = "http://www.w3.org/2005/08/addressing"
 _MIME_NS = "http://www.w3.org/2004/06/xmlmime"
 
 _PEPPOL_AS4_ACTION = "http://docs.oasis-open.org/ebxml-msg/ebms/v3.0/ns/core/200704/oneWay"
-_PEPPOL_AS4_SERVICE = (
-    "http://docs.oasis-open.org/ebxml-msg/ebms/v3.0/ns/core/200704/service"
-)
+_PEPPOL_AS4_SERVICE = "http://docs.oasis-open.org/ebxml-msg/ebms/v3.0/ns/core/200704/service"
 
 NSMAP = {
     "S12": _SOAP_NS,

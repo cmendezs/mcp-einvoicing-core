@@ -36,9 +36,7 @@ class TestResolveNaptr:
 
     async def test_returns_none_when_no_matching_service_record(self, httpx_mock) -> None:
         naptr_data = '100 0 "U" "Meta:OTHER" "!^.*$!https://irrelevant.example!" .'
-        httpx_mock.add_response(
-            json={"Status": 0, "Answer": [{"type": 35, "data": naptr_data}]}
-        )
+        httpx_mock.add_response(json={"Status": 0, "Answer": [{"type": 35, "data": naptr_data}]})
         hostname = await resolve_naptr(_DNS_NAME)
         assert hostname is None
 
@@ -59,9 +57,7 @@ class TestResolveNaptr:
 
     async def test_respects_custom_service_field(self, httpx_mock) -> None:
         naptr_data = '100 0 "U" "Meta:CUSTOM" "!^.*$!https://test.smp.acube.io!" .'
-        httpx_mock.add_response(
-            json={"Status": 0, "Answer": [{"type": 35, "data": naptr_data}]}
-        )
+        httpx_mock.add_response(json={"Status": 0, "Answer": [{"type": 35, "data": naptr_data}]})
         hostname = await resolve_naptr(_DNS_NAME, service="Meta:CUSTOM")
         assert hostname == "test.smp.acube.io"
 

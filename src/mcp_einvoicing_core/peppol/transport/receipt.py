@@ -65,10 +65,14 @@ def build_receipt_envelope(
         for uri, digest_b64 in reference_digests:
             mpni = etree.SubElement(nri, "MessagePartNRInformation")
             ref = etree.SubElement(
-                mpni, "{http://www.w3.org/2000/09/xmldsig#}Reference", nsmap={"ds": "http://www.w3.org/2000/09/xmldsig#"}
+                mpni,
+                "{http://www.w3.org/2000/09/xmldsig#}Reference",
+                nsmap={"ds": "http://www.w3.org/2000/09/xmldsig#"},
             )
             ref.set("URI", uri)
-            etree.SubElement(ref, "{http://www.w3.org/2000/09/xmldsig#}DigestValue").text = digest_b64
+            etree.SubElement(
+                ref, "{http://www.w3.org/2000/09/xmldsig#}DigestValue"
+            ).text = digest_b64
 
     etree.SubElement(envelope, _qn(_SOAP_NS, "Body"))
 
@@ -141,9 +145,7 @@ class AS4ReceiptHandler:
             error_code = error_el.get("errorCode", "")
             raise PlatformError(
                 status_code=0,
-                message=(
-                    f"AS4 error signal received: {error_code} {error_detail}"
-                ),
+                message=(f"AS4 error signal received: {error_code} {error_detail}"),
             )
 
         signal = self._find_element(root, "SignalMessage")
@@ -160,9 +162,7 @@ class AS4ReceiptHandler:
         timestamp: datetime
         if timestamp_str:
             try:
-                timestamp = datetime.fromisoformat(
-                    timestamp_str.replace("Z", "+00:00")
-                )
+                timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
             except ValueError:
                 timestamp = datetime.now(UTC)
         else:
@@ -178,18 +178,14 @@ class AS4ReceiptHandler:
             raw_xml=response_bytes,
         )
 
-    def _find_element(
-        self, root: etree._Element, local_name: str
-    ) -> etree._Element | None:
+    def _find_element(self, root: etree._Element, local_name: str) -> etree._Element | None:
         for el in root.iter():
             tag_local = etree.QName(el.tag).localname if "{" in el.tag else el.tag
             if tag_local == local_name:
                 return el
         return None
 
-    def _find_text(
-        self, parent: etree._Element, local_name: str
-    ) -> str | None:
+    def _find_text(self, parent: etree._Element, local_name: str) -> str | None:
         el = self._find_element(parent, local_name)
         if el is not None:
             return (el.text or "").strip() or None

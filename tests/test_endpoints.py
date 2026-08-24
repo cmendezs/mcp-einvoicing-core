@@ -31,9 +31,11 @@ class TestEndpointSet:
 
 class TestBaseEnvironmentEndpoints:
     def test_get_registered_endpoint(self) -> None:
-        endpoints = BaseEnvironmentEndpoints({
-            "submit": EndpointSet(sandbox="https://s.test", production="https://s.prod"),
-        })
+        endpoints = BaseEnvironmentEndpoints(
+            {
+                "submit": EndpointSet(sandbox="https://s.test", production="https://s.prod"),
+            }
+        )
         assert endpoints.get("submit", EndpointEnvironment.SANDBOX) == "https://s.test"
 
     def test_get_unknown_endpoint_raises(self) -> None:
@@ -47,15 +49,19 @@ class TestBaseEnvironmentEndpoints:
         assert endpoints.get("api", EndpointEnvironment.PRODUCTION) == "https://api.prod"
 
     def test_names(self) -> None:
-        endpoints = BaseEnvironmentEndpoints({
-            "b": EndpointSet(),
-            "a": EndpointSet(),
-        })
+        endpoints = BaseEnvironmentEndpoints(
+            {
+                "b": EndpointSet(),
+                "a": EndpointSet(),
+            }
+        )
         assert endpoints.names() == ["a", "b"]
 
     def test_register_overwrites(self) -> None:
-        endpoints = BaseEnvironmentEndpoints({
-            "api": EndpointSet(sandbox="https://old.test"),
-        })
+        endpoints = BaseEnvironmentEndpoints(
+            {
+                "api": EndpointSet(sandbox="https://old.test"),
+            }
+        )
         endpoints.register("api", sandbox="https://new.test")
         assert endpoints.get("api", EndpointEnvironment.SANDBOX) == "https://new.test"

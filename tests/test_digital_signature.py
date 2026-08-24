@@ -41,9 +41,7 @@ def _generate_test_p12(path: Path, password: bytes | None = b"test") -> None:
     from cryptography.x509.oid import NameOID
 
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    subject = issuer = x509.Name(
-        [x509.NameAttribute(NameOID.COMMON_NAME, "Test Signer")]
-    )
+    subject = issuer = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "Test Signer")])
     cert = (
         x509.CertificateBuilder()
         .subject_name(subject)
@@ -51,10 +49,7 @@ def _generate_test_p12(path: Path, password: bytes | None = b"test") -> None:
         .public_key(key.public_key())
         .serial_number(x509.random_serial_number())
         .not_valid_before(datetime.datetime.now(datetime.UTC))
-        .not_valid_after(
-            datetime.datetime.now(datetime.UTC)
-            + datetime.timedelta(days=365)
-        )
+        .not_valid_after(datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=365))
         .sign(key, hashes.SHA256())
     )
     p12_bytes = pkcs12.serialize_key_and_certificates(
@@ -224,9 +219,7 @@ class TestXAdESEPESSigner:
         assert cr is not None and cr.text == "supplier"
 
     def test_no_password_cert(self, p12_path_no_password: Path) -> None:
-        config = XAdESSignerConfig(
-            cert_path=str(p12_path_no_password), cert_password=None
-        )
+        config = XAdESSignerConfig(cert_path=str(p12_path_no_password), cert_password=None)
         result = XAdESEPESSigner(config).sign(SAMPLE_XML)
         root = etree.fromstring(result)
         assert root.find(f"{{{_DS}}}Signature") is not None
@@ -238,9 +231,7 @@ class TestXAdESEPESSigner:
         # The original root tag must still be present
         assert "Facturae" in root.tag
 
-    def test_signed_info_references_document_and_signed_properties(
-        self, p12_path: Path
-    ) -> None:
+    def test_signed_info_references_document_and_signed_properties(self, p12_path: Path) -> None:
         config = XAdESSignerConfig(cert_path=str(p12_path), cert_password="test")
         result = XAdESEPESSigner(config).sign(SAMPLE_XML)
         root = etree.fromstring(result)
@@ -254,11 +245,16 @@ class TestXAdESEPESSigner:
         assert "" in uris  # empty URI = enveloped document reference
 
     def test_missing_cryptography_raises_import_error(self, p12_path: Path) -> None:
-        with patch.dict("sys.modules", {"cryptography": None,
-                                        "cryptography.hazmat": None,
-                                        "cryptography.hazmat.primitives": None,
-                                        "cryptography.hazmat.primitives.serialization": None,
-                                        "cryptography.hazmat.primitives.serialization.pkcs12": None}):
+        with patch.dict(
+            "sys.modules",
+            {
+                "cryptography": None,
+                "cryptography.hazmat": None,
+                "cryptography.hazmat.primitives": None,
+                "cryptography.hazmat.primitives.serialization": None,
+                "cryptography.hazmat.primitives.serialization.pkcs12": None,
+            },
+        ):
             config = XAdESSignerConfig(cert_path=str(p12_path), cert_password="test")
             signer = XAdESEPESSigner(config)
             signer._cert_info = None  # force reload
@@ -308,9 +304,7 @@ class TestXMLDSigSigner:
         root = etree.fromstring(result)
         ref = root.find(f".//{{{_DS}}}Reference")
         assert ref is not None
-        assert ref.get("URI") == (
-            "#NFe35260112345678000199550010000000011000000010"
-        )
+        assert ref.get("URI") == ("#NFe35260112345678000199550010000000011000000010")
 
     def test_signature_value_is_non_empty_base64(self, p12_path: Path) -> None:
         config = XMLDSigSignerConfig(cert_path=str(p12_path), cert_password="test")
@@ -344,7 +338,7 @@ class TestXMLDSigSigner:
 
     def test_missing_signed_element_raises_value_error(self, p12_path: Path) -> None:
         config = XMLDSigSignerConfig(cert_path=str(p12_path), cert_password="test")
-        xml_without_infnfe = b"<NFe xmlns=\"http://www.portalfiscal.inf.br/nfe\"/>"
+        xml_without_infnfe = b'<NFe xmlns="http://www.portalfiscal.inf.br/nfe"/>'
         with pytest.raises(ValueError, match="infNFe"):
             XMLDSigSigner(config).sign(xml_without_infnfe)
 
@@ -394,9 +388,7 @@ class TestCAdESSigner:
         assert FATTURA_XML in result or b"FatturaElettronica" in result
 
     def test_no_password_cert(self, p12_path_no_password: Path) -> None:
-        config = CAdESSignerConfig(
-            cert_path=str(p12_path_no_password), cert_password=None
-        )
+        config = CAdESSignerConfig(cert_path=str(p12_path_no_password), cert_password=None)
         result = CAdESSigner(config).sign(FATTURA_XML)
         assert isinstance(result, bytes)
         assert len(result) > 0

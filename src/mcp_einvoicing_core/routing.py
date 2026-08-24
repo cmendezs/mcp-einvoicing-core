@@ -31,9 +31,7 @@ class RoutingIdValidationResult(NamedTuple):
     error: str
 
 
-_LEITWEG_PATTERN = re.compile(
-    r"^[0-9]{1,12}(-[A-Za-z0-9]{1,30}){0,1}-[0-9]{2}$"
-)
+_LEITWEG_PATTERN = re.compile(r"^[0-9]{1,12}(-[A-Za-z0-9]{1,30}){0,1}-[0-9]{2}$")
 
 
 def _mod97(s: str) -> int:

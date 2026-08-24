@@ -68,9 +68,7 @@ def safe_fromstring(data: bytes) -> etree._Element:
         etree.XMLSyntaxError: On malformed XML (same as the raw lxml API).
     """
     if len(data) > MAX_XML_BYTES:
-        raise ValueError(
-            f"XML input exceeds the {MAX_XML_BYTES // 1024 // 1024} MB safety limit"
-        )
+        raise ValueError(f"XML input exceeds the {MAX_XML_BYTES // 1024 // 1024} MB safety limit")
     return etree.fromstring(data, parser=safe_parser())
 
 
@@ -212,6 +210,7 @@ def xml_element(
         attrs:   Optional attribute dict.
         unsafe:  When True, embed *content* verbatim (no escaping).  Default False.
     """
+
     def _escape_attr(v: str) -> str:
         return v.replace("&", "&amp;").replace('"', "&quot;")
 
@@ -238,8 +237,7 @@ def xml_escape(text: str) -> str:
     into raw XML f-string templates.
     """
     return (
-        text
-        .replace("&", "&amp;")
+        text.replace("&", "&amp;")
         .replace("<", "&lt;")
         .replace(">", "&gt;")
         .replace('"', "&quot;")
@@ -302,9 +300,7 @@ def resolve_xml_input(xml_content: str | None, xml_base64: str | None) -> bytes:
     else:
         raise ValueError("Provide either xml_content or xml_base64.")
     if len(data) > MAX_XML_BYTES:
-        raise ValueError(
-            f"XML input exceeds the {MAX_XML_BYTES // 1024 // 1024} MB safety limit"
-        )
+        raise ValueError(f"XML input exceeds the {MAX_XML_BYTES // 1024 // 1024} MB safety limit")
     return data
 
 

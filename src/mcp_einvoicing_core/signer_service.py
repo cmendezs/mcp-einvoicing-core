@@ -107,9 +107,7 @@ class _SignerService:
         async with server:
             await server.serve_forever()
 
-    async def _handle(
-        self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
-    ) -> None:
+    async def _handle(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         try:
             raw = await reader.readuntil(b"\n")
             if len(raw) > _MAX_REQUEST_BYTES:

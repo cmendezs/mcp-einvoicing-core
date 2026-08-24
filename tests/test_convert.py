@@ -36,14 +36,24 @@ def _make_invoice() -> EN16931Invoice:
         tax_inclusive_amount=Decimal("120.00"),
         amount_due=Decimal("120.00"),
         tax_lines=[
-            EN16931Tax(category="S", rate=Decimal("20"), taxable_amount=Decimal("100.00"),
-                       tax_amount=Decimal("20.00"))
+            EN16931Tax(
+                category="S",
+                rate=Decimal("20"),
+                taxable_amount=Decimal("100.00"),
+                tax_amount=Decimal("20.00"),
+            )
         ],
         line_items=[
-            EN16931LineItem(line_id="1", name="Item", quantity=Decimal("1"),
-                           unit_code="C62", unit_price=Decimal("100.00"),
-                           line_net_amount=Decimal("100.00"), tax_category="S",
-                           tax_rate=Decimal("20"))
+            EN16931LineItem(
+                line_id="1",
+                name="Item",
+                quantity=Decimal("1"),
+                unit_code="C62",
+                unit_price=Decimal("100.00"),
+                line_net_amount=Decimal("100.00"),
+                tax_category="S",
+                tax_rate=Decimal("20"),
+            )
         ],
     )
 

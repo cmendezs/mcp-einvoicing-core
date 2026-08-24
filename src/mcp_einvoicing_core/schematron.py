@@ -221,12 +221,12 @@ class SchematronValidator(BaseStructuredValidator):
         try:
             self._transform = etree.XSLT(etree.parse(str(path), safe_parser(load_dtd=True)))
         except etree.XSLTParseError as exc:
-            raise ValueError(
-                f"Failed to parse Schematron stylesheet {path}: {exc}"
-            ) from exc
+            raise ValueError(f"Failed to parse Schematron stylesheet {path}: {exc}") from exc
         self._stylesheet_path = path
 
-    def validate(self, xml_bytes: bytes, *, profile: str = "", syntax: str = "") -> ValidationResult:
+    def validate(
+        self, xml_bytes: bytes, *, profile: str = "", syntax: str = ""
+    ) -> ValidationResult:
         """Validate xml_bytes against the Schematron stylesheet.
 
         Args:
@@ -309,7 +309,11 @@ def _parse_svrl_text(svrl_text: str) -> ValidationResult:
     except etree.XMLSyntaxError as exc:
         return ValidationResult(
             is_valid=False,
-            errors=[ValidationMessage(severity="error", rule_id="SVRL-PARSE", location="/", text=str(exc))],
+            errors=[
+                ValidationMessage(
+                    severity="error", rule_id="SVRL-PARSE", location="/", text=str(exc)
+                )
+            ],
         )
 
     return _extract_svrl_findings(svrl_root)
@@ -399,7 +403,11 @@ class SaxonSchematronValidator(BaseStructuredValidator):
         except Exception as exc:
             return ValidationResult(
                 is_valid=False,
-                errors=[ValidationMessage(severity="error", rule_id="XML-PARSE", location="/", text=str(exc))],
+                errors=[
+                    ValidationMessage(
+                        severity="error", rule_id="XML-PARSE", location="/", text=str(exc)
+                    )
+                ],
                 profile=profile,
                 syntax=syntax,
             )
@@ -515,7 +523,11 @@ class XSDValidator(BaseXSDValidator):
         except etree.XMLSyntaxError as exc:
             return ValidationResult(
                 is_valid=False,
-                errors=[ValidationMessage(severity="error", rule_id="XML-PARSE", location="/", text=str(exc))],
+                errors=[
+                    ValidationMessage(
+                        severity="error", rule_id="XML-PARSE", location="/", text=str(exc)
+                    )
+                ],
                 profile=profile,
                 syntax=syntax,
             )

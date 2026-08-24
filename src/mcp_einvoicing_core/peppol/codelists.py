@@ -119,7 +119,9 @@ def load_codelist(name: str) -> CodeList:
     return parse_genericode(path.read_bytes())
 
 
-def _filter_active(rows: list[dict[str, str | None]], active_only: bool) -> list[dict[str, str | None]]:
+def _filter_active(
+    rows: list[dict[str, str | None]], active_only: bool
+) -> list[dict[str, str | None]]:
     if not active_only:
         return rows
     return [r for r in rows if r.get("state") == "active"]

@@ -184,9 +184,12 @@ class InvoiceFixtureFactory:
             tax_total=vat,
             tax_inclusive_amount=gross,
             amount_due=gross,
-            tax_lines=tax_lines or [InvoiceFixtureFactory.tax_line(
-                taxable_amount=net,
-                tax_amount=vat,
-            )],
+            tax_lines=tax_lines
+            or [
+                InvoiceFixtureFactory.tax_line(
+                    taxable_amount=net,
+                    tax_amount=vat,
+                )
+            ],
             line_items=line_items or [],
         )

@@ -67,6 +67,7 @@ for _proxy_var in ("HTTPS_PROXY", "HTTP_PROXY", "https_proxy", "http_proxy"):
 # Certificate pinning (P2-14)
 # ---------------------------------------------------------------------------
 
+
 def _parse_cert_pins() -> dict[str, frozenset[str]]:
     """Parse EINVOICING_CERT_PINS env var into a hostname → fingerprint-set map.
 
@@ -100,6 +101,7 @@ _CERT_PINS: dict[str, frozenset[str]] = _parse_cert_pins()
 
 def _make_pin_hook(host: str, pins: frozenset[str]):
     """Return an httpx async response event hook that validates the peer cert fingerprint."""
+
     async def _check_pin(response: httpx.Response) -> None:
         ssl_obj = response.extensions.get("ssl_object")
         if ssl_obj is None:
@@ -120,6 +122,7 @@ def _make_pin_hook(host: str, pins: frozenset[str]):
                     "Update EINVOICING_CERT_PINS or rotate the pinned fingerprint."
                 ),
             )
+
     return _check_pin
 
 
@@ -668,7 +671,11 @@ class BaseEInvoicingClient:
         assert self._jws_config is not None
         config = self._jws_config
         now = int(time.time())
-        claims: dict[str, Any] = {"iat": now, "exp": now + config.ttl_seconds, **config.extra_claims}
+        claims: dict[str, Any] = {
+            "iat": now,
+            "exp": now + config.ttl_seconds,
+            **config.extra_claims,
+        }
 
         from mcp_einvoicing_core.signer_client import SignerClient  # noqa: PLC0415
 

@@ -72,10 +72,7 @@ class TestParseMls:
         assert mls.sender.value == "123456"
         assert mls.receiver.value == "234567"
         assert mls.document_response.response.response_code == "AB"
-        assert (
-            mls.document_response.document_reference.id
-            == "90f14eff-3705-4869-ad3c-caae270a234e"
-        )
+        assert mls.document_response.document_reference.id == "90f14eff-3705-4869-ad3c-caae270a234e"
         assert mls.document_response.line_responses == []
 
     def test_parses_rejected_response_with_line_details(self, re2_xml: bytes) -> None:
@@ -230,7 +227,11 @@ class TestSbdhMlsTypeHelpers:
     def test_mls_to_and_mls_type_from_scope(self) -> None:
         sbdh = StandardBusinessDocumentHeader(
             business_scope=[
-                SBDHScope(type="MLS_TO", instance_identifier="0242:987654", identifier="iso6523-actorid-upis"),
+                SBDHScope(
+                    type="MLS_TO",
+                    instance_identifier="0242:987654",
+                    identifier="iso6523-actorid-upis",
+                ),
                 SBDHScope(type="MLS_TYPE", instance_identifier="FAILURE_ONLY"),
             ]
         )

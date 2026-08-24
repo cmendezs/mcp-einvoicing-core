@@ -126,16 +126,11 @@ class TestUBLSerializer:
         assert root.find("cbc:CustomizationID", ns).text == _PROFILE
 
     def test_profile_id_emitted_when_business_process_set(self):
-        inv = _make_invoice(
-            business_process="urn:fdc:peppol.eu:2017:poacc:billing:01:1.0"
-        )
+        inv = _make_invoice(business_process="urn:fdc:peppol.eu:2017:poacc:billing:01:1.0")
         xml = EN16931UBLSerializer().serialize(inv)
         root = etree.fromstring(xml)
         ns = {"cbc": "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"}
-        assert (
-            root.find("cbc:ProfileID", ns).text
-            == "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0"
-        )
+        assert root.find("cbc:ProfileID", ns).text == "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0"
 
     def test_profile_id_absent_when_business_process_unset(self):
         xml = EN16931UBLSerializer().serialize(_make_invoice())
@@ -144,14 +139,16 @@ class TestUBLSerializer:
         assert root.find("cbc:ProfileID", ns) is None
 
     def test_profile_id_document_order(self):
-        inv = _make_invoice(
-            business_process="urn:fdc:peppol.eu:2017:poacc:billing:01:1.0"
-        )
+        inv = _make_invoice(business_process="urn:fdc:peppol.eu:2017:poacc:billing:01:1.0")
         xml = EN16931UBLSerializer().serialize(inv)
         root = etree.fromstring(xml)
         cbc = "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
-        children = [etree.QName(c.tag).localname for c in root if etree.QName(c.tag).namespace == cbc]
-        assert children.index("CustomizationID") < children.index("ProfileID") < children.index("ID")
+        children = [
+            etree.QName(c.tag).localname for c in root if etree.QName(c.tag).namespace == cbc
+        ]
+        assert (
+            children.index("CustomizationID") < children.index("ProfileID") < children.index("ID")
+        )
 
     def test_seller_name_present(self):
         xml = EN16931UBLSerializer().serialize(_make_invoice())
@@ -232,8 +229,10 @@ class TestUBLSerializer:
         # Must come after IssueDate and before InvoiceTypeCode per the UBL
         # 2.1 XSD sequence.
         children = [etree.QName(c).localname for c in root]
-        assert children.index("IssueDate") < children.index("DueDate") < children.index(
-            "InvoiceTypeCode"
+        assert (
+            children.index("IssueDate")
+            < children.index("DueDate")
+            < children.index("InvoiceTypeCode")
         )
 
     def test_document_level_allowance(self):
@@ -279,9 +278,7 @@ class TestUBLRoundTrip:
         assert restored.profile == original.profile
 
     def test_business_process_round_trip(self):
-        original = _make_invoice(
-            business_process="urn:fdc:peppol.eu:2017:poacc:billing:01:1.0"
-        )
+        original = _make_invoice(business_process="urn:fdc:peppol.eu:2017:poacc:billing:01:1.0")
         restored = self._round_trip(original)
         assert restored.business_process == original.business_process
 
@@ -388,17 +385,14 @@ class TestCIISerializer:
         root = etree.fromstring(xml)
         ns = {"rsm": _RSM, "ram": _RAM}
         id_el = root.find(
-            "rsm:ExchangedDocumentContext"
-            "/ram:GuidelineSpecifiedDocumentContextParameter/ram:ID",
+            "rsm:ExchangedDocumentContext/ram:GuidelineSpecifiedDocumentContextParameter/ram:ID",
             ns,
         )
         assert id_el is not None
         assert id_el.text == _PROFILE
 
     def test_business_process_emitted_when_set(self):
-        inv = _make_invoice(
-            business_process="urn:fdc:peppol.eu:2017:poacc:billing:01:1.0"
-        )
+        inv = _make_invoice(business_process="urn:fdc:peppol.eu:2017:poacc:billing:01:1.0")
         xml = EN16931CIISerializer().serialize(inv)
         root = etree.fromstring(xml)
         ns = {"rsm": _RSM, "ram": _RAM}
@@ -415,24 +409,21 @@ class TestCIISerializer:
         root = etree.fromstring(xml)
         ns = {"rsm": _RSM, "ram": _RAM}
         id_el = root.find(
-            "rsm:ExchangedDocumentContext"
-            "/ram:BusinessProcessSpecifiedDocumentContextParameter",
+            "rsm:ExchangedDocumentContext/ram:BusinessProcessSpecifiedDocumentContextParameter",
             ns,
         )
         assert id_el is None
 
     def test_business_process_before_guideline_in_document_order(self):
-        inv = _make_invoice(
-            business_process="urn:fdc:peppol.eu:2017:poacc:billing:01:1.0"
-        )
+        inv = _make_invoice(business_process="urn:fdc:peppol.eu:2017:poacc:billing:01:1.0")
         xml = EN16931CIISerializer().serialize(inv)
         root = etree.fromstring(xml)
         ns = {"rsm": _RSM, "ram": _RAM}
         ctx = root.find("rsm:ExchangedDocumentContext", ns)
         children = [etree.QName(c.tag).localname for c in ctx]
-        assert children.index(
-            "BusinessProcessSpecifiedDocumentContextParameter"
-        ) < children.index("GuidelineSpecifiedDocumentContextParameter")
+        assert children.index("BusinessProcessSpecifiedDocumentContextParameter") < children.index(
+            "GuidelineSpecifiedDocumentContextParameter"
+        )
 
     def test_invoice_number_present(self):
         xml = EN16931CIISerializer().serialize(_make_invoice())
@@ -446,9 +437,7 @@ class TestCIISerializer:
         xml = EN16931CIISerializer().serialize(_make_invoice())
         root = etree.fromstring(xml)
         ns = {"rsm": _RSM, "ram": _RAM, "udt": _UDT}
-        dt_el = root.find(
-            "rsm:ExchangedDocument/ram:IssueDateTime/udt:DateTimeString", ns
-        )
+        dt_el = root.find("rsm:ExchangedDocument/ram:IssueDateTime/udt:DateTimeString", ns)
         assert dt_el is not None
         assert dt_el.text == "20260523"
         assert dt_el.get("format") == "102"
@@ -691,6 +680,7 @@ class TestParserSafety:
 
     def test_ubl_parser_rejects_oversized(self):
         from mcp_einvoicing_core.xml_utils import MAX_XML_BYTES
+
         big = b"<Invoice>" + b"x" * (MAX_XML_BYTES + 1)
         with pytest.raises(ValueError, match="safety limit"):
             EN16931UBLParser().parse(big)

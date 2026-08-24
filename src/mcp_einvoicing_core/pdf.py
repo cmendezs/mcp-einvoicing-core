@@ -146,11 +146,11 @@ def _build_xmp_rdf_block(filename: str, profile: str) -> str:
     return (
         f'    <rdf:Description rdf:about=""\n'
         f'        xmlns:fx="{_FX_NS}">\n'
-        f'      <fx:ConformanceLevel>{profile}</fx:ConformanceLevel>\n'
-        f'      <fx:DocumentFileName>{filename}</fx:DocumentFileName>\n'
-        f'      <fx:DocumentType>INVOICE</fx:DocumentType>\n'
-        f'      <fx:Version>1.0</fx:Version>\n'
-        f'    </rdf:Description>'
+        f"      <fx:ConformanceLevel>{profile}</fx:ConformanceLevel>\n"
+        f"      <fx:DocumentFileName>{filename}</fx:DocumentFileName>\n"
+        f"      <fx:DocumentType>INVOICE</fx:DocumentType>\n"
+        f"      <fx:Version>1.0</fx:Version>\n"
+        f"    </rdf:Description>"
     )
 
 
@@ -248,7 +248,6 @@ class PDFEmbedder:
             ) from exc
 
         with pikepdf.open(io.BytesIO(pdf_bytes)) as pdf:
-
             # ── 1. Embedded file stream ───────────────────────────────────────
             ef_stream = pdf.make_stream(xml_bytes)
             ef_stream["/Type"] = Name("/EmbeddedFile")
@@ -256,14 +255,16 @@ class PDFEmbedder:
             ef_stream["/Params"] = Dictionary(Size=len(xml_bytes))
 
             # ── 2. File specification dictionary ─────────────────────────────
-            file_spec = pdf.make_indirect(Dictionary(
-                Type=Name("/Filespec"),
-                F=String(filename),
-                UF=String(filename),
-                AFRelationship=Name(f"/{afrelationship}"),
-                Desc=String("Electronic invoice (ZUGFeRD / Factur-X)"),
-                EF=Dictionary(F=ef_stream, UF=ef_stream),
-            ))
+            file_spec = pdf.make_indirect(
+                Dictionary(
+                    Type=Name("/Filespec"),
+                    F=String(filename),
+                    UF=String(filename),
+                    AFRelationship=Name(f"/{afrelationship}"),
+                    Desc=String("Electronic invoice (ZUGFeRD / Factur-X)"),
+                    EF=Dictionary(F=ef_stream, UF=ef_stream),
+                )
+            )
 
             # ── 3. Names / EmbeddedFiles name tree ────────────────────────────
             if "/Names" not in pdf.Root:
@@ -347,8 +348,7 @@ class PDFEmbedder:
             import pikepdf
         except ImportError as exc:
             raise ImportError(
-                "pikepdf is required for PDF extraction. "
-                "Install it with: pip install pikepdf"
+                "pikepdf is required for PDF extraction. Install it with: pip install pikepdf"
             ) from exc
 
         with pikepdf.open(io.BytesIO(pdf_bytes)) as pdf:
@@ -410,8 +410,7 @@ class PDFEmbedder:
             import pikepdf
         except ImportError as exc:
             raise ImportError(
-                "pikepdf is required for PDF identification. "
-                "Install it with: pip install pikepdf"
+                "pikepdf is required for PDF identification. Install it with: pip install pikepdf"
             ) from exc
 
         result: dict[str, str | bool | None] = {

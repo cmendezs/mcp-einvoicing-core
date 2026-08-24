@@ -49,9 +49,9 @@ class CheckFinding:
     """Single finding emitted by one audit check."""
 
     check_id: str
-    tag: str        # e.g. [OK], [MISSING], [OVERRIDE], [SKIP], [WRONG_BASE_CLASS]
-    severity: str   # SEVERITY_* constant
-    symbol: str     # Qualified name of the checked item
+    tag: str  # e.g. [OK], [MISSING], [OVERRIDE], [SKIP], [WRONG_BASE_CLASS]
+    severity: str  # SEVERITY_* constant
+    symbol: str  # Qualified name of the checked item
     message: str
 
 
@@ -83,8 +83,8 @@ class AuditReport:
     """Full audit report for one country package."""
 
     generated_at: str
-    pkg_name: str           # e.g. "mcp-einvoicing-de"
-    pkg_version: str        # installed version of the country package
+    pkg_name: str  # e.g. "mcp-einvoicing-de"
+    pkg_version: str  # installed version of the country package
     core_version: str | None
     core_version_compatible: bool
     checks: list[CheckResult] = field(default_factory=list)
@@ -156,11 +156,7 @@ def _try_import(module_path: str) -> tuple[Any | None, str | None]:
 def _get_public_symbols(module: Any) -> dict[str, Any]:
     """Return all public symbols from a module, respecting ``__all__`` if defined."""
     if hasattr(module, "__all__"):
-        return {
-            name: getattr(module, name)
-            for name in module.__all__
-            if hasattr(module, name)
-        }
+        return {name: getattr(module, name) for name in module.__all__ if hasattr(module, name)}
     return {
         name: obj
         for name, obj in inspect.getmembers(module)
@@ -186,6 +182,7 @@ def _version_in_range(version: str, spec: str) -> bool:
     try:
         from packaging.specifiers import SpecifierSet  # noqa: PLC0415
         from packaging.version import Version  # noqa: PLC0415
+
         return Version(version) in SpecifierSet(spec)
     except ImportError:
         pass
@@ -283,24 +280,28 @@ def _run_invoice_tree_check(
 
     country_mod, err = _try_import(mod_path)
     if country_mod is None:
-        result.findings.append(CheckFinding(
-            check_id="CHECK_1",
-            tag="[SKIP]",
-            severity=SEVERITY_WARNING,
-            symbol=f"{mod_path}.{cls_name}",
-            message=f"Cannot verify invoice tree: could not import {mod_path}: {err}",
-        ))
+        result.findings.append(
+            CheckFinding(
+                check_id="CHECK_1",
+                tag="[SKIP]",
+                severity=SEVERITY_WARNING,
+                symbol=f"{mod_path}.{cls_name}",
+                message=f"Cannot verify invoice tree: could not import {mod_path}: {err}",
+            )
+        )
         return
 
     country_cls = getattr(country_mod, cls_name, None)
     if country_cls is None:
-        result.findings.append(CheckFinding(
-            check_id="CHECK_1",
-            tag="[MISSING]",
-            severity=SEVERITY_BLOCKING,
-            symbol=f"{mod_path}.{cls_name}",
-            message=f"Primary invoice class '{cls_name}' not found in {mod_path}.",
-        ))
+        result.findings.append(
+            CheckFinding(
+                check_id="CHECK_1",
+                tag="[MISSING]",
+                severity=SEVERITY_BLOCKING,
+                symbol=f"{mod_path}.{cls_name}",
+                message=f"Primary invoice class '{cls_name}' not found in {mod_path}.",
+            )
+        )
         return
 
     if is_en16931_family:
@@ -313,50 +314,58 @@ def _run_invoice_tree_check(
         base_source = "mcp_einvoicing_core.models"
 
     if core_mod is None:
-        result.findings.append(CheckFinding(
-            check_id="CHECK_1",
-            tag="[SKIP]",
-            severity=SEVERITY_WARNING,
-            symbol=base_name,
-            message=f"Cannot verify invoice tree: {base_source} not importable.",
-        ))
+        result.findings.append(
+            CheckFinding(
+                check_id="CHECK_1",
+                tag="[SKIP]",
+                severity=SEVERITY_WARNING,
+                symbol=base_name,
+                message=f"Cannot verify invoice tree: {base_source} not importable.",
+            )
+        )
         return
 
     expected_base = getattr(core_mod, base_name, None)
     if expected_base is None:
-        result.findings.append(CheckFinding(
-            check_id="CHECK_1",
-            tag="[SKIP]",
-            severity=SEVERITY_WARNING,
-            symbol=base_name,
-            message=f"Base class '{base_name}' not found in {base_source}.",
-        ))
+        result.findings.append(
+            CheckFinding(
+                check_id="CHECK_1",
+                tag="[SKIP]",
+                severity=SEVERITY_WARNING,
+                symbol=base_name,
+                message=f"Base class '{base_name}' not found in {base_source}.",
+            )
+        )
         return
 
     pathway = "EN 16931 family" if is_en16931_family else "non-EN 16931"
     if issubclass(country_cls, expected_base):
-        result.findings.append(CheckFinding(
-            check_id="CHECK_1",
-            tag="[OK]",
-            severity=SEVERITY_OK,
-            symbol=f"{cls_name} → {base_name}",
-            message=(
-                f"{cls_name} correctly extends {base_name} "
-                f"(canonical invoice tree, {pathway} pathway)."
-            ),
-        ))
+        result.findings.append(
+            CheckFinding(
+                check_id="CHECK_1",
+                tag="[OK]",
+                severity=SEVERITY_OK,
+                symbol=f"{cls_name} → {base_name}",
+                message=(
+                    f"{cls_name} correctly extends {base_name} "
+                    f"(canonical invoice tree, {pathway} pathway)."
+                ),
+            )
+        )
     else:
-        result.findings.append(CheckFinding(
-            check_id="CHECK_1",
-            tag="[WRONG_BASE_CLASS]",
-            severity=SEVERITY_BLOCKING,
-            symbol=f"{cls_name} → {base_name}",
-            message=(
-                f"{package_label} is a {pathway} package: {cls_name} must extend "
-                f"{base_name} from {base_source}, not be a standalone implementation. "
-                "See CLAUDE.md 'Canonical invoice tree' and resolve before publish."
-            ),
-        ))
+        result.findings.append(
+            CheckFinding(
+                check_id="CHECK_1",
+                tag="[WRONG_BASE_CLASS]",
+                severity=SEVERITY_BLOCKING,
+                symbol=f"{cls_name} → {base_name}",
+                message=(
+                    f"{package_label} is a {pathway} package: {cls_name} must extend "
+                    f"{base_name} from {base_source}, not be a standalone implementation. "
+                    "See CLAUDE.md 'Canonical invoice tree' and resolve before publish."
+                ),
+            )
+        )
 
 
 def _collect_package_imports(package_modules: list[str]) -> set[str]:
@@ -414,16 +423,17 @@ def run_check_core_coverage(
     if _get_installed_version("mcp-einvoicing-core") is None:
         result.skipped = True
         result.skip_reason = (
-            "mcp-einvoicing-core is not installed. "
-            "Install it with: pip install mcp-einvoicing-core"
+            "mcp-einvoicing-core is not installed. Install it with: pip install mcp-einvoicing-core"
         )
-        result.findings.append(CheckFinding(
-            check_id="CHECK_1",
-            tag="[SKIP]",
-            severity=SEVERITY_WARNING,
-            symbol="mcp-einvoicing-core",
-            message="Package not installed — cannot verify core interface coverage.",
-        ))
+        result.findings.append(
+            CheckFinding(
+                check_id="CHECK_1",
+                tag="[SKIP]",
+                severity=SEVERITY_WARNING,
+                symbol="mcp-einvoicing-core",
+                message="Package not installed — cannot verify core interface coverage.",
+            )
+        )
         return result
 
     pkg_imports = _collect_package_imports(package_modules)
@@ -431,13 +441,15 @@ def run_check_core_coverage(
     for mod_path in mods:
         core_mod, err = _try_import(mod_path)
         if core_mod is None:
-            result.findings.append(CheckFinding(
-                check_id="CHECK_1",
-                tag="[SKIP]",
-                severity=SEVERITY_WARNING,
-                symbol=mod_path,
-                message=f"Could not import core module: {err}",
-            ))
+            result.findings.append(
+                CheckFinding(
+                    check_id="CHECK_1",
+                    tag="[SKIP]",
+                    severity=SEVERITY_WARNING,
+                    symbol=mod_path,
+                    message=f"Could not import core module: {err}",
+                )
+            )
             continue
 
         overrides_for_mod = overrides.get(mod_path, set())
@@ -448,33 +460,39 @@ def run_check_core_coverage(
                 continue
 
             if sym_name in overrides_for_mod:
-                result.findings.append(CheckFinding(
-                    check_id="CHECK_1",
-                    tag="[OVERRIDE]",
-                    severity=SEVERITY_OK,
-                    symbol=f"{mod_path}.{sym_name}",
-                    message=f"Intentionally overridden by {label}.",
-                ))
+                result.findings.append(
+                    CheckFinding(
+                        check_id="CHECK_1",
+                        tag="[OVERRIDE]",
+                        severity=SEVERITY_OK,
+                        symbol=f"{mod_path}.{sym_name}",
+                        message=f"Intentionally overridden by {label}.",
+                    )
+                )
             elif sym_name in pkg_imports:
-                result.findings.append(CheckFinding(
-                    check_id="CHECK_1",
-                    tag="[OK]",
-                    severity=SEVERITY_OK,
-                    symbol=f"{mod_path}.{sym_name}",
-                    message="Imported and used.",
-                ))
+                result.findings.append(
+                    CheckFinding(
+                        check_id="CHECK_1",
+                        tag="[OK]",
+                        severity=SEVERITY_OK,
+                        symbol=f"{mod_path}.{sym_name}",
+                        message="Imported and used.",
+                    )
+                )
             else:
-                result.findings.append(CheckFinding(
-                    check_id="CHECK_1",
-                    tag="[MISSING]",
-                    severity=SEVERITY_WARNING,
-                    symbol=f"{mod_path}.{sym_name}",
-                    message=(
-                        f"Core symbol '{sym_name}' is neither imported by {label} "
-                        "nor marked as an intentional override. "
-                        "Add to _INTENTIONAL_OVERRIDES if this is deliberate."
-                    ),
-                ))
+                result.findings.append(
+                    CheckFinding(
+                        check_id="CHECK_1",
+                        tag="[MISSING]",
+                        severity=SEVERITY_WARNING,
+                        symbol=f"{mod_path}.{sym_name}",
+                        message=(
+                            f"Core symbol '{sym_name}' is neither imported by {label} "
+                            "nor marked as an intentional override. "
+                            "Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+                        ),
+                    )
+                )
 
     # Canonical invoice tree sub-check
     if is_en16931_family is not None and primary_invoice_class is not None:
@@ -509,43 +527,49 @@ def run_check_version_compatibility(
 
     installed_core = _get_installed_version("mcp-einvoicing-core")
     if installed_core is None:
-        result.findings.append(CheckFinding(
-            check_id="CHECK_4",
-            tag="[SKIP]",
-            severity=SEVERITY_WARNING,
-            symbol="mcp-einvoicing-core",
-            message=(
-                "mcp-einvoicing-core is not installed — cannot check version compatibility."
-            ),
-        ))
+        result.findings.append(
+            CheckFinding(
+                check_id="CHECK_4",
+                tag="[SKIP]",
+                severity=SEVERITY_WARNING,
+                symbol="mcp-einvoicing-core",
+                message=(
+                    "mcp-einvoicing-core is not installed — cannot check version compatibility."
+                ),
+            )
+        )
         return result
 
     declared_spec = _read_core_version_spec(pyproject_path)
     if declared_spec is None:
-        result.findings.append(CheckFinding(
-            check_id="CHECK_4",
-            tag="[SKIP]",
-            severity=SEVERITY_WARNING,
-            symbol="pyproject.toml",
-            message=(
-                f"Could not parse mcp-einvoicing-core version spec from "
-                f"{pyproject_path}. Ensure the file uses standard PEP 440 specifiers."
-            ),
-        ))
+        result.findings.append(
+            CheckFinding(
+                check_id="CHECK_4",
+                tag="[SKIP]",
+                severity=SEVERITY_WARNING,
+                symbol="pyproject.toml",
+                message=(
+                    f"Could not parse mcp-einvoicing-core version spec from "
+                    f"{pyproject_path}. Ensure the file uses standard PEP 440 specifiers."
+                ),
+            )
+        )
         return result
 
     compatible = _version_in_range(installed_core, declared_spec)
-    result.findings.append(CheckFinding(
-        check_id="CHECK_4",
-        tag="[OK]" if compatible else "[VERSION_MISMATCH]",
-        severity=SEVERITY_OK if compatible else SEVERITY_BLOCKING,
-        symbol="mcp-einvoicing-core",
-        message=(
-            f"Installed: {installed_core} | "
-            f"Declared range: {declared_spec} | "
-            f"Compatible: {compatible}"
-        ),
-    ))
+    result.findings.append(
+        CheckFinding(
+            check_id="CHECK_4",
+            tag="[OK]" if compatible else "[VERSION_MISMATCH]",
+            severity=SEVERITY_OK if compatible else SEVERITY_BLOCKING,
+            symbol="mcp-einvoicing-core",
+            message=(
+                f"Installed: {installed_core} | "
+                f"Declared range: {declared_spec} | "
+                f"Compatible: {compatible}"
+            ),
+        )
+    )
     return result
 
 
@@ -695,23 +719,25 @@ def make_report(
 # CHECK 6 — Known shared helpers (compliance audit 2.3)
 # ---------------------------------------------------------------------------
 
-KNOWN_SHARED_HELPERS: frozenset[str] = frozenset({
-    "format_amount",
-    "format_quantity",
-    "safe_fromstring",
-    "xml_element",
-    "xml_optional",
-    "format_error",
-    "filter_empty_values",
-    "resolve_xml_input",
-    "mark_untrusted",
-    "mark_untrusted_fields",
-    "scrub",
-    "validate_date_iso",
-    "validate_iban",
-    "assert_not_read_only",
-    "xml_escape",
-})
+KNOWN_SHARED_HELPERS: frozenset[str] = frozenset(
+    {
+        "format_amount",
+        "format_quantity",
+        "safe_fromstring",
+        "xml_element",
+        "xml_optional",
+        "format_error",
+        "filter_empty_values",
+        "resolve_xml_input",
+        "mark_untrusted",
+        "mark_untrusted_fields",
+        "scrub",
+        "validate_date_iso",
+        "validate_iban",
+        "assert_not_read_only",
+        "xml_escape",
+    }
+)
 
 
 def _collect_defined_functions(source_dir: Path) -> list[tuple[str, str, int]]:
@@ -764,26 +790,30 @@ def run_check_known_shared_helpers(
     for func_name, filepath, lineno in defined:
         if func_name in helpers and func_name not in seen:
             seen.add(func_name)
-            result.findings.append(CheckFinding(
-                check_id="CHECK_6",
-                tag="[REIMPLEMENTED]",
-                severity=SEVERITY_BLOCKING,
-                symbol=func_name,
-                message=(
-                    f"{package_label} defines '{func_name}' at {filepath}:{lineno}. "
-                    f"This is a core helper — use the export from mcp_einvoicing_core "
-                    f"instead of re-implementing."
-                ),
-            ))
+            result.findings.append(
+                CheckFinding(
+                    check_id="CHECK_6",
+                    tag="[REIMPLEMENTED]",
+                    severity=SEVERITY_BLOCKING,
+                    symbol=func_name,
+                    message=(
+                        f"{package_label} defines '{func_name}' at {filepath}:{lineno}. "
+                        f"This is a core helper — use the export from mcp_einvoicing_core "
+                        f"instead of re-implementing."
+                    ),
+                )
+            )
 
     if not seen:
-        result.findings.append(CheckFinding(
-            check_id="CHECK_6",
-            tag="[OK]",
-            severity=SEVERITY_OK,
-            symbol="(all)",
-            message=f"No core helpers re-implemented in {package_label}.",
-        ))
+        result.findings.append(
+            CheckFinding(
+                check_id="CHECK_6",
+                tag="[OK]",
+                severity=SEVERITY_OK,
+                symbol="(all)",
+                message=f"No core helpers re-implemented in {package_label}.",
+            )
+        )
 
     return result
 
@@ -845,12 +875,14 @@ def load_rates(rates_path: Path) -> list[TaxRate]:
                 f"rates.{name}: missing required fields: {', '.join(sorted(missing))}. "
                 f"Each rate entry must include value, effective_from, and source."
             )
-        results.append(TaxRate(
-            name=name,
-            value=str(entry["value"]),
-            effective_from=str(entry["effective_from"]),
-            source=str(entry["source"]),
-            category=str(entry.get("category", "")),
-        ))
+        results.append(
+            TaxRate(
+                name=name,
+                value=str(entry["value"]),
+                effective_from=str(entry["effective_from"]),
+                source=str(entry["source"]),
+                category=str(entry.get("category", "")),
+            )
+        )
 
     return results

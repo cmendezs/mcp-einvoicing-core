@@ -31,12 +31,8 @@ class BillingReference(BaseModel):
       CII:  ram:InvoiceReferencedDocument (within ApplicableHeaderTradeAgreement)
     """
 
-    invoice_number: str = Field(
-        ..., description="Original invoice number (BT-25)"
-    )
-    issue_date: date | None = Field(
-        None, description="Original invoice issue date (BT-26)"
-    )
+    invoice_number: str = Field(..., description="Original invoice number (BT-25)")
+    issue_date: date | None = Field(None, description="Original invoice issue date (BT-26)")
 
 
 class EN16931CreditNote(EN16931Invoice):

@@ -63,7 +63,9 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 _HITL_DISABLED: bool = os.environ.get("EINVOICING_DISABLE_HITL", "").strip() in {
-    "1", "true", "yes",
+    "1",
+    "true",
+    "yes",
 }
 
 

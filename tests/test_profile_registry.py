@@ -11,10 +11,27 @@ from mcp_einvoicing_core.profile_registry import ProfileRegistry
 def registry() -> ProfileRegistry:
     r = ProfileRegistry()
     r.register("DE", "MINIMUM", "CII", "urn:factur-x.eu:1p0:minimum")
-    r.register("DE", "EN_16931", "CII", "urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:en16931")
-    r.register("DE", "XRECHNUNG", "CII", "urn:cen.eu:en16931:2017#compliant#urn:xoev-de:kosit:standard:xrechnung_2.3")
-    r.register("DE", "XRECHNUNG", "UBL", "urn:cen.eu:en16931:2017#compliant#urn:xoev-de:kosit:standard:xrechnung_2.3")
-    r.register("BE", "PEPPOL_BIS_3", "UBL", "urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0")
+    r.register(
+        "DE", "EN_16931", "CII", "urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:en16931"
+    )
+    r.register(
+        "DE",
+        "XRECHNUNG",
+        "CII",
+        "urn:cen.eu:en16931:2017#compliant#urn:xoev-de:kosit:standard:xrechnung_2.3",
+    )
+    r.register(
+        "DE",
+        "XRECHNUNG",
+        "UBL",
+        "urn:cen.eu:en16931:2017#compliant#urn:xoev-de:kosit:standard:xrechnung_2.3",
+    )
+    r.register(
+        "BE",
+        "PEPPOL_BIS_3",
+        "UBL",
+        "urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0",
+    )
     return r
 
 

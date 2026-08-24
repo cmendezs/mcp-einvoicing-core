@@ -59,14 +59,9 @@ class AS4TransportClient:
         )
 
         boundary = f"----=_Part_{uuid.uuid4().hex}"
-        content_type = (
-            f'multipart/related; type="application/soap+xml"; '
-            f'boundary="{boundary}"'
-        )
+        content_type = f'multipart/related; type="application/soap+xml"; boundary="{boundary}"'
 
-        body = self._build_multipart_body(
-            signed_soap_bytes, compressed_payload, boundary
-        )
+        body = self._build_multipart_body(signed_soap_bytes, compressed_payload, boundary)
 
         headers = {
             "Content-Type": content_type,
@@ -87,8 +82,7 @@ class AS4TransportClient:
             raise PlatformError(
                 status_code=response.status_code,
                 message=(
-                    f"AS4 endpoint returned HTTP {response.status_code}: "
-                    f"{response.text[:500]}"
+                    f"AS4 endpoint returned HTTP {response.status_code}: {response.text[:500]}"
                 ),
             )
 
@@ -151,9 +145,7 @@ class AS4TransportClient:
         key_bytes = credentials.load_private_key()
 
         password = (
-            credentials.private_key_password.encode()
-            if credentials.private_key_password
-            else None
+            credentials.private_key_password.encode() if credentials.private_key_password else None
         )
 
         private_key = serialization.load_pem_private_key(key_bytes, password=password)

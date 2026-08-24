@@ -147,26 +147,27 @@ class EN16931AllowanceCharge(BaseModel):
     tax_category: UNCL5305 code for the VAT category of this allowance/charge.
     """
 
-    is_charge: bool = Field(..., description="True = charge (BG-21/BG-28), False = allowance (BG-20/BG-27)")
-    amount: Decimal = Field(..., ge=Decimal("0"), description="Amount (BT-92 / BT-99 / BT-136 / BT-141)")
+    is_charge: bool = Field(
+        ..., description="True = charge (BG-21/BG-28), False = allowance (BG-20/BG-27)"
+    )
+    amount: Decimal = Field(
+        ..., ge=Decimal("0"), description="Amount (BT-92 / BT-99 / BT-136 / BT-141)"
+    )
     base_amount: Decimal | None = Field(
-        None, description="Base amount for percentage calculation (BT-93 / BT-100 / BT-137 / BT-142)"
+        None,
+        description="Base amount for percentage calculation (BT-93 / BT-100 / BT-137 / BT-142)",
     )
     percentage: Decimal | None = Field(
         None, description="Percentage (BT-94 / BT-101 / BT-138 / BT-143)"
     )
-    reason: str | None = Field(
-        None, description="Reason text (BT-97 / BT-104 / BT-139 / BT-144)"
-    )
+    reason: str | None = Field(None, description="Reason text (BT-97 / BT-104 / BT-139 / BT-144)")
     reason_code: str | None = Field(
         None, description="UNCL7161 reason code (BT-98 / BT-105 / BT-140 / BT-145)"
     )
     tax_category: str = Field(
         ..., description="UNCL5305 VAT category code (BT-95 / BT-102 / BT-151)"
     )
-    tax_rate: Decimal = Field(
-        ..., description="VAT rate % for this item (BT-96 / BT-103 / BT-152)"
-    )
+    tax_rate: Decimal = Field(..., description="VAT rate % for this item (BT-96 / BT-103 / BT-152)")
 
 
 # ---------------------------------------------------------------------------
@@ -199,12 +200,8 @@ class EN16931LineItem(BaseModel):
     buyer_accounting_reference: str | None = Field(
         None, description="Buyer accounting reference (BT-133)"
     )
-    seller_article_id: str | None = Field(
-        None, description="Seller item identifier (BT-155)"
-    )
-    buyer_article_id: str | None = Field(
-        None, description="Buyer item identifier (BT-156)"
-    )
+    seller_article_id: str | None = Field(None, description="Seller item identifier (BT-155)")
+    buyer_article_id: str | None = Field(None, description="Buyer item identifier (BT-156)")
     standard_article_id: str | None = Field(
         None, description="Standard item identifier, e.g. EAN (BT-157)"
     )
@@ -240,9 +237,7 @@ class EN16931PaymentMeans(BaseModel):
     mandate_reference: str | None = Field(
         None, description="SEPA Direct Debit mandate reference (BT-89)"
     )
-    creditor_id: str | None = Field(
-        None, description="SEPA Creditor Identifier (BT-90)"
-    )
+    creditor_id: str | None = Field(None, description="SEPA Creditor Identifier (BT-90)")
 
 
 # ---------------------------------------------------------------------------
@@ -327,12 +322,8 @@ class EN16931Invoice(BaseModel):
     # ── Delivery dates ───────────────────────────────────────────────────────
 
     delivery_date: date | None = Field(None, description="Actual delivery date (BT-72)")
-    billing_period_start: date | None = Field(
-        None, description="Billing period start date (BT-73)"
-    )
-    billing_period_end: date | None = Field(
-        None, description="Billing period end date (BT-74)"
-    )
+    billing_period_start: date | None = Field(None, description="Billing period start date (BT-73)")
+    billing_period_end: date | None = Field(None, description="Billing period end date (BT-74)")
 
     # ── Parties ──────────────────────────────────────────────────────────────
 
@@ -350,13 +341,9 @@ class EN16931Invoice(BaseModel):
     charges_total: Decimal = Field(
         Decimal("0"), description="Total document-level charges (BT-108)"
     )
-    tax_exclusive_amount: Decimal = Field(
-        ..., description="Invoice total without VAT (BT-109)"
-    )
+    tax_exclusive_amount: Decimal = Field(..., description="Invoice total without VAT (BT-109)")
     tax_total: Decimal = Field(..., description="Total VAT amount (BT-110)")
-    tax_inclusive_amount: Decimal = Field(
-        ..., description="Invoice total with VAT (BT-112)"
-    )
+    tax_inclusive_amount: Decimal = Field(..., description="Invoice total with VAT (BT-112)")
     prepaid_amount: Decimal = Field(Decimal("0"), description="Prepaid amount (BT-113)")
     rounding_amount: Decimal = Field(Decimal("0"), description="Rounding amount (BT-114)")
     amount_due: Decimal = Field(..., description="Amount due for payment (BT-115)")
@@ -410,9 +397,7 @@ class EN16931Invoice(BaseModel):
     payment_means: EN16931PaymentMeans | None = Field(
         None, description="Payment instructions (BG-16)"
     )
-    payment_terms: str | None = Field(
-        None, description="Payment terms free text (BT-20)"
-    )
+    payment_terms: str | None = Field(None, description="Payment terms free text (BT-20)")
     due_date: date | None = Field(None, description="Payment due date (BT-9)")
 
     # ── Invoice lines — BG-25 ────────────────────────────────────────────────
