@@ -35,6 +35,37 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.20.0] - 2026-08-24
+#### Added
+- `en16931_codelists` module + `register_en16931_codelist_tools`: EN 16931 semantic code-list
+  lookup (country, currency, ICD, UNCL1001/1153/4461/5305, allowance/item/charge reason, MIME,
+  EAS, VATEX). Deployer-supplied data via `EINVOICING_EN16931_CODELIST_DIR` (CORE-EN16931-CODELIST-1).
+- `genericode` module: `parse_genericode`/`CodeList`/`CodelistNotConfiguredError` extracted from
+  `peppol.codelists` (non-breaking re-export) so it can be shared with `en16931_codelists`.
+- `peppol.directory` module: `PeppolDirectoryClient`, public Peppol Directory REST search
+  (`peppol_directory_search` tool added to `register_peppol_tools`) (CORE-PEPPOL-DIR-1).
+- `peppol.transport.wssecurity` module: real WS-Security X.509 message signing/verification for
+  outbound AS4, replacing the previous compute-and-discard stub in `AS4TransportClient`.
+- `peppol.transport.inbound` module: `AS4InboundHandler`, an inbound AS4 receiver (C3 role) — MIME
+  parsing, WS-Security signature verification, sender cert chain validation, SBDH extraction
+  (CORE-PEPPOL-AS4-IN-1).
+- `peppol.transport.receipt`: `build_receipt_envelope`/`build_error_envelope` — the module now
+  builds, not just parses, AS4 receipt and `PEPPOL:NOT_SERVICED` error signal messages.
+- `peppol.trust` module: `PeppolTrustStore`, `validate_certificate_chain`, `check_revocation`,
+  `verify_smp_signature` — Peppol PKI chain/revocation/signature validation, guarded on
+  `EINVOICING_PEPPOL_PKI_DIR` (root certs not yet supplied) (CORE-PEPPOL-TRUST-1).
+- `peppol.reporting` module: EUSR/TSR service-provider statistics report models + XSD/Schematron
+  validation, bundled artifacts, `[xslt2]` extra required (CORE-PEPPOL-REPORT-1).
+- `peppol.mls` module: Message Level Status (MLS) model + Schematron validation, bundled
+  artifacts, `[xslt2]` extra required (CORE-PEPPOL-MLR-1).
+- `schematron.XSDValidator`: first concrete `BaseXSDValidator` implementation in core (was
+  abstract-only). Used by `peppol.reporting`.
+- `PeppolServiceInfo.signature_verification` field and `PeppolSMPClient(verify_smp_signatures=...)`
+  opt-in flag, non-breaking (default off).
+
+All changes additive and non-breaking. Full detail:
+`context-library/launches/changelog.md` (2026-08-24 entry) and `core-state.md` in the root repo.
+
 ### [1.19.1] - 2026-08-23
 #### Changed
 - Adopted the country-standard ruff lint config, `select = ["E","F","I","N","W","UP"]` with `ignore = ["N999","E501"]`, matching the pattern already used by `mcp-einvoicing-be` / `mcp-nfe-br`. Core previously ran ruff with no explicit `select` (only ruff's small default ruleset); isort (`I`) and pyupgrade (`UP`) checks were never enforced.
