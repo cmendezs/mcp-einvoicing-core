@@ -35,6 +35,18 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.20.1] - 2026-08-25
+#### Changed
+- `en16931.py`: verified the full EN 16931 semantic model (BT-1..BT-161, BG-1..BG-32) against
+  NF EN 16931-1:2017+A1:2019 (AFNOR), Article 6.3, Tableau 2. No mislabeled BT number found.
+  Lifted the `[Inference]` disclaimer to `[Verified against NF EN 16931-1:2017+A1:2019 §6.3]`
+  and added an explicit coverage statement of the optional BTs/BGs deliberately omitted (payee,
+  seller tax representative, delivery address, payment card, attachments, line-level billing
+  period, item attributes, address line 3, etc.).
+#### Added
+- `tests/test_en16931_bt_mapping.py`: regression test pinning each field's declared BT reference
+  so an edit to a `Field(description=...)` string cannot silently drift the field -> BT mapping.
+
 ### [1.20.0] - 2026-08-24
 #### Added
 - `en16931_codelists` module + `register_en16931_codelist_tools`: EN 16931 semantic code-list
