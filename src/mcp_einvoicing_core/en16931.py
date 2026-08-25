@@ -27,9 +27,54 @@ defined in EN 16931-1:2017 Table 2.
     BG-25:          invoice lines (EN16931LineItem)
     BG-27 / BG-28:  line-level allowances / charges (EN16931AllowanceCharge reused)
 
-[Inference: field names and descriptions derived from EN 16931-1:2017 Table 2.
- Cross-reference against the official FeRD and CEN specifications before
- relying on BT numbers for production use.]
+[Verified against NF EN 16931-1:2017+A1:2019 (AFNOR), Article 6.3, Tableau 2 --
+the full semantic model, BT-1 through BT-161 and BG-1 through BG-32 -- on
+2026-08-25. Every BT/BG reference in this module's field descriptions was
+checked against the normative text and confirmed correct; no mislabeled BT
+number was found. See context-library/decisions/en16931-2026-deferral.md in
+the mcp-einvoicing root repo for the verification record, and
+tests/test_en16931_bt_mapping.py in this package for the regression test that
+pins each field's BT reference.]
+
+Coverage statement -- core is a deliberate common subset, not a full
+implementation of every optional EN 16931 BT/BG. Confirmed omitted from this
+module (verify against Table 2 before assuming a field exists):
+
+  - BT-6 (VAT accounting currency code), BT-7 / BT-8 (VAT due date / code)
+  - BT-14 (sales order ref), BT-15 / BT-16 (receiving advice / despatch advice
+    ref), BT-17 (tender/lot ref), BT-18 (invoiced object ID), BT-19 (buyer
+    accounting ref at document level -- BT-133, the line-level equivalent, IS
+    modeled), BT-21 (note subject code)
+  - BT-28 / BT-45 (seller / buyer trading name), BT-29 / BT-46 (seller / buyer
+    general identifier), BT-30 / BT-47 (seller / buyer legal registration ID),
+    BT-32 (seller tax identifier, non-VAT), BT-33 (seller additional legal
+    info) -- EN16931Party only carries `name` (BT-27/44) and `vat_id`
+    (BT-31/48) as identifiers
+  - BT-91 (direct debit debited account identifier)
+  - BT-127 (line note), BT-128 (line object identifier), BT-132 (line PO
+    reference)
+  - BT-147 / BT-148 (item price discount / gross price -- only the net price
+    BT-146 is modeled), BT-150 (base-quantity unit code), BT-158 (item
+    classification identifier), BT-159 (item country of origin)
+  - BT-162 / BT-163 / BT-164 / BT-165 (address line 3, for seller / buyer /
+    tax representative / delivery addresses -- only lines 1-2 are modeled)
+  - BG-10 / BG-11 / BG-12 (payee, seller tax representative + address) --
+    entirely absent, no payee or tax-representative fields anywhere in this
+    module
+  - BG-13 (deliver-to party name / establishment identifier), BG-15 (delivery
+    address) -- entirely absent; only `delivery_date` is modeled
+  - BG-17's 0..n cardinality (multiple bank transfer targets) is flattened to
+    a single `payment_means` per invoice
+  - BG-18 (payment card details) -- entirely absent
+  - BG-24 (supporting document attachments) -- entirely absent
+  - BG-26 (line-level billing period)
+  - BG-32 (item attributes, e.g. colour/size)
+
+Deliberate stricter-than-base validation (not an omission, not a mismatch):
+EN16931Tax.rate (BT-119) and EN16931LineItem.tax_rate (BT-152) are declared
+required here, though the base standard marks both cardinality 0..1
+(optional). Implementations that omit the VAT rate for an exempt/zero-rated
+line should supply an explicit 0 rather than rely on omission.
 """
 
 from __future__ import annotations
