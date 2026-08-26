@@ -35,6 +35,15 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.21.0] - 2026-08-26
+#### Fixed
+- `wire_formats.py`: `EN16931CIISerializer._build_monetary_summary` now emits `@currencyID`
+  (bound to `InvoiceCurrencyCode`, BT-5) on the header `ram:TaxTotalAmount` (BT-110). The
+  attribute was previously omitted, which made the Factur-X EXTENDED rule `BR-FXEXT-CO-15`
+  (and `BR-53`) fire on every EXTENDED-profile invoice with a VAT total (DE-ZF252-3). Only
+  `TaxTotalAmount` carries the attribute in the header summation, per CII D16B; the other
+  amounts stay attribute-free. Additive, non-breaking; affects DE (ZUGFeRD) and FR (Factur-X).
+
 ### [1.20.1] - 2026-08-25
 #### Changed
 - `en16931.py`: verified the full EN 16931 semantic model (BT-1..BT-161, BG-1..BG-32) against
