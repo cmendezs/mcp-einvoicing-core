@@ -965,7 +965,13 @@ class EN16931CIISerializer:
             ("TotalPrepaidAmount", invoice.prepaid_amount, ROUND_HALF_UP),
             ("DuePayableAmount", invoice.amount_due, ROUND_HALF_UP),
         ]:
-            _sub(s, _RAM, tag, format_amount(val, rounding_mode=rounding))
+            el = _sub(s, _RAM, tag, format_amount(val, rounding_mode=rounding))
+            # Per CII D16B, only the header TaxTotalAmount (BT-110) carries @currencyID,
+            # in the invoice currency (BT-5). The other summation amounts must stay
+            # attribute-free. EN16931 / Factur-X EXTENDED rules (BR-FXEXT-CO-15, BR-53)
+            # require this attribute to be present and bound to InvoiceCurrencyCode.
+            if tag == "TaxTotalAmount":
+                el.set("currencyID", invoice.currency_code)
 
     def _build_line(self, parent: etree._Element, line: EN16931LineItem, currency: str) -> None:
         el = _sub(parent, _RAM, "IncludedSupplyChainTradeLineItem")
