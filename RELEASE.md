@@ -35,6 +35,15 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.22.0] - 2026-08-27
+#### Added
+- `models.py`: `TaxIdentifier.validate_ae_trn()` — validates the format of a UAE TRN (Tax
+  Registration Number): exactly 15 numeric digits, confirmed against PINT AE example invoices
+  (`cac:PartyTaxScheme/cbc:CompanyID`, IBT-031/IBT-048). No check-digit algorithm was found in
+  any supplied FTA or Peppol AE specification document, so this validates format only — flagged
+  `[NEED: check-digit algorithm]` in the docstring rather than fabricating one. Additive,
+  non-breaking (AE-INV-1).
+
 ### [1.21.0] - 2026-08-26
 #### Fixed
 - `wire_formats.py`: `EN16931CIISerializer._build_monetary_summary` now emits `@currencyID`
