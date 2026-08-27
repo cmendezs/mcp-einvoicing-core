@@ -35,6 +35,17 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.23.0] - 2026-08-27
+#### Added
+- `ubl_documents.py`: `BaseUBLDocument` — shared envelope (`document_id`, `issue_date`,
+  `customization_id`, `profile_id`, `sender`/`receiver` as `PeppolParticipantId`) for
+  non-invoice UBL/Peppol document families (Peppol Ordering: Order, OrderResponse,
+  OrderChange, OrderCancellation, OrderAgreement, Invoice Response, plus jurisdiction
+  extensions such as Singapore IMDA's Order Balance). Explicitly outside the canonical
+  invoice tree — never subclass `InvoiceDocument`/`EN16931Invoice` for a non-invoice UBL
+  document, and never subclass `BaseUBLDocument` for an invoice or credit note. Resolves
+  `mcp-invoicenow-sg` (Singapore) roadmap item SG-INV-2. Additive, non-breaking.
+
 ### [1.22.0] - 2026-08-27
 #### Added
 - `models.py`: `TaxIdentifier.validate_ae_trn()` — validates the format of a UAE TRN (Tax
