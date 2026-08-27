@@ -629,6 +629,42 @@ class TaxIdentifier(BaseModel):
             )
         return True, ""
 
+    # --- United Arab Emirates ---
+
+    @staticmethod
+    def validate_ae_trn(identifier: str) -> tuple[bool, str]:
+        """Validate the format of a UAE TRN (Tax Registration Number).
+
+        Format: exactly 15 numeric digits (e.g. ``198765432102003``), confirmed
+        against PINT AE example invoices
+        (``cac:PartyTaxScheme/cbc:CompanyID``, IBT-031/IBT-048).
+
+        The UAE FTA's Peppol Participant Identifier ("TIN") is the first 10
+        digits of the TRN — see ``mcp-einvoicing-ae``'s Peppol identifier
+        handling for that derivation; it is out of scope for this validator.
+
+        ``[NEED: check-digit algorithm]`` — no checksum/check-digit algorithm
+        for the TRN was found in any supplied FTA or Peppol AE specification
+        document as of 2026-08-27. This validator checks format only (length
+        and digit-only content); it does not and must not claim to verify a
+        checksum that has not been confirmed from a primary source. If a
+        checksum algorithm is later confirmed, extend this validator rather
+        than fabricating one now.
+
+        Source: `context-library/countries/ae.md` (`mcp-einvoicing` monorepo),
+        section "TRN (Tax Registration Number)".
+
+        Args:
+            identifier: Raw TRN string. Whitespace is stripped before checking.
+
+        Returns:
+            ``(True, "")`` on success, ``(False, error_message)`` on failure.
+        """
+        trn = identifier.strip()
+        if not re.match(r"^\d{15}$", trn):
+            return False, "TRN must be exactly 15 digits."
+        return True, ""
+
 
 class PartyAddress(BaseModel):
     """Postal address of a party's registered office.

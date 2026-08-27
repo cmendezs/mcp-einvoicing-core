@@ -321,3 +321,20 @@ class TestValidateItCodiceFiscale:
         # Correct check letter is Q, so A should fail
         assert ok is False
         assert "mismatch" in error
+
+
+class TestValidateAeTrn:
+    def test_valid_trn(self) -> None:
+        ok, error = TaxIdentifier.validate_ae_trn("198765432102003")
+        assert ok is True
+        assert error == ""
+
+    def test_wrong_length(self) -> None:
+        ok, error = TaxIdentifier.validate_ae_trn("12345")
+        assert ok is False
+        assert "15 digits" in error
+
+    def test_non_numeric(self) -> None:
+        ok, error = TaxIdentifier.validate_ae_trn("19876543210200A")
+        assert ok is False
+        assert "15 digits" in error
