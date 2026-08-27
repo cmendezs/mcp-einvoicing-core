@@ -11,6 +11,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.23.0] - 2026-08-27
+
+### Added
+- `ubl_documents.py`: new `BaseUBLDocument` model — a shared envelope
+  (`document_id`, `issue_date`, `customization_id`, `profile_id`, `sender`/
+  `receiver` as `PeppolParticipantId`) for non-invoice UBL/Peppol document
+  families (Peppol Ordering: Order, OrderResponse, OrderChange,
+  OrderCancellation, OrderAgreement, Invoice Response, and jurisdiction
+  extensions such as Singapore IMDA's Order Balance). Explicitly outside the
+  canonical invoice tree (`InvoiceDocument`/`EN16931Invoice`) per CLAUDE.md —
+  never subclass one for the other. Resolves the `mcp-invoicenow-sg`
+  (Singapore) roadmap item SG-INV-2. Additive, non-breaking.
+
+---
+
 ## [1.20.1] - 2026-08-25
 
 ### Changed

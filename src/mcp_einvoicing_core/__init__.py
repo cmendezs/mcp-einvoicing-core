@@ -217,6 +217,7 @@ from mcp_einvoicing_core.schematron import (
     load_schematron_validator,
 )
 from mcp_einvoicing_core.testing import InvoiceFixtureFactory
+from mcp_einvoicing_core.ubl_documents import BaseUBLDocument
 from mcp_einvoicing_core.wire_formats import (
     CII_NSMAP,
     UBL_NSMAP,
@@ -399,6 +400,8 @@ __all__ = [
     "set_profile_registry",
     # Test fixture factory
     "InvoiceFixtureFactory",
+    # Non-invoice UBL document base (Peppol Ordering family, etc.)
+    "BaseUBLDocument",
     # PDF/A-3 utilities
     "PDFEmbedder",
     "CANONICAL_HYBRID_PDF_FILENAMES",
