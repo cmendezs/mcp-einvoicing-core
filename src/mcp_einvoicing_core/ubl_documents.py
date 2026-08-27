@@ -67,9 +67,7 @@ class BaseUBLDocument(BaseModel):
             "urn:fdc:peppol.eu:poacc:bis:order_only:3"
         ),
     )
-    sender: PeppolParticipantId = Field(
-        ..., description="Sender's Peppol participant identifier"
-    )
+    sender: PeppolParticipantId = Field(..., description="Sender's Peppol participant identifier")
     receiver: PeppolParticipantId = Field(
         ..., description="Receiver's Peppol participant identifier"
     )
