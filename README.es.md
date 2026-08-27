@@ -25,6 +25,7 @@ auditoria de cumplimiento para que los paquetes por pais compartan una base comu
 | `models` | `InvoiceDocument`, `InvoiceParty`, `InvoiceLineItem`, `PartyAddress`, `VATSummary`, `PaymentTerms`, `DocumentValidationResult`, `TaxIdentifier` (validadores de IDs fiscales por pais: IT, FR, DE, BE, ES, PL, BR, AE), `TaxIdValidationResult` |
 | `en16931` | `EN16931Invoice`, `EN16931Party`, `EN16931LineItem`, `EN16931Address`, `EN16931Tax`, `EN16931AllowanceCharge`, `EN16931PaymentMeans` |
 | `credit_note` | `EN16931CreditNote` (codigos tipo 381/383/384/385), `BillingReference` |
+| `ubl_documents` | `BaseUBLDocument` — envoltura compartida para familias de documentos UBL/Peppol no-factura (Peppol Ordering, extensiones jurisdiccionales); explicitamente fuera del arbol `InvoiceDocument`/`EN16931Invoice` |
 | `wire_formats` | `EN16931UBLSerializer`, `EN16931UBLParser`, `EN16931CIISerializer`, `EN16931CIIParser`, `UBL_NSMAP`, `CII_NSMAP` |
 | `convert` | `Syntax` (UBL, CII), `convert_wire_format` (deteccion automatica del origen, serializacion al destino) |
 | `base_server` | `EInvoicingMCPServer`, `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BaseLifecycleManager`, `BasePartyValidator`, `SubmitResult`, `assert_not_read_only`, `scrub` |

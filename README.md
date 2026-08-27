@@ -25,6 +25,7 @@ audit framework so country-specific packages share a common foundation without d
 | `models` | `InvoiceDocument`, `InvoiceParty`, `InvoiceLineItem`, `PartyAddress`, `VATSummary`, `PaymentTerms`, `DocumentValidationResult`, `TaxIdentifier` (per-country tax ID validators: IT, FR, DE, BE, ES, PL, BR, AE), `TaxIdValidationResult` |
 | `en16931` | `EN16931Invoice`, `EN16931Party`, `EN16931LineItem`, `EN16931Address`, `EN16931Tax`, `EN16931AllowanceCharge`, `EN16931PaymentMeans` |
 | `credit_note` | `EN16931CreditNote` (type codes 381/383/384/385), `BillingReference` |
+| `ubl_documents` | `BaseUBLDocument` — shared envelope for non-invoice UBL/Peppol document families (Peppol Ordering, jurisdiction extensions); explicitly outside the `InvoiceDocument`/`EN16931Invoice` tree |
 | `wire_formats` | `EN16931UBLSerializer`, `EN16931UBLParser`, `EN16931CIISerializer`, `EN16931CIIParser`, `UBL_NSMAP`, `CII_NSMAP` |
 | `convert` | `Syntax` (UBL, CII), `convert_wire_format` (auto-detect source, serialize to target) |
 | `base_server` | `EInvoicingMCPServer`, `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BaseLifecycleManager`, `BasePartyValidator`, `SubmitResult`, `assert_not_read_only`, `scrub` |
