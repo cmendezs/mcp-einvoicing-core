@@ -22,7 +22,7 @@ audit framework so country-specific packages share a common foundation without d
 
 | Module | Contents |
 |--------|----------|
-| `models` | `InvoiceDocument`, `InvoiceParty`, `InvoiceLineItem`, `PartyAddress`, `VATSummary`, `PaymentTerms`, `DocumentValidationResult`, `TaxIdentifier` (per-country tax ID validators: IT, FR, DE, BE, ES, PL, BR, AE), `TaxIdValidationResult` |
+| `models` | `InvoiceDocument`, `InvoiceParty`, `InvoiceLineItem`, `PartyAddress`, `VATSummary`, `PaymentTerms`, `DocumentValidationResult`, `TaxIdentifier` (per-country tax ID validators: IT, FR, DE, BE, ES, PL, BR, AE, SG), `TaxIdValidationResult` |
 | `en16931` | `EN16931Invoice`, `EN16931Party`, `EN16931LineItem`, `EN16931Address`, `EN16931Tax`, `EN16931AllowanceCharge`, `EN16931PaymentMeans` |
 | `credit_note` | `EN16931CreditNote` (type codes 381/383/384/385), `BillingReference` |
 | `ubl_documents` | `BaseUBLDocument` — shared envelope for non-invoice UBL/Peppol document families (Peppol Ordering, jurisdiction extensions); explicitly outside the `InvoiceDocument`/`EN16931Invoice` tree |

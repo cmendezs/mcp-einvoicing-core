@@ -35,6 +35,14 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.24.0] - 2026-08-28
+#### Added
+- `models.py`: `TaxIdentifier.validate_sg_uen()` — Singapore UEN (Unique Entity Number)
+  validator, covering all three ACRA shapes (businesses, local companies, other entities)
+  including the check digit. Check-digit algorithm ported from `python-stdnum`'s
+  `stdnum.sg.uen` module (open-source, LGPL-2.1) since ACRA does not publish a standalone
+  specification — see the method's docstring for full provenance. Additive, non-breaking.
+
 ### [1.23.0] - 2026-08-27
 #### Added
 - `ubl_documents.py`: `BaseUBLDocument` — shared envelope (`document_id`, `issue_date`,

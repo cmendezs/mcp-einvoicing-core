@@ -23,7 +23,7 @@ Grundlage aufbauen, ohne Code zu duplizieren.
 
 | Modul | Inhalt |
 |-------|--------|
-| `models` | `InvoiceDocument`, `InvoiceParty`, `InvoiceLineItem`, `PartyAddress`, `VATSummary`, `PaymentTerms`, `DocumentValidationResult`, `TaxIdentifier` (laenderspezifische Steuer-ID-Validatoren: IT, FR, DE, BE, ES, PL, BR, AE), `TaxIdValidationResult` |
+| `models` | `InvoiceDocument`, `InvoiceParty`, `InvoiceLineItem`, `PartyAddress`, `VATSummary`, `PaymentTerms`, `DocumentValidationResult`, `TaxIdentifier` (laenderspezifische Steuer-ID-Validatoren: IT, FR, DE, BE, ES, PL, BR, AE, SG), `TaxIdValidationResult` |
 | `en16931` | `EN16931Invoice`, `EN16931Party`, `EN16931LineItem`, `EN16931Address`, `EN16931Tax`, `EN16931AllowanceCharge`, `EN16931PaymentMeans` |
 | `credit_note` | `EN16931CreditNote` (Typecodes 381/383/384/385), `BillingReference` |
 | `ubl_documents` | `BaseUBLDocument` — gemeinsame Hülle für Nicht-Rechnungs-UBL/Peppol-Dokumentfamilien (Peppol Ordering, jurisdiktionsspezifische Erweiterungen); ausdrücklich außerhalb des `InvoiceDocument`/`EN16931Invoice`-Baums |

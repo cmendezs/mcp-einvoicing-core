@@ -22,7 +22,7 @@
 
 | الوحدة | المحتويات |
 |--------|----------|
-| `models` | `InvoiceDocument`, `InvoiceParty`, `InvoiceLineItem`, `PartyAddress`, `VATSummary`, `PaymentTerms`, `DocumentValidationResult`, `TaxIdentifier` (مدققات ارقام ضريبية حسب البلد: IT, FR, DE, BE, ES, PL, BR, AE), `TaxIdValidationResult` |
+| `models` | `InvoiceDocument`, `InvoiceParty`, `InvoiceLineItem`, `PartyAddress`, `VATSummary`, `PaymentTerms`, `DocumentValidationResult`, `TaxIdentifier` (مدققات ارقام ضريبية حسب البلد: IT, FR, DE, BE, ES, PL, BR, AE, SG), `TaxIdValidationResult` |
 | `en16931` | `EN16931Invoice`, `EN16931Party`, `EN16931LineItem`, `EN16931Address`, `EN16931Tax`, `EN16931AllowanceCharge`, `EN16931PaymentMeans` |
 | `credit_note` | `EN16931CreditNote` (رموز النوع 381/383/384/385), `BillingReference` |
 | `ubl_documents` | `BaseUBLDocument` — غلاف مشترك لعائلات مستندات UBL/Peppol غير الفاتورة (Peppol Ordering، امتدادات خاصة بالولاية القضائية)؛ خارج شجرة `InvoiceDocument`/`EN16931Invoice` صراحةً |

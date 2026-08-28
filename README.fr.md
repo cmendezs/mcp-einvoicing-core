@@ -23,7 +23,7 @@ dupliquer le code.
 
 | Module | Contenu |
 |--------|---------|
-| `models` | `InvoiceDocument`, `InvoiceParty`, `InvoiceLineItem`, `PartyAddress`, `VATSummary`, `PaymentTerms`, `DocumentValidationResult`, `TaxIdentifier` (validateurs de numeros fiscaux par pays : IT, FR, DE, BE, ES, PL, BR, AE), `TaxIdValidationResult` |
+| `models` | `InvoiceDocument`, `InvoiceParty`, `InvoiceLineItem`, `PartyAddress`, `VATSummary`, `PaymentTerms`, `DocumentValidationResult`, `TaxIdentifier` (validateurs de numeros fiscaux par pays : IT, FR, DE, BE, ES, PL, BR, AE, SG), `TaxIdValidationResult` |
 | `en16931` | `EN16931Invoice`, `EN16931Party`, `EN16931LineItem`, `EN16931Address`, `EN16931Tax`, `EN16931AllowanceCharge`, `EN16931PaymentMeans` |
 | `credit_note` | `EN16931CreditNote` (codes type 381/383/384/385), `BillingReference` |
 | `ubl_documents` | `BaseUBLDocument` — enveloppe partagée pour les familles de documents UBL/Peppol non-facture (Peppol Ordering, extensions juridictionnelles) ; explicitement en dehors de l'arbre `InvoiceDocument`/`EN16931Invoice` |

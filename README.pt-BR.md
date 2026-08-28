@@ -22,7 +22,7 @@ auditoria de conformidade para que os pacotes por pais compartilhem uma base com
 
 | Modulo | Conteudo |
 |--------|----------|
-| `models` | `InvoiceDocument`, `InvoiceParty`, `InvoiceLineItem`, `PartyAddress`, `VATSummary`, `PaymentTerms`, `DocumentValidationResult`, `TaxIdentifier` (validadores de IDs fiscais por pais: IT, FR, DE, BE, ES, PL, BR, AE), `TaxIdValidationResult` |
+| `models` | `InvoiceDocument`, `InvoiceParty`, `InvoiceLineItem`, `PartyAddress`, `VATSummary`, `PaymentTerms`, `DocumentValidationResult`, `TaxIdentifier` (validadores de IDs fiscais por pais: IT, FR, DE, BE, ES, PL, BR, AE, SG), `TaxIdValidationResult` |
 | `en16931` | `EN16931Invoice`, `EN16931Party`, `EN16931LineItem`, `EN16931Address`, `EN16931Tax`, `EN16931AllowanceCharge`, `EN16931PaymentMeans` |
 | `credit_note` | `EN16931CreditNote` (codigos tipo 381/383/384/385), `BillingReference` |
 | `ubl_documents` | `BaseUBLDocument` — envelope compartilhado para familias de documentos UBL/Peppol que nao sao fatura (Peppol Ordering, extensoes jurisdicionais); explicitamente fora da arvore `InvoiceDocument`/`EN16931Invoice` |
