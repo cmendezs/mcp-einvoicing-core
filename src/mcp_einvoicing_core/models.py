@@ -131,6 +131,23 @@ def _br_check_digit(value: str, weights: list[int]) -> int:
     return 0 if remainder < 2 else 11 - remainder
 
 
+#: Valid 2-letter entity-type codes for Singapore "other entities" UENs
+#: (LLPs, societies, foreign companies, etc). Ported 2026-08-28 from
+#: python-stdnum's stdnum.sg.uen.OTHER_UEN_ENTITY_TYPES — see
+#: TaxIdentifier.validate_sg_uen()'s docstring for provenance. Module-level
+#: (not a class attribute) because TaxIdentifier is a pydantic BaseModel,
+#: where an underscore-prefixed class attribute becomes a ModelPrivateAttr
+#: descriptor rather than a plain value.
+_SG_UEN_OTHER_ENTITY_TYPES = frozenset(
+    {
+        "CC", "CD", "CH", "CL", "CM", "CP", "CS", "CX", "DP", "FB", "FC", "FM",
+        "FN", "GA", "GB", "GS", "HS", "LL", "LP", "MB", "MC", "MD", "MH", "MM",
+        "MQ", "NB", "NR", "PA", "PB", "PF", "RF", "RP", "SM", "SS", "TC", "TU",
+        "VH", "XL",
+    }
+)  # fmt: skip
+
+
 class TaxIdentifier(BaseModel):
     """A tax / VAT identifier tied to a country.
 
@@ -663,6 +680,96 @@ class TaxIdentifier(BaseModel):
         trn = identifier.strip()
         if not re.match(r"^\d{15}$", trn):
             return False, "TRN must be exactly 15 digits."
+        return True, ""
+
+    # --- Singapore ---
+
+    @staticmethod
+    def validate_sg_uen(identifier: str) -> tuple[bool, str]:
+        """Validate a Singapore UEN (Unique Entity Number), including its check digit.
+
+        ACRA (Accounting and Corporate Regulatory Authority) defines three UEN
+        formats, distinguished by entity type:
+
+          - Businesses (ROB): ``nnnnnnnnX`` — 8 digits + 1 check-alphabet
+            letter (9 characters).
+          - Local companies (ROC): ``yyyynnnnnX`` — 4-digit registration year
+            + 5 digits + 1 check-alphabet letter (10 characters).
+          - Other entities (LLPs, societies, foreign companies): ``PyyQRnnnnX``
+            — a prefix letter (``R``, ``S``, or ``T``) + 2-digit year + a
+            2-letter entity-type code (one of ``_SG_UEN_OTHER_ENTITY_TYPES``,
+            e.g. ``"LL"``, ``"FC"``) + 4 digits + 1 check-alphabet letter (10
+            characters).
+
+        Format source: ACRA UEN structure, supplied by the user 2026-08-27
+        (`context-library/countries/sg.md`, "Party-identifier formats").
+
+        Check-digit algorithm source (added 2026-08-28): **ACRA does not
+        publish a standalone specification of the check-digit formula** —
+        confirmed by the user directly, not assumed. The weights, moduli, and
+        check-alphabets below are ported verbatim from `python-stdnum`
+        (`stdnum.sg.uen`, https://github.com/arthurdejong/python-stdnum,
+        LGPL-2.1), a widely-used open-source identifier-validation library —
+        read directly from its installed source (`calc_business_check_digit`,
+        `calc_local_company_check_digit`, `calc_other_check_digit`,
+        `OTHER_UEN_ENTITY_TYPES`), not reconstructed from memory. This is a
+        **third-party reference implementation, not an ACRA-confirmed
+        specification** — label any output that depends on it accordingly.
+        Test vectors below are `python-stdnum`'s own doctests, which are
+        themselves real (or realistically-shaped) UEN values, not fabricated.
+
+        Args:
+            identifier: Raw UEN string. Whitespace is stripped before checking.
+
+        Returns:
+            ``(True, "")`` on success, ``(False, error_message)`` on failure.
+        """
+        uen = identifier.strip().upper()
+
+        if len(uen) == 9:
+            if not (uen[:8].isdigit() and uen[8].isalpha()):
+                return False, "Business UEN must be 8 digits followed by a check letter."
+            weights = (10, 4, 9, 3, 8, 2, 7, 1)
+            alphabet = "XMKECAWLJDB"
+            check = alphabet[sum(int(n) * w for n, w in zip(uen[:8], weights)) % 11]
+            if uen[8] != check:
+                return False, f"Invalid check digit for business UEN: expected {check!r}."
+            return True, ""
+
+        if len(uen) != 10:
+            return False, (
+                "UEN must be 9 characters (business) or 10 characters "
+                "(local company / other entity)."
+            )
+
+        if uen[0].isdigit():
+            if not (uen[:9].isdigit() and uen[9].isalpha()):
+                return False, "Local company UEN must be 9 digits followed by a check letter."
+            weights = (10, 8, 6, 4, 9, 7, 5, 3, 1)
+            alphabet = "ZKCMDNERGWH"
+            check = alphabet[sum(int(n) * w for n, w in zip(uen[:9], weights)) % 11]
+            if uen[9] != check:
+                return False, f"Invalid check digit for local company UEN: expected {check!r}."
+            return True, ""
+
+        if uen[0] not in ("R", "S", "T"):
+            return False, "Other-entity UEN must start with 'R', 'S', or 'T'."
+        if not uen[1:3].isdigit():
+            return False, "Other-entity UEN characters 2-3 must be the 2-digit issuance year."
+        if uen[3:5] not in _SG_UEN_OTHER_ENTITY_TYPES:
+            return False, f"Unrecognized other-entity UEN entity-type code: {uen[3:5]!r}."
+        if not (uen[5:9].isdigit() and uen[9].isalpha()):
+            return False, "Other-entity UEN must end with 4 digits followed by a check letter."
+        alphabet = "ABCDEFGHJKLMNPQRSTUVWX0123456789"
+        weights = (4, 3, 5, 3, 10, 2, 2, 5, 7)
+        try:
+            check = alphabet[
+                (sum(alphabet.index(n) * w for n, w in zip(uen[:9], weights)) - 5) % 11
+            ]
+        except ValueError:
+            return False, "Other-entity UEN contains a character outside the check-digit alphabet."
+        if uen[9] != check:
+            return False, f"Invalid check digit for other-entity UEN: expected {check!r}."
         return True, ""
 
 

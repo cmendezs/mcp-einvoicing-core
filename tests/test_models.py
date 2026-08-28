@@ -338,3 +338,67 @@ class TestValidateAeTrn:
         ok, error = TaxIdentifier.validate_ae_trn("19876543210200A")
         assert ok is False
         assert "15 digits" in error
+
+
+class TestValidateSgUen:
+    """Test vectors are python-stdnum's own doctests (stdnum.sg.uen) — real,
+    checksum-valid UENs, not fabricated. See validate_sg_uen()'s docstring
+    for the check-digit algorithm's provenance (ported from that library,
+    not an ACRA-published spec)."""
+
+    def test_valid_business(self) -> None:
+        ok, error = TaxIdentifier.validate_sg_uen("00192200M")
+        assert ok is True
+        assert error == ""
+
+    def test_valid_local_company(self) -> None:
+        ok, error = TaxIdentifier.validate_sg_uen("197401143C")
+        assert ok is True
+        assert error == ""
+
+    def test_valid_other_entity_s_prefix(self) -> None:
+        ok, error = TaxIdentifier.validate_sg_uen("S16FC0121D")
+        assert ok is True
+        assert error == ""
+
+    def test_valid_other_entity_t_prefix(self) -> None:
+        ok, error = TaxIdentifier.validate_sg_uen("T01FC6132D")
+        assert ok is True
+        assert error == ""
+
+    def test_lowercase_is_accepted(self) -> None:
+        ok, error = TaxIdentifier.validate_sg_uen("s16fc0121d")
+        assert ok is True
+        assert error == ""
+
+    def test_wrong_length_rejected(self) -> None:
+        ok, error = TaxIdentifier.validate_sg_uen("12345")
+        assert ok is False
+
+    def test_business_wrong_check_digit_rejected(self) -> None:
+        ok, error = TaxIdentifier.validate_sg_uen("00192200X")
+        assert ok is False
+        assert "check digit" in error
+
+    def test_local_company_wrong_check_digit_rejected(self) -> None:
+        # This exact value appears as illustrative sample data throughout
+        # OpenPeppol's official PINT-SG/BIS3 example XMLs, but is not
+        # itself checksum-valid — confirmed 2026-08-28 by this port.
+        ok, error = TaxIdentifier.validate_sg_uen("200212345Z")
+        assert ok is False
+        assert "check digit" in error
+
+    def test_other_entity_wrong_prefix_rejected(self) -> None:
+        ok, error = TaxIdentifier.validate_sg_uen("X09LL1234A")
+        assert ok is False
+        assert "'R', 'S', or 'T'" in error
+
+    def test_other_entity_unrecognized_entity_type_rejected(self) -> None:
+        ok, error = TaxIdentifier.validate_sg_uen("S16XX0121D")
+        assert ok is False
+        assert "entity-type code" in error
+
+    def test_other_entity_wrong_check_digit_rejected(self) -> None:
+        ok, error = TaxIdentifier.validate_sg_uen("R16FC0121D")
+        assert ok is False
+        assert "check digit" in error
