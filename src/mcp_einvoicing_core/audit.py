@@ -219,15 +219,24 @@ def _version_in_range(version: str, spec: str) -> bool:
 
 
 def _read_core_version_spec(pyproject_path: Path) -> str | None:
-    """Extract the ``mcp-einvoicing-core`` version specifier from *pyproject_path*."""
+    """Extract the ``mcp-einvoicing-core`` version specifier from *pyproject_path*.
+
+    Only matches lines whose stripped text is itself a TOML string literal
+    beginning with the package name (a real ``dependencies``/extras array
+    entry, e.g. ``"mcp-einvoicing-core>=1.24.0,<2.0.0",``) — not any line
+    that merely contains the substring. A prose comment on a preceding line
+    (e.g. explaining why the pin is mandatory) previously matched first and
+    produced a garbled spec; comments start with ``#``, not a quote, so they
+    no longer match.
+    """
     if not pyproject_path.exists():
         return None
     try:
         text = pyproject_path.read_text(encoding="utf-8")
         for line in text.splitlines():
-            if "mcp-einvoicing-core" in line:
-                start = line.find("mcp-einvoicing-core")
-                fragment = line[start:].strip().strip('",').strip("'")
+            stripped = line.strip()
+            if stripped.startswith(('"mcp-einvoicing-core', "'mcp-einvoicing-core")):
+                fragment = stripped.strip('",').strip("'")
                 spec = fragment.replace("mcp-einvoicing-core", "").strip()
                 return spec if spec else None
     except Exception:

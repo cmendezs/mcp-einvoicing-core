@@ -12,6 +12,7 @@ from mcp_einvoicing_core.audit import (
     SEVERITY_BLOCKING,
     SEVERITY_OK,
     TaxRate,
+    _read_core_version_spec,
     load_rates,
     run_check_known_shared_helpers,
 )
@@ -105,6 +106,51 @@ class TestCheckKnownSharedHelpers:
 # ---------------------------------------------------------------------------
 # load_rates
 # ---------------------------------------------------------------------------
+
+
+class TestReadCoreVersionSpec:
+    """CHECK 4 helper — must not be fooled by a comment line preceding the
+    real dependency entry (regression: SG and AE's pyproject.toml both carry
+    a two-line comment explaining the uv #9811 pin, and the comment itself
+    contains the substring "mcp-einvoicing-core")."""
+
+    def test_reads_plain_dependency_line(self, tmp_path: Path) -> None:
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text(
+            textwrap.dedent(
+                """
+                [project]
+                dependencies = [
+                    "mcp-einvoicing-core>=1.24.0,<2.0.0",
+                ]
+                """
+            )
+        )
+        assert _read_core_version_spec(pyproject) == ">=1.24.0,<2.0.0"
+
+    def test_ignores_preceding_comment_with_package_name(self, tmp_path: Path) -> None:
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text(
+            textwrap.dedent(
+                """
+                [project]
+                # The upper-bound pin on mcp-einvoicing-core is mandatory: uv bug #9811 strips version
+                # pins from built wheel metadata, so this is the only protection downstream consumers have.
+                dependencies = [
+                    "mcp-einvoicing-core>=1.24.0,<2.0.0",
+                ]
+                """
+            )
+        )
+        assert _read_core_version_spec(pyproject) == ">=1.24.0,<2.0.0"
+
+    def test_missing_file_returns_none(self, tmp_path: Path) -> None:
+        assert _read_core_version_spec(tmp_path / "does-not-exist.toml") is None
+
+    def test_no_dependency_returns_none(self, tmp_path: Path) -> None:
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text('[project]\ndependencies = ["some-other-package>=1.0.0"]\n')
+        assert _read_core_version_spec(pyproject) is None
 
 
 class TestLoadRates:

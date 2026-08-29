@@ -11,6 +11,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.25.0] - 2026-08-29
+
+### Added
+- `en16931.py`: `EN16931Invoice.document_uuid` — optional field emitted as
+  `<cbc:UUID>`, a sibling immediately after `<cbc:ID>` in UBL 2.1 output.
+  Several Peppol jurisdiction CIUS profiles mandate a document UUID (e.g.
+  PINT AE BTAE-07, PINT-SG BT-SG-003); previously each country package had
+  no core hook to emit it. `None` by default, so existing packages that
+  never set it produce byte-identical output to before this change.
+- `wire_formats.py`: `EN16931UBLSerializer._emit_item_price_extension`
+  (default `False`) — an opt-in flag for country subclasses that must emit
+  `cac:ItemPriceExtension` per invoice line (line net amount + line VAT
+  amount, and the line VAT amount, as a sibling of `cac:Price`). Not part of
+  base EN 16931 or generic Peppol BIS 3.0 — confirmed absent from the BE,
+  DE, IT, PL, ES, SG, FR specs vendored in this workspace; present only in
+  PINT AE's jurisdiction rules (ibr-104-ae/ibr-194-ae). Base behavior is
+  unchanged for every package that doesn't opt in.
+
+### Fixed
+- `audit.py`: `_read_core_version_spec` (CHECK 4) no longer matches a prose
+  comment line that happens to contain the substring `"mcp-einvoicing-core"`
+  when it precedes the real dependency-array entry — it now only matches
+  lines that are themselves a TOML string literal starting with the package
+  name. Both `mcp-invoicenow-sg` and `mcp-einvoicing-ae` carry an explanatory
+  comment directly above their dependency line and were hitting this bug,
+  rendering a garbled "declared range" in their audit reports.
+
+---
+
 ## [1.23.0] - 2026-08-27
 
 ### Added

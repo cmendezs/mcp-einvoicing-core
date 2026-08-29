@@ -258,6 +258,83 @@ class TestUBLSerializer:
         charge_indicator = acs[0].find("cbc:ChargeIndicator", ns)
         assert charge_indicator.text == "false"
 
+    def test_uuid_absent_when_unset(self):
+        """Unset document_uuid must produce byte-identical output to before
+        this field existed — no package that doesn't set it is affected."""
+        xml = EN16931UBLSerializer().serialize(_make_invoice())
+        root = etree.fromstring(xml)
+        ns = {"cbc": "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"}
+        assert root.find("cbc:UUID", ns) is None
+
+    def test_uuid_emitted_when_set(self):
+        inv = _make_invoice(document_uuid="6bf90225-3776-4a75-83f1-4a5a0fe45a1c")
+        xml = EN16931UBLSerializer().serialize(inv)
+        root = etree.fromstring(xml)
+        ns = {"cbc": "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"}
+        uuid_el = root.find("cbc:UUID", ns)
+        assert uuid_el is not None
+        assert uuid_el.text == "6bf90225-3776-4a75-83f1-4a5a0fe45a1c"
+
+    def test_uuid_document_order(self):
+        """UBL 2.1 Invoice sequence: ID -> UUID -> IssueDate."""
+        inv = _make_invoice(document_uuid="6bf90225-3776-4a75-83f1-4a5a0fe45a1c")
+        xml = EN16931UBLSerializer().serialize(inv)
+        root = etree.fromstring(xml)
+        cbc = "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+        children = [
+            etree.QName(c.tag).localname for c in root if etree.QName(c.tag).namespace == cbc
+        ]
+        assert children.index("ID") < children.index("UUID") < children.index("IssueDate")
+
+    def test_item_price_extension_absent_by_default(self):
+        """The base serializer never emits cac:ItemPriceExtension — it's not
+        part of base EN 16931 or generic Peppol BIS 3.0, only specific
+        jurisdiction CIUS profiles (e.g. PINT AE) require it. Confirmed
+        absent from BE/DE/IT/PL/ES/SG/FR specs vendored in this workspace."""
+        xml = EN16931UBLSerializer().serialize(_make_invoice())
+        root = etree.fromstring(xml)
+        ns = {"cac": "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"}
+        assert root.find(".//cac:ItemPriceExtension", ns) is None
+
+    def test_item_price_extension_emitted_when_subclass_opts_in(self):
+        class _OptedInSerializer(EN16931UBLSerializer):
+            _emit_item_price_extension = True
+
+        xml = _OptedInSerializer().serialize(_make_invoice())
+        root = etree.fromstring(xml)
+        ns = {
+            "cbc": "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2",
+            "cac": "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2",
+        }
+        ipe = root.find(".//cac:InvoiceLine/cac:ItemPriceExtension", ns)
+        assert ipe is not None
+        # line_net_amount=100.00, tax_rate=21 -> vat=21.00, payable=121.00
+        # (matches the fixture's own tax_total, confirming the math).
+        amount = ipe.find("cbc:Amount", ns)
+        assert amount is not None
+        assert Decimal(amount.text) == Decimal("121.00")
+        tax_amount = ipe.find("cac:TaxTotal/cbc:TaxAmount", ns)
+        assert tax_amount is not None
+        assert Decimal(tax_amount.text) == Decimal("21.00")
+
+    def test_item_price_extension_is_sibling_of_price(self):
+        """Confirmed placement against mcp-einvoicing-ae/specs/pint-ae/
+        trn-invoice/example/Standard tax invoice.xml: ItemPriceExtension is
+        a sibling of Price under InvoiceLine, not nested inside Price."""
+
+        class _OptedInSerializer(EN16931UBLSerializer):
+            _emit_item_price_extension = True
+
+        xml = _OptedInSerializer().serialize(_make_invoice())
+        root = etree.fromstring(xml)
+        cac = "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+        ns = {"cac": cac}
+        line = root.find("cac:InvoiceLine", ns)
+        children = [
+            etree.QName(c.tag).localname for c in line if etree.QName(c.tag).namespace == cac
+        ]
+        assert children.index("Price") < children.index("ItemPriceExtension")
+
 
 # ---------------------------------------------------------------------------
 # UBL round-trip tests

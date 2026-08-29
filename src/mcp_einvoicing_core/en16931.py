@@ -347,6 +347,16 @@ class EN16931Invoice(BaseModel):
     currency_code: Annotated[str, Field(min_length=3, max_length=3)] = Field(
         "EUR", description="ISO 4217 invoice currency code (BT-5)"
     )
+    document_uuid: str | None = Field(
+        None,
+        description=(
+            "Universally unique document identifier, emitted as <cbc:UUID> — a sibling "
+            "element immediately after <cbc:ID>. Not a formal EN 16931 BT; several Peppol "
+            "jurisdiction CIUS profiles mandate it (e.g. PINT AE BTAE-07, PINT-SG BT-SG-003). "
+            "Optional in the base model since most EN 16931 profiles do not require it; "
+            "country subclasses that require it should re-declare it as required."
+        ),
+    )
 
     # ── Optional header references ───────────────────────────────────────────
 

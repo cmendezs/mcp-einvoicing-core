@@ -130,6 +130,14 @@ class EN16931UBLSerializer:
         xml_bytes = EN16931UBLSerializer().serialize(invoice)
     """
 
+    #: Opt-in flag for country subclasses that must emit cac:ItemPriceExtension
+    #: per invoice line (e.g. PINT AE ibr-104-ae/ibr-194-ae). Not part of base
+    #: EN 16931 / generic Peppol BIS 3.0 — confirmed absent from the BE, DE,
+    #: IT, PL, ES, SG, FR specs vendored in this workspace, present only in
+    #: mcp-einvoicing-ae's PINT AE specs. Left False so existing packages'
+    #: serialized output is unchanged; a subclass sets it to True to opt in.
+    _emit_item_price_extension: bool = False
+
     def serialize(self, invoice: EN16931Invoice) -> bytes:
         root = self._build_root(invoice)
         return self._to_bytes(root)
@@ -144,6 +152,11 @@ class EN16931UBLSerializer:
         _sub(root, _CBC, "CustomizationID", invoice.profile)
         _sub_opt(root, _CBC, "ProfileID", invoice.business_process)
         _sub(root, _CBC, "ID", invoice.invoice_number)
+        # cbc:UUID (BTAE-07, BT-SG-003, ...): a sibling of cbc:ID per the UBL
+        # 2.1 Invoice schema sequence (ID -> UUID -> IssueDate), confirmed
+        # against the vendored UBL-Invoice-2.1.xsd. Only emitted when set —
+        # most EN 16931 profiles do not require it.
+        _sub_opt(root, _CBC, "UUID", invoice.document_uuid)
         _sub(root, _CBC, "IssueDate", _date_ubl(invoice.invoice_date))
         # BT-9 (Payment due date): must be a top-level cbc:DueDate per the UBL
         # 2.1 Invoice schema sequence (IssueDate -> IssueTime -> DueDate ->
@@ -379,6 +392,32 @@ class EN16931UBLSerializer:
         if line.unit_price_base_quantity != Decimal("1"):
             bq = _sub(price, _CBC, "BaseQuantity", str(line.unit_price_base_quantity))
             bq.set("unitCode", line.unit_code)
+
+        if self._emit_item_price_extension:
+            self._build_item_price_extension(el, line, currency)
+
+    @staticmethod
+    def _build_item_price_extension(
+        el: etree._Element, line: EN16931LineItem, currency: str
+    ) -> None:
+        """Emit cac:ItemPriceExtension as a sibling of cac:Price (BTAE-10/BTAE-08).
+
+        Placement and semantics confirmed against
+        mcp-einvoicing-ae/specs/pint-ae/trn-invoice/example/Standard tax
+        invoice.xml: cbc:Amount (BTAE-10, "Invoice line Amount payable") is
+        the line net amount plus the line VAT amount; cac:TaxTotal/
+        cbc:TaxAmount (BTAE-08) is the line VAT amount, both derived from
+        fields EN16931LineItem already carries (line_net_amount, tax_rate).
+        """
+        vat_amount = line.line_net_amount * line.tax_rate / Decimal("100")
+        payable_amount = line.line_net_amount + vat_amount
+
+        ipe = _sub(el, _CAC, "ItemPriceExtension")
+        amt = _sub(ipe, _CBC, "Amount", _fmt(payable_amount))
+        amt.set("currencyID", currency)
+        tax_total = _sub(ipe, _CAC, "TaxTotal")
+        tax_amt = _sub(tax_total, _CBC, "TaxAmount", _fmt_vat(vat_amount))
+        tax_amt.set("currencyID", currency)
 
     @staticmethod
     def _to_bytes(root: etree._Element, pretty_print: bool = True) -> bytes:
