@@ -35,6 +35,28 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.25.0] - 2026-08-29
+#### Added
+- `en16931.py`: `EN16931Invoice.document_uuid` (optional) — emitted as `<cbc:UUID>`, a
+  sibling immediately after `<cbc:ID>` in UBL 2.1 output, only when set. Several Peppol
+  jurisdiction CIUS profiles mandate a document UUID (PINT AE BTAE-07, PINT-SG
+  BT-SG-003); country subclasses that require it should re-declare it as required.
+  Additive, non-breaking — packages that never set it get identical output to before.
+- `wire_formats.py`: `EN16931UBLSerializer._emit_item_price_extension` (opt-in class
+  flag, default `False`) and `_build_item_price_extension` — emits per-line
+  `cac:ItemPriceExtension` (payable amount + line VAT amount, derived from
+  `line_net_amount`/`tax_rate`) as a sibling of `cac:Price`. Not part of base EN 16931
+  or generic Peppol BIS 3.0 — confirmed absent from BE/DE/IT/PL/ES/SG/FR specs, present
+  only in PINT AE (ibr-104-ae/ibr-194-ae). Off by default; no change for packages that
+  don't opt in.
+
+#### Fixed
+- `audit.py`: `_read_core_version_spec` (CHECK 4) no longer matches a prose comment
+  line that happens to contain the substring `mcp-einvoicing-core` when it precedes
+  the real dependency-array entry. Both `mcp-invoicenow-sg` and `mcp-einvoicing-ae`
+  carry such a comment and were hitting this bug, rendering a garbled declared-range
+  string in their audit reports.
+
 ### [1.24.0] - 2026-08-28
 #### Added
 - `models.py`: `TaxIdentifier.validate_sg_uen()` — Singapore UEN (Unique Entity Number)
