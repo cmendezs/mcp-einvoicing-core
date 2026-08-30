@@ -236,6 +236,9 @@ class EN16931UBLSerializer:
         return root
 
     def _build_party(self, parent: etree._Element, wrapper: str, party: EN16931Party) -> None:
+        # Element order follows the UBL 2.1 PartyType xsd:sequence: EndpointID →
+        # PartyIdentification → PartyName → PostalAddress → PartyTaxScheme →
+        # PartyLegalEntity → Contact (PartyIdentification/PartyName are not emitted).
         w = _sub(parent, _CAC, wrapper)
         p = _sub(w, _CAC, "Party")
 
@@ -244,8 +247,7 @@ class EN16931UBLSerializer:
             if party.electronic_address_scheme:
                 ep.set("schemeID", party.electronic_address_scheme)
 
-        legal = _sub(p, _CAC, "PartyLegalEntity")
-        _sub(legal, _CBC, "RegistrationName", party.name)
+        self._build_address(p, party.address)
 
         if party.vat_id:
             pts = _sub(p, _CAC, "PartyTaxScheme")
@@ -253,7 +255,8 @@ class EN16931UBLSerializer:
             ts = _sub(pts, _CAC, "TaxScheme")
             _sub(ts, _CBC, "ID", "VAT")
 
-        self._build_address(p, party.address)
+        legal = _sub(p, _CAC, "PartyLegalEntity")
+        _sub(legal, _CBC, "RegistrationName", party.name)
 
         if party.contact_name or party.contact_phone or party.contact_email:
             contact = _sub(p, _CAC, "Contact")

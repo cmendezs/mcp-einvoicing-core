@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 from lxml import etree
@@ -17,6 +18,7 @@ from mcp_einvoicing_core.en16931 import (
     EN16931PaymentMeans,
     EN16931Tax,
 )
+from mcp_einvoicing_core.schematron import XSDValidator
 from mcp_einvoicing_core.wire_formats import (
     EN16931CIIParser,
     EN16931CIISerializer,
@@ -29,6 +31,9 @@ from mcp_einvoicing_core.wire_formats import (
 # ---------------------------------------------------------------------------
 
 _PROFILE = "urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0"
+_UBL_INVOICE_XSD = (
+    Path(__file__).parent / "fixtures" / "ubl-2.1" / "maindoc" / "UBL-Invoice-2.1.xsd"
+)
 
 
 def _make_invoice(**kwargs) -> EN16931Invoice:
@@ -160,6 +165,79 @@ class TestUBLSerializer:
         name = root.find(".//cac:AccountingSupplierParty//cbc:RegistrationName", ns)
         assert name is not None
         assert name.text == "Acme SA"
+
+    def test_party_element_document_order(self):
+        """cac:Party children must follow the UBL 2.1 PartyType xsd:sequence:
+        EndpointID, PostalAddress, PartyTaxScheme, PartyLegalEntity, Contact
+        (PartyIdentification/PartyName are not emitted). Regression test for
+        the party-ordering bug that made every core-serialized invoice XSD-invalid.
+        """
+        inv = _make_invoice(
+            seller=EN16931Party(
+                name="Acme SA",
+                address=EN16931Address(
+                    line_one="1 Rue de la Paix",
+                    city="Paris",
+                    postcode="75001",
+                    country_code="FR",
+                ),
+                vat_id="FR12345678901",
+                electronic_address="0208:0123456789",
+                electronic_address_scheme="0208",
+                contact_name="Jane Seller",
+                contact_email="jane@acme.example",
+            )
+        )
+        xml = EN16931UBLSerializer().serialize(inv)
+        root = etree.fromstring(xml)
+        cac = "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+        cbc = "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+        party = root.find(f".//{{{cac}}}AccountingSupplierParty/{{{cac}}}Party")
+        assert party is not None
+        localnames = [etree.QName(c.tag).localname for c in party]
+        expected_present = ["EndpointID", "PostalAddress", "PartyTaxScheme", "PartyLegalEntity", "Contact"]
+        assert localnames == expected_present
+        assert etree.QName(party[0].tag).namespace == cbc  # EndpointID is cbc, not cac
+
+    def test_serialized_output_validates_against_ubl_invoice_xsd(self):
+        """Full-document XSD validation guards the party-ordering fix end to end."""
+        validator = XSDValidator(_UBL_INVOICE_XSD)
+
+        be_style = _make_invoice(
+            buyer=EN16931Party(
+                name="ACME Belgium NV",
+                address=EN16931Address(
+                    line_one="Avenue Louise 10",
+                    city="Brussels",
+                    postcode="1050",
+                    country_code="BE",
+                ),
+                vat_id="BE0123456789",
+                electronic_address="0208:9876543210",
+                electronic_address_scheme="0208",
+                contact_name="Jan Buyer",
+                contact_phone="+32-2-1234567",
+            )
+        )
+        result = validator.validate(EN16931UBLSerializer().serialize(be_style))
+        assert result.is_valid, [m.text for m in result.errors]
+
+        sg_style = _make_invoice(
+            seller=EN16931Party(
+                name="Acme Pte Ltd",
+                address=EN16931Address(
+                    line_one="1 Marina Boulevard",
+                    city="Singapore",
+                    postcode="018989",
+                    country_code="SG",
+                ),
+                vat_id="SG12345678A",
+                electronic_address="0195:201912345A",
+                electronic_address_scheme="0195",
+            )
+        )
+        result = validator.validate(EN16931UBLSerializer().serialize(sg_style))
+        assert result.is_valid, [m.text for m in result.errors]
 
     def test_tax_total_present(self):
         xml = EN16931UBLSerializer().serialize(_make_invoice())
