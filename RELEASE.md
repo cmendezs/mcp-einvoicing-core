@@ -35,6 +35,16 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.26.0] - 2026-08-30
+#### Fixed
+- `wire_formats.py`: `EN16931UBLSerializer._build_party` now emits `cac:Party` children
+  in UBL 2.1 `PartyType` `xsd:sequence` order — `EndpointID → PostalAddress →
+  PartyTaxScheme → PartyLegalEntity → Contact` (was `EndpointID → PartyLegalEntity →
+  PartyTaxScheme → PostalAddress → Contact`). Every core-serialized UBL invoice was
+  XSD-invalid until this fix; undetected because only order-insensitive Schematron ran
+  against it. No public API change — only serialized output byte order, affecting every
+  EN16931-family package (BE, DE, FR, IT, ES, SG, AE). Found via SG audit finding SG-SC-3.
+
 ### [1.25.0] - 2026-08-29
 #### Added
 - `en16931.py`: `EN16931Invoice.document_uuid` (optional) — emitted as `<cbc:UUID>`, a
