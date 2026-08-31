@@ -102,3 +102,12 @@ class TestPlatformError:
     def test_no_error_code(self) -> None:
         err = PlatformError(404, "not found")
         assert err.error_code is None
+
+    def test_response_body_defaults_to_none(self) -> None:
+        err = PlatformError(404, "not found")
+        assert err.response_body is None
+
+    def test_response_body_stored(self) -> None:
+        body = b'{"exceptionCode": "AUTH_001", "message": "bad token"}'
+        err = PlatformError(401, "unauthorized", response_body=body)
+        assert err.response_body == body

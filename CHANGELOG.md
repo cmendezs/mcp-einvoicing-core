@@ -11,6 +11,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.28.0] - 2026-08-31
+
+### Fixed
+- `exceptions.py`: `PlatformError` now accepts and stores an optional
+  `response_body: bytes | None` (default `None`, fully backward-compatible —
+  every existing call site uses keyword args). `http_client.py`'s
+  `_extract_platform_error()` populates it from `response.content`. Previously
+  the raw error body was discarded after `_parse_error_body()` extracted a
+  summary `message`/`error_code`, so a country adapter's own re-parse of a
+  platform-specific error schema (e.g. mcp-ksef-pl's `_raise_ksef_error`,
+  which keys on `exc.response_body`) was unreachable dead code — `PlatformError`
+  never set that attribute, so `hasattr(exc, "response_body")` was always
+  `False`. Surfaced during the KSeF v2.7.1 delta review; see PL-ERR-1 in
+  `mcp-ksef-pl`'s `audit-history.md`.
+
+---
+
 ## [1.27.0] - 2026-08-31
 
 ### Added

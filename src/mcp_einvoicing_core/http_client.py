@@ -483,7 +483,12 @@ def _extract_platform_error(
     base_msg = _HTTP_ERROR_MESSAGES.get(code, f"HTTP error {code}")
     message = base_msg + (f" — {detail}" if detail else "")
     logger.error("HTTP %d from platform: %s", code, message)
-    return PlatformError(status_code=code, message=message, error_code=error_code)
+    return PlatformError(
+        status_code=code,
+        message=message,
+        error_code=error_code,
+        response_body=response.content,
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -113,9 +113,21 @@ class PlatformError(EInvoicingError):
         status_code: HTTP status code from the platform.
         message: Human-readable error from the platform's error body.
         error_code: Platform-specific error code (optional).
+        response_body: Raw response body bytes, when available, so a country
+            adapter can re-parse a platform-specific error schema (e.g. KSeF's
+            ``{"exceptionCode": ..., "message": ...}``) beyond the summarized
+            *message*. ``None`` when the error did not originate from an HTTP
+            response (e.g. a certificate-pin mismatch).
     """
 
-    def __init__(self, status_code: int, message: str, error_code: str | None = None) -> None:
+    def __init__(
+        self,
+        status_code: int,
+        message: str,
+        error_code: str | None = None,
+        response_body: bytes | None = None,
+    ) -> None:
         self.status_code = status_code
         self.error_code = error_code
+        self.response_body = response_body
         super().__init__(f"Platform error {status_code}: {message}")
