@@ -195,7 +195,13 @@ class TestUBLSerializer:
         party = root.find(f".//{{{cac}}}AccountingSupplierParty/{{{cac}}}Party")
         assert party is not None
         localnames = [etree.QName(c.tag).localname for c in party]
-        expected_present = ["EndpointID", "PostalAddress", "PartyTaxScheme", "PartyLegalEntity", "Contact"]
+        expected_present = [
+            "EndpointID",
+            "PostalAddress",
+            "PartyTaxScheme",
+            "PartyLegalEntity",
+            "Contact",
+        ]
         assert localnames == expected_present
         assert etree.QName(party[0].tag).namespace == cbc  # EndpointID is cbc, not cac
 
