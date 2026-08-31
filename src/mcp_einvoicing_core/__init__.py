@@ -240,7 +240,7 @@ from mcp_einvoicing_core.xml_utils import (
     xml_optional,
 )
 
-__version__ = "1.13.1"
+__version__ = "1.28.1"
 
 __all__ = [
     # Archive provider
