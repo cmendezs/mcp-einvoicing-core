@@ -69,7 +69,9 @@ dupliquer le code.
 | 🇩🇪 Allemagne | [`mcp-einvoicing-de`](https://github.com/cmendezs/mcp-einvoicing-de) | ZUGFeRD 2.x / XRechnung 3.x | B2B, progressif de 2025 a 2028 | En service |
 | 🇮🇹 Italie | [`mcp-fattura-elettronica-it`](https://github.com/cmendezs/mcp-fattura-elettronica-it) | FatturaPA / SDI | B2G + B2B + B2C, obligatoire depuis 2019 (B2G depuis 2014) | En service |
 | 🇵🇱 Pologne | [`mcp-ksef-pl`](https://github.com/cmendezs/mcp-ksef-pl) | KSeF FA(3) / FA(2) / Peppol BIS 3.0 | B2B, progressif de fevrier 2026 a janvier 2027 | En service ; flux de session par lots non implemente |
+| 🇸🇬 Singapour | [`mcp-invoicenow-sg`](https://github.com/cmendezs/mcp-invoicenow-sg) | PINT-SG v1.4.1 / SG Peppol BIS Billing 3.0 | B2B, obligatoire pour les entreprises assujetties a la GST a partir d'avril 2026 | En service ; perimetre de validation limite aux controles d'acceptation IRAS C5, les regles Schematron de juridiction PINT-SG et la validation EN 16931 de base ne sont pas encore cablees |
 | 🇪🇸 Espagne | [`mcp-facturacion-electronica-es`](https://github.com/cmendezs/mcp-facturacion-electronica-es) | Factura-e / VeriFactu / SII / FACe | En attente de l'Orden Ministerial, visee pour le 2026-10-01 | En service pour VeriFactu/SII ; integration du format B2B bloquee dans l'attente de l'Orden Ministerial |
+| 🇦🇪 Emirats arabes unis | [`mcp-einvoicing-ae`](https://github.com/cmendezs/mcp-einvoicing-ae) | PINT AE (facturation + autofacturation) / Peppol AE TDD | B2B + B2G, pilote volontaire a partir de juillet 2026, obligatoire pour les grands contribuables a partir de janvier 2027 | En service ; valide uniquement le Schematron de base CEN EN16931, la surcouche de juridiction PINT AE et la validation TDD ne sont pas encore disponibles |
 
 ## Installation
 

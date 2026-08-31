@@ -68,7 +68,9 @@
 | 🇩🇪 المانيا | [`mcp-einvoicing-de`](https://github.com/cmendezs/mcp-einvoicing-de) | ZUGFeRD 2.x / XRechnung 3.x | B2B، تدريجي من 2025 الى 2028 | نشط |
 | 🇮🇹 ايطاليا | [`mcp-fattura-elettronica-it`](https://github.com/cmendezs/mcp-fattura-elettronica-it) | FatturaPA / SDI | B2G + B2B + B2C، الزامي منذ 2019 (B2G منذ 2014) | نشط |
 | 🇵🇱 بولندا | [`mcp-ksef-pl`](https://github.com/cmendezs/mcp-ksef-pl) | KSeF FA(3) / FA(2) / Peppol BIS 3.0 | B2B، تدريجي من فبراير 2026 الى يناير 2027 | نشط؛ تدفق جلسة الدفعات غير مطبق |
+| 🇸🇬 سنغافورة | [`mcp-invoicenow-sg`](https://github.com/cmendezs/mcp-invoicenow-sg) | PINT-SG v1.4.1 / SG Peppol BIS Billing 3.0 | B2B، الزامي للشركات المسجلة في GST اعتبارا من ابريل 2026 | نشط؛ نطاق التحقق مقتصر على فحوصات قبول IRAS C5، قواعد Schematron الخاصة بولاية PINT-SG والتحقق الاساسي EN 16931 لم يتم ربطهما بعد |
 | 🇪🇸 اسبانيا | [`mcp-facturacion-electronica-es`](https://github.com/cmendezs/mcp-facturacion-electronica-es) | Factura-e / VeriFactu / SII / FACe | في انتظار Orden Ministerial، المستهدف 2026-10-01 | نشط لـ VeriFactu/SII؛ ربط صيغة B2B معطل بانتظار Orden Ministerial |
+| 🇦🇪 الامارات العربية المتحدة | [`mcp-einvoicing-ae`](https://github.com/cmendezs/mcp-einvoicing-ae) | PINT AE (فوترة + فوترة ذاتية) / Peppol AE TDD | B2B + B2G، تجربة تطوعية اعتبارا من يوليو 2026، الزامي لكبار دافعي الضرائب اعتبارا من يناير 2027 | نشط؛ يتحقق فقط من Schematron الاساسي CEN EN16931، تراكب ولاية PINT AE والتحقق من TDD غير متوفرين بعد |
 
 ## التثبيت
 

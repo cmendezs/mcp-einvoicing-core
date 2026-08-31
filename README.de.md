@@ -69,7 +69,9 @@ Grundlage aufbauen, ohne Code zu duplizieren.
 | 🇩🇪 Deutschland | [`mcp-einvoicing-de`](https://github.com/cmendezs/mcp-einvoicing-de) | ZUGFeRD 2.x / XRechnung 3.x | B2B, stufenweise 2025 bis 2028 | Aktiv |
 | 🇮🇹 Italien | [`mcp-fattura-elettronica-it`](https://github.com/cmendezs/mcp-fattura-elettronica-it) | FatturaPA / SDI | B2G + B2B + B2C, verpflichtend seit 2019 (B2G seit 2014) | Aktiv |
 | 🇵🇱 Polen | [`mcp-ksef-pl`](https://github.com/cmendezs/mcp-ksef-pl) | KSeF FA(3) / FA(2) / Peppol BIS 3.0 | B2B, stufenweise Februar 2026 bis Januar 2027 | Aktiv; Batch-Session-Flow nicht implementiert |
+| 🇸🇬 Singapur | [`mcp-invoicenow-sg`](https://github.com/cmendezs/mcp-invoicenow-sg) | PINT-SG v1.4.1 / SG Peppol BIS Billing 3.0 | B2B, verpflichtend fuer GST-registrierte Unternehmen ab April 2026 | Aktiv; Validierungsumfang beschraenkt auf IRAS-C5-Abnahmepruefungen, PINT-SG-Jurisdiktions-Schematron und EN-16931-Basisvalidierung noch nicht eingebunden |
 | 🇪🇸 Spanien | [`mcp-facturacion-electronica-es`](https://github.com/cmendezs/mcp-facturacion-electronica-es) | Factura-e / VeriFactu / SII / FACe | Ausstehende Orden Ministerial, angestrebt fuer 2026-10-01 | Aktiv fuer VeriFactu/SII; B2B-Formatanbindung blockiert bis zur Orden Ministerial |
+| 🇦🇪 Vereinigte Arabische Emirate | [`mcp-einvoicing-ae`](https://github.com/cmendezs/mcp-einvoicing-ae) | PINT AE (Rechnungsstellung + Selbstfakturierung) / Peppol AE TDD | B2B + B2G, freiwilliger Pilot ab Juli 2026, verpflichtend fuer Grosssteuerzahler ab Januar 2027 | Aktiv; validiert nur das CEN-EN16931-Basis-Schematron, PINT-AE-Jurisdiktions-Overlay und TDD-Validierung noch nicht verfuegbar |
 
 ## Installation
 
