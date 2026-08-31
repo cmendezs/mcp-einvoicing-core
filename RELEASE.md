@@ -35,6 +35,30 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.28.0] - 2026-08-31
+#### Fixed
+- `exceptions.py`: `PlatformError` now accepts and stores an optional
+  `response_body: bytes | None` (default `None`, fully backward-compatible — every
+  existing call site in this repo uses keyword args). `http_client.py`'s
+  `_extract_platform_error()` populates it from `response.content`. Previously the raw
+  error body was discarded after `_parse_error_body()` extracted a summary
+  `message`/`error_code`, so a country adapter's own re-parse of a platform-specific
+  error schema (e.g. `mcp-ksef-pl`'s `_raise_ksef_error`, keyed on `exc.response_body`)
+  was unreachable dead code. Found during the KSeF API v2.1.1→v2.7.1 delta review,
+  `mcp-ksef-pl` regulatory-watch issue [#10](https://github.com/cmendezs/mcp-ksef-pl/issues/10).
+
+### [1.27.0] - 2026-08-31
+#### Added
+- `xml_utils.py`: `sanitize_xml_text()` and `DiscouragedCharacterError` — strip or
+  reject W3C XML 1.0 Appendix C "discouraged" code points (C1 controls + DEL,
+  U+007F-U+009F; noncharacters U+FDD0-U+FDEF and U+nFFFE/U+nFFFF in every plane)
+  before a field value is embedded via `xml_escape()`. These pass the Char production
+  and XSD validation, so `xml_escape()` alone does not filter them, but a receiving
+  platform can enforce a stricter policy and reject an otherwise schema-valid document.
+  Opt-in and additive; no effect on existing callers. Surfaced by the KSeF API v2.4.0
+  discouraged-Unicode rejection (PRD-live since 2026-07-16); consumed by
+  `mcp-ksef-pl` v0.8.3.
+
 ### [1.26.0] - 2026-08-30
 #### Fixed
 - `wire_formats.py`: `EN16931UBLSerializer._build_party` now emits `cac:Party` children
