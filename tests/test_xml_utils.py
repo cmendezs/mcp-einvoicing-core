@@ -10,6 +10,7 @@ from lxml import etree
 
 from mcp_einvoicing_core.xml_utils import (
     MAX_XML_BYTES,
+    DiscouragedCharacterError,
     filter_empty_values,
     format_amount,
     format_error,
@@ -17,6 +18,7 @@ from mcp_einvoicing_core.xml_utils import (
     resolve_xml_input,
     safe_fromstring,
     safe_parser,
+    sanitize_xml_text,
     validate_date_iso,
     validate_iban,
     xml_element,
@@ -300,3 +302,38 @@ class TestFilterEmptyValues:
 
     def test_scalar_passthrough(self) -> None:
         assert filter_empty_values(42) == 42
+
+
+class TestSanitizeXmlText:
+    def test_clean_text_passthrough(self) -> None:
+        assert sanitize_xml_text("ACME Sp. z o.o.") == "ACME Sp. z o.o."
+
+    def test_reject_is_default_policy(self) -> None:
+        with pytest.raises(DiscouragedCharacterError):
+            sanitize_xml_text("bad\x85char")
+
+    def test_reject_c1_control_del(self) -> None:
+        with pytest.raises(DiscouragedCharacterError):
+            sanitize_xml_text("bad\x7fchar")
+
+    def test_reject_noncharacter(self) -> None:
+        with pytest.raises(DiscouragedCharacterError):
+            sanitize_xml_text("bad￾char")
+
+    def test_reject_plane1_noncharacter(self) -> None:
+        with pytest.raises(DiscouragedCharacterError):
+            sanitize_xml_text("bad\U0001ffffchar")
+
+    def test_strip_removes_offending_char(self) -> None:
+        assert sanitize_xml_text("bad\x85char", policy="strip") == "badchar"
+
+    def test_strip_keeps_clean_text_unchanged(self) -> None:
+        assert sanitize_xml_text("clean text", policy="strip") == "clean text"
+
+    def test_invalid_policy_raises_value_error(self) -> None:
+        with pytest.raises(ValueError, match="policy"):
+            sanitize_xml_text("text", policy="bogus")
+
+    def test_error_message_includes_codepoint(self) -> None:
+        with pytest.raises(DiscouragedCharacterError, match="U\\+0085"):
+            sanitize_xml_text("bad\x85char")

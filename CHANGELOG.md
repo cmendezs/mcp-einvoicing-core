@@ -11,6 +11,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.27.0] - 2026-08-31
+
+### Added
+- `xml_utils.py`: `sanitize_xml_text()` and `DiscouragedCharacterError` — strip
+  or reject W3C XML 1.0 Appendix C "discouraged" code points (C1 controls +
+  DEL, U+007F-U+009F; noncharacters U+FDD0-U+FDEF and U+nFFFE/U+nFFFF in every
+  plane) before a field value is embedded via `xml_escape()`. These code
+  points pass the Char production and XSD validation, so `xml_escape()` alone
+  does not filter them, but a receiving platform can enforce a stricter policy
+  and reject an otherwise schema-valid document. Opt-in and additive; no
+  effect on existing callers. Surfaced by the KSeF API v2.4.0 discouraged-
+  Unicode rejection (PRD since 2026-07-16); see PL-DISC-1 in
+  `mcp-ksef-pl`'s `audit-history.md` for the consuming change.
+
+---
+
 ## [1.25.0] - 2026-08-29
 
 ### Added

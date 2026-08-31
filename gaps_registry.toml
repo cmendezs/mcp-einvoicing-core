@@ -25,3 +25,8 @@ resolved_in = "1.14.0"
 #   directly; it can switch validate_facturx to load_schematron_validator() once its own
 #   package is next touched, to get the XSLT2 backend without needing a version-dispatch
 #   helper of its own.
+
+[gap."core.xml_utils.discouraged_char_sanitization"]
+description = "xml_escape() only neutralizes the 5 XML metacharacters; it does not filter W3C XML 1.0 Appendix C 'discouraged' code points (C1 controls + DEL U+007F-U+009F, noncharacters U+FDD0-U+FDEF and U+nFFFE/U+nFFFF). These are valid per the Char production and pass XSD validation, but KSeF API v2.4.0 (PRD-live 2026-07-16) rejects documents containing them. mcp-ksef-pl had no local workaround (field values were inserted verbatim via xml_escape() in generator.py) — this was a live-compliance gap, not a workaround needing removal. Resolved by adding sanitize_xml_text()/DiscouragedCharacterError to xml_utils.py. Tracked in context-library/audit-history.md as PL-DISC-1."
+resolved = true
+resolved_in = "1.27.0"

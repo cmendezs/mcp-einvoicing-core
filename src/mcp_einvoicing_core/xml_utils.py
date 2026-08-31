@@ -246,6 +246,81 @@ def xml_escape(text: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Discouraged/noncharacter code point sanitization
+# ---------------------------------------------------------------------------
+#
+# [DECISION 2026-08-31, PL-DISC-1] W3C XML 1.0 Appendix C lists a set of code
+# points that pass the Char production (and therefore XSD schema validation)
+# but are marked "SHOULD NOT be used": C1 controls + DEL (U+007F-U+009F),
+# noncharacters U+FDD0-U+FDEF, and the last two code points of every plane
+# (U+nFFFE/U+nFFFF). xml_escape() only neutralizes the five XML metacharacters
+# and does not filter these — a receiving platform with a stricter policy than
+# the XSD (e.g. KSeF API v2.4.0+) can reject a schema-valid document that
+# contains them. Surfaced first by mcp-ksef-pl; kept here rather than as a
+# country-package workaround since any EN 16931 or non-EN 16931 emitter that
+# accepts free-text fields (names, addresses, notes) can hit the same class
+# of receiving-platform rejection.
+
+_DISCOURAGED_XML_RANGES: tuple[tuple[int, int], ...] = (
+    (0x007F, 0x009F),
+    (0xFDD0, 0xFDEF),
+)
+
+
+def _is_discouraged_xml_char(codepoint: int) -> bool:
+    if any(lo <= codepoint <= hi for lo, hi in _DISCOURAGED_XML_RANGES):
+        return True
+    return (codepoint & 0xFFFE) == 0xFFFE  # U+nFFFE / U+nFFFF in every plane 0-16
+
+
+class DiscouragedCharacterError(ValueError):
+    """sanitize_xml_text found a W3C-discouraged code point under policy='reject'."""
+
+
+def sanitize_xml_text(text: str, *, policy: str = "reject") -> str:
+    """Remove or reject W3C XML 1.0 Appendix C "discouraged" code points.
+
+    These characters are valid per the XML 1.0 Char production and pass XSD
+    schema validation, but some receiving platforms apply a stricter policy
+    and reject documents containing them. Call this before xml_escape() on
+    any field value where the target platform is known to enforce such a
+    policy; it is opt-in and has no effect on callers that do not need it.
+
+    Args:
+        text: Field value about to be embedded in an XML text node.
+        policy: ``'reject'`` (default) raises DiscouragedCharacterError on the
+            first match. Preferred for legally-binding documents (invoices)
+            where silently mutating content is unacceptable. ``'strip'``
+            removes the offending code points instead.
+
+    Returns:
+        *text* unchanged (no discouraged code points present, or policy is
+        ``'reject'`` and none were found), or *text* with discouraged code
+        points removed (policy=``'strip'``).
+
+    Raises:
+        DiscouragedCharacterError: policy=``'reject'`` and *text* contains a
+            discouraged code point.
+        ValueError: *policy* is neither ``'reject'`` nor ``'strip'``.
+
+    >>> sanitize_xml_text('ACME Sp. z o.o.')
+    'ACME Sp. z o.o.'
+    >>> sanitize_xml_text('bad\\x85char', policy='strip')
+    'badchar'
+    """
+    if policy not in ("reject", "strip"):
+        raise ValueError(f"policy must be 'reject' or 'strip', got {policy!r}")
+    offending = [c for c in text if _is_discouraged_xml_char(ord(c))]
+    if not offending:
+        return text
+    if policy == "reject":
+        raise DiscouragedCharacterError(
+            f"text contains W3C-discouraged code point U+{ord(offending[0]):04X}"
+        )
+    return "".join(c for c in text if not _is_discouraged_xml_char(ord(c)))
+
+
+# ---------------------------------------------------------------------------
 # Error response (standardized across FR and IT)
 # ---------------------------------------------------------------------------
 
