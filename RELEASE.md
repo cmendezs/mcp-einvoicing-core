@@ -35,6 +35,13 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.28.1] - 2026-08-31
+#### Fixed
+- `mcp_einvoicing_core/__init__.py`: `__version__` had drifted to `"1.13.1"` while
+  `pyproject.toml`/`server.json` were already at `1.28.0` — no interface change, string
+  literal only. Added `tests/test_metadata.py` to assert `__version__` and `server.json`
+  stay in sync with `pyproject.toml` going forward.
+
 ### [1.28.0] - 2026-08-31
 #### Fixed
 - `exceptions.py`: `PlatformError` now accepts and stores an optional
