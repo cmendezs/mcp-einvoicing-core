@@ -35,6 +35,15 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.29.0] - 2026-09-01
+#### Added
+- `TaxIdentifier.validate_mx_rfc()`: format-only validation of a Mexican RFC (Registro
+  Federal de Contribuyentes) per the normative `t_RFC` simple type in SAT's `tdCFDI.xsd`
+  (CFDI 4.0 shared types) — 3-4 letters (or `&`/`Ñ`) + `YYMMDD` date + 3-character
+  homoclave, 12 (moral) or 13 (física) characters total. No homoclave check-digit
+  algorithm has a confirmed normative source, so format only is checked, following the
+  `validate_ae_trn` precedent. Step 0 of the `mcp-cfdi-mx` (Mexico, CFDI 4.0) scaffold.
+
 ### [1.28.1] - 2026-08-31
 #### Fixed
 - `mcp_einvoicing_core/__init__.py`: `__version__` had drifted to `"1.13.1"` while
