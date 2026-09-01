@@ -19,12 +19,20 @@ CAdESSignerConfig, CAdESSigner
     CAdES-BES (CMS/PKCS#7) attached signature for IT FatturaPA (.xml.p7m)
     and FR Chorus Pro. Requires the [xml-sign] optional extra.
 
+SelloDigitalSignerConfig, SelloDigitalSigner
+    MX CFDI 4.0 Sello Digital: SHA-256 digest of the cadena original,
+    RSA-PKCS#1v1.5-signed with the emisor's CSD private key, Base64-encoded.
+    Not an XML-embedded signature element like the other three signers —
+    populates the Comprobante's NoCertificado/Certificado/Sello attributes
+    directly. Requires the [xml-sign] optional extra.
+
 Used by:
   ES — Facturae 3.2.2 (Orden EHA/962/2007 signature policy)
   ES — TicketBAI (per-province policy OIDs: Álava, Gipuzkoa, Bizkaia)
   BR — NF-e/NFC-e (enveloped XML-DSig over infNFe, RSA-SHA1 per MOC 7.0
        Table 4-2; CT-e/NFS-e expected to reuse the same signer)
   IT — FatturaPA (CAdES-BES .xml.p7m or XAdES-BES .xml, per SDI spec v1.8.4 s2.1)
+  MX — CFDI 4.0 Sello Digital (Anexo 20 RMF, "Generación de sellos digitales")
   [NEED: FR Chorus Pro CAdES attachment path — confirm whether XAdES applies]
 """
 
@@ -67,8 +75,8 @@ class BaseDocumentSigner(ABC):
       properties (BR NF-e/NFC-e; CT-e/NFS-e expected to reuse)
     - ``CAdESSigner`` — CAdES-BES attached CMS/PKCS#7 signature
       (IT FatturaPA .xml.p7m; FR Chorus Pro PDF/A-3)
+    - ``SelloDigitalSigner`` — MX CFDI Sello Digital (RSA-SHA256 + base64)
     - [Future] ZATCASigner — ZATCA cryptographic stamp (HSM-backed, SA Phase 2)
-    - [Future] SelloDigitalSigner — MX CFDI Sello Digital (RSA-SHA256 + base64)
 
     All implementations must satisfy two invariants:
     1. ``sign(document)`` is idempotent for the same *document* + credential pair.
@@ -904,3 +912,331 @@ class CAdESSigner(BaseDocumentSigner):
         )
 
         return builder.sign(Encoding.DER, [pkcs7.PKCS7Options.Binary])
+
+
+# ---------------------------------------------------------------------------
+# MX — Sello Digital (CFDI 4.0)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class SelloDigitalSignerConfig:
+    """Configuration for MX CFDI Sello Digital signing.
+
+    Unlike ES/BR/IT, the CSD (Certificado de Sello Digital) is issued by SAT
+    as two *separate* DER-encoded files — a public certificate (``.cer``) and
+    an encrypted private key (``.key``) — not a combined PKCS#12 bundle.
+
+    Attributes:
+        cert_path: Path to the CSD's DER-encoded X.509 certificate (``.cer``).
+        key_path: Path to the CSD's encrypted private key (``.key``).
+            ``[Unverified]`` — no supplied SAT document confirms the exact
+            container format; this loader assumes an encrypted PKCS#8 DER
+            key, matching common third-party CFDI tooling. If SAT's own CSD
+            issuance documentation is later supplied, verify against it.
+        key_password: Passphrase protecting the private key. SAT-issued CSD
+            keys are always password-protected.
+        no_certificado: The CSD's 20-digit serial number, exactly as issued
+            in the SAT enrollment acknowledgment ("acuse"). ``[Unverified]``
+            — no supplied source documents an algorithm to derive this from
+            the certificate's ASN.1 serial number field, so it is not
+            derived automatically; supply it directly rather than trust an
+            unconfirmed byte-decoding step for a value that determines
+            whether a signed CFDI validates.
+        cadena_original_xslt_path: Path to the cadena original XSLT entry
+            point for the CFDI root document (e.g. ``cadenaoriginal_4_0.xslt``
+            from SAT's Anexo 20 bundle). Not bundled in core — SAT's XSLT
+            files are supplied by the calling country package.
+        xslt_include_paths: Maps a SAT include URL (as it appears in an
+            ``<xsl:include href="...">`` inside the entry-point stylesheet)
+            to a local file path. The entry-point stylesheet ``xsl:include``s
+            one fragment per CFDI complemento; only the fragments actually
+            reachable from the documents this signer processes need a real
+            local file here (e.g. the base ``utilerias.xslt`` helper
+            templates, and ``Pagos/Pagos20.xslt`` if Complemento de Pagos is
+            in scope).
+        stub_unresolved_includes: If True (default), any ``xsl:include`` URL
+            under ``http://www.sat.gob.mx/`` not listed in
+            ``xslt_include_paths`` resolves to an empty no-op stylesheet
+            instead of failing to compile or hitting the network. Safe for
+            complemento fragments that are never reached because the
+            document never contains that complemento — the corresponding
+            templates simply never match. Set False to fail loudly instead
+            if every include must be accounted for.
+        root_local_name: Local name of the element to seal. Defaults to
+            ``"Comprobante"``. The signer looks up this element with no
+            namespace prefix constraint (``.//{*}<root_local_name>`` or, if
+            it is the document root, the root element itself).
+    """
+
+    cert_path: str
+    key_path: str
+    key_password: str
+    no_certificado: str
+    cadena_original_xslt_path: str
+    xslt_include_paths: dict[str, str] = field(default_factory=dict)
+    stub_unresolved_includes: bool = True
+    root_local_name: str = "Comprobante"
+
+
+@dataclass
+class _CSDInfo:
+    """Parsed CSD material needed for Sello Digital construction."""
+
+    cert_der: bytes
+    private_key: object = field(repr=False)
+
+
+def _load_csd(cert_path: str, key_path: str, key_password: str) -> _CSDInfo:
+    """Load a SAT CSD (separate DER certificate + encrypted DER private key)."""
+    try:
+        from cryptography.hazmat.primitives.serialization import (  # noqa: PLC0415
+            load_der_private_key,
+        )
+    except ImportError as exc:
+        raise ImportError(
+            "cryptography>=42.0.0 is required for Sello Digital signing. "
+            "Install: pip install 'mcp-einvoicing-core[xml-sign]'"
+        ) from exc
+
+    with open(cert_path, "rb") as fh:
+        cert_der = fh.read()
+    with open(key_path, "rb") as fh:
+        key_der = fh.read()
+
+    private_key = load_der_private_key(key_der, password=key_password.encode())
+
+    return _CSDInfo(cert_der=cert_der, private_key=private_key)
+
+
+_STUB_XSLT = (
+    b'<?xml version="1.0" encoding="UTF-8"?>'
+    b'<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"/>'
+)
+
+
+class _SATIncludeResolver(etree.Resolver):
+    """Resolve ``xsl:include`` URLs in a SAT cadena original stylesheet.
+
+    Known URLs (``xslt_include_paths``) resolve to the supplied local file.
+    Any other ``http://www.sat.gob.mx/`` URL resolves to an empty no-op
+    stylesheet when ``stub_unresolved_includes`` is True (the complemento
+    fragment is never reached by a document that doesn't contain that
+    complemento), or raises when False.
+
+    ``lxml``'s ``Resolver.resolve()`` is called at runtime with a third
+    ``context`` argument that ``lxml-stubs`` does not declare (only
+    ``system_url``/``public_id``); the ``type: ignore[override]`` below is
+    for that stub gap, not a real signature mismatch. Likewise
+    ``resolve_filename``/``resolve_string`` are real ``etree.Resolver``
+    methods missing from the stubs.
+    """
+
+    def __init__(self, known: dict[str, str], stub_unresolved: bool) -> None:
+        super().__init__()
+        self._known = known
+        self._stub_unresolved = stub_unresolved
+
+    def resolve(  # type: ignore[override]
+        self, url: str, pubid: object, context: object
+    ) -> object:
+        if url in self._known:
+            return self.resolve_filename(self._known[url], context)  # type: ignore[attr-defined]
+        if url.startswith("http://www.sat.gob.mx/"):
+            if self._stub_unresolved:
+                return self.resolve_string(  # type: ignore[call-arg]
+                    _STUB_XSLT, context
+                )
+            raise ValueError(
+                f"Unresolved SAT cadena original include: {url!r}. Add it to "
+                "SelloDigitalSignerConfig.xslt_include_paths or set "
+                "stub_unresolved_includes=True."
+            )
+        return None
+
+
+def _compile_cadena_original_xslt(config: SelloDigitalSignerConfig) -> etree.XSLT:
+    """Compile the cadena original stylesheet with SAT includes resolved."""
+    parser = etree.XMLParser()
+    parser.resolvers.add(
+        _SATIncludeResolver(config.xslt_include_paths, config.stub_unresolved_includes)
+    )
+    tree = etree.parse(config.cadena_original_xslt_path, parser)
+    return etree.XSLT(tree)
+
+
+class SelloDigitalSigner(BaseDocumentSigner):
+    """Compute and embed a CFDI 4.0 Sello Digital (MX SAT).
+
+    Algorithm confirmed directly against SAT's Anexo 20 ("Generación de
+    sellos digitales"): SHA-2 256 digest of the cadena original, then
+    RSA-encrypt the digest with the emisor's CSD private key
+    (``RSAPrivateEncrypt`` in Anexo 20's terminology — PKCS#1 v1.5 padding,
+    the scheme this module already uses elsewhere via ``_sign_bytes``),
+    Base64-encoded. The cadena original is the XSLT-transformed
+    representation of the ``Comprobante`` element, computed by the caller's
+    supplied stylesheet, not reconstructed by field concatenation.
+
+    ``NoCertificado`` is part of the cadena original and must be set (via
+    ``config.no_certificado``) before ``sign()`` transforms the document.
+    ``Sello`` and ``Certificado`` are **not** part of the cadena original
+    (grep-confirmed against the supplied ``cadenaoriginal_4_0.xslt`` — the
+    template's attribute sequence includes ``NoCertificado`` but never
+    ``Sello`` or ``Certificado``) and are populated as pure output.
+
+    Example::
+
+        config = SelloDigitalSignerConfig(
+            cert_path="/path/to/csd.cer",
+            key_path="/path/to/csd.key",
+            key_password="secret",
+            no_certificado="30001000000500003416",
+            cadena_original_xslt_path="specs/cadenaoriginal_4_0.xslt",
+            xslt_include_paths={
+                "http://www.sat.gob.mx/sitio_internet/cfd/2/cadenaoriginal_2_0/utilerias.xslt":
+                    "specs/utilerias.xslt",
+                "http://www.sat.gob.mx/sitio_internet/cfd/Pagos/Pagos20.xslt":
+                    "specs/Pagos20.xslt",
+            },
+        )
+        signer = SelloDigitalSigner(config)
+        sealed_xml = signer.sign(unsealed_comprobante_xml_bytes)
+    """
+
+    def __init__(
+        self,
+        config: SelloDigitalSignerConfig,
+        *,
+        _preloaded_csd_info: _CSDInfo | None = None,
+    ) -> None:
+        self._config = config
+        self._csd_info: _CSDInfo | None = _preloaded_csd_info
+        self._transform: etree.XSLT | None = None
+
+    def load_credentials(self) -> None:
+        """Load the CSD certificate and private key into memory."""
+        self._csd_info = _load_csd(
+            self._config.cert_path, self._config.key_path, self._config.key_password
+        )
+
+    def _get_csd_info(self) -> _CSDInfo:
+        if self._csd_info is None:
+            self.load_credentials()
+        return self._csd_info  # type: ignore[return-value]
+
+    def _get_transform(self) -> etree.XSLT:
+        if self._transform is None:
+            self._transform = _compile_cadena_original_xslt(self._config)
+        return self._transform
+
+    def cleanup(self) -> None:
+        """Drop references to the private key and certificate material.
+
+        See :meth:`XAdESEPESSigner.cleanup` for the rationale. After
+        ``cleanup()``, the next ``sign()`` call reloads credentials from
+        disk via ``load_credentials()``.
+        """
+        self._csd_info = None
+
+    def _cadena_original(self, root: etree._Element) -> bytes:
+        result = self._get_transform()(root)
+        return str(result).encode("utf-8")
+
+    def sign(self, document: bytes) -> bytes:
+        """Return *document* with ``NoCertificado``/``Certificado``/``Sello`` set.
+
+        Args:
+            document: Well-formed CFDI XML containing a
+                ``config.root_local_name`` element (default ``Comprobante``).
+                Any pre-existing ``Sello``/``Certificado``/``NoCertificado``
+                attribute values are overwritten.
+
+        Returns:
+            UTF-8 XML document with ``NoCertificado``, ``Certificado`` and
+            ``Sello`` populated on the root element.
+
+        Raises:
+            ImportError: If ``cryptography`` is not installed.
+            ValueError: If the root element is missing, or the CSD files
+                are missing/invalid.
+        """
+        csd_info = self._get_csd_info()
+
+        root = safe_fromstring(document)
+        target = root if etree.QName(root).localname == self._config.root_local_name else None
+        if target is None:
+            target = root.find(f".//{{*}}{self._config.root_local_name}")
+        if target is None:
+            raise ValueError(f"No <{self._config.root_local_name}> element found in document")
+
+        target.set("NoCertificado", self._config.no_certificado)
+
+        cadena_original = self._cadena_original(target)
+        signature = _sign_bytes(csd_info.private_key, cadena_original, "sha256")
+
+        target.set("Certificado", base64.b64encode(csd_info.cert_der).decode())
+        target.set("Sello", base64.b64encode(signature).decode())
+
+        return etree.tostring(root, xml_declaration=True, encoding="UTF-8")
+
+    def verify(self, signed_document: bytes) -> bool:
+        """Return True if the embedded ``Sello`` is a valid signature.
+
+        Recomputes the cadena original from *signed_document* (via the same
+        stylesheet ``sign()`` uses — ``Sello`` is not part of the cadena
+        original, so its presence does not affect the recomputed string) and
+        verifies it against the embedded ``Sello`` using the public key
+        extracted from the embedded ``Certificado``.
+
+        Args:
+            signed_document: Signed CFDI XML bytes, as returned by ``sign()``.
+
+        Returns:
+            True if the signature is cryptographically valid.
+
+        Raises:
+            ImportError: If ``cryptography`` is not installed.
+            ValueError: If the root element, ``Sello``, or ``Certificado``
+                attribute is missing.
+        """
+        try:
+            from cryptography.exceptions import InvalidSignature  # noqa: PLC0415
+            from cryptography.hazmat.primitives import hashes  # noqa: PLC0415
+            from cryptography.hazmat.primitives.asymmetric import padding, rsa  # noqa: PLC0415
+            from cryptography.x509 import load_der_x509_certificate  # noqa: PLC0415
+        except ImportError as exc:
+            raise ImportError(
+                "cryptography>=42.0.0 is required for Sello Digital verification. "
+                "Install: pip install 'mcp-einvoicing-core[xml-sign]'"
+            ) from exc
+
+        root = safe_fromstring(signed_document)
+        target = root if etree.QName(root).localname == self._config.root_local_name else None
+        if target is None:
+            target = root.find(f".//{{*}}{self._config.root_local_name}")
+        if target is None:
+            raise ValueError(f"No <{self._config.root_local_name}> element found in document")
+
+        sello_b64 = target.get("Sello")
+        certificado_b64 = target.get("Certificado")
+        if not sello_b64:
+            raise ValueError("Document has no 'Sello' attribute to verify")
+        if not certificado_b64:
+            raise ValueError("Document has no 'Certificado' attribute to verify against")
+
+        signature = base64.b64decode(sello_b64)
+        cert = load_der_x509_certificate(base64.b64decode(certificado_b64))
+        public_key = cert.public_key()
+        if not isinstance(public_key, rsa.RSAPublicKey):
+            raise ValueError(
+                f"Certificado contains a {type(public_key).__name__}, not an RSA public "
+                "key — a CFDI CSD certificate is always RSA."
+            )
+
+        cadena_original = self._cadena_original(target)
+
+        try:
+            public_key.verify(signature, cadena_original, padding.PKCS1v15(), hashes.SHA256())
+        except InvalidSignature:
+            return False
+        return True

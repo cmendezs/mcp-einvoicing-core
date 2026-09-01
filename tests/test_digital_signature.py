@@ -19,6 +19,8 @@ from mcp_einvoicing_core.digital_signature import (
     _XADES,
     CAdESSigner,
     CAdESSignerConfig,
+    SelloDigitalSigner,
+    SelloDigitalSignerConfig,
     XAdESEPESSigner,
     XAdESSignerConfig,
     XMLDSigSigner,
@@ -415,3 +417,199 @@ class TestCAdESSigner:
         original = FATTURA_XML[:]
         signer.sign(FATTURA_XML)
         assert FATTURA_XML == original
+
+
+# ---------------------------------------------------------------------------
+# MX — Sello Digital
+#
+# The fixtures below are synthetic (not SAT's actual cadena original
+# stylesheet — that file is copyrighted SAT material that lives only in
+# mcp-cfdi-mx/specs/, exercised by that package's own tests). They mimic the
+# same structural pattern confirmed against the supplied Anexo 20 bundle:
+# a "Requerido" helper in an included utility stylesheet, and one additional
+# include that a document referencing an "extra" complemento would need.
+# ---------------------------------------------------------------------------
+
+
+def _generate_test_csd(cert_path: Path, key_path: Path, password: bytes = b"test") -> None:
+    """Write a self-signed DER cert + encrypted PKCS#8 DER key (MX CSD shape)."""
+    from cryptography import x509
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.x509.oid import NameOID
+
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    subject = issuer = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "Test CSD")])
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(datetime.datetime.now(datetime.UTC))
+        .not_valid_after(datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=365))
+        .sign(key, hashes.SHA256())
+    )
+    cert_path.write_bytes(cert.public_bytes(serialization.Encoding.DER))
+    key_path.write_bytes(
+        key.private_bytes(
+            encoding=serialization.Encoding.DER,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.BestAvailableEncryption(password),
+        )
+    )
+
+
+_TEST_UTILERIAS_XSLT = b"""<?xml version="1.0" encoding="UTF-8"?>
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+  <xsl:template name="Requerido">
+    <xsl:param name="valor"/>|<xsl:value-of select="normalize-space(string($valor))"/>
+  </xsl:template>
+</xsl:stylesheet>
+"""
+
+_TEST_CADENA_ORIGINAL_XSLT_TEMPLATE = b"""<?xml version="1.0" encoding="UTF-8"?>
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+  <xsl:include href="http://example.test/utilerias.xslt"/>
+  <xsl:include href="http://www.sat.gob.mx/sitio_internet/cfd/unused/unused_complemento.xslt"/>
+  <xsl:output method="text" encoding="UTF-8"/>
+  <xsl:template match="/Comprobante">|<xsl:call-template name="Requerido">
+      <xsl:with-param name="valor" select="./@NoCertificado"/>
+    </xsl:call-template>|<xsl:call-template name="Requerido">
+      <xsl:with-param name="valor" select="./@Total"/>
+    </xsl:call-template>||</xsl:template>
+</xsl:stylesheet>
+"""
+
+MX_SAMPLE_XML = b'<?xml version="1.0" encoding="UTF-8"?><Comprobante Total="100.00"/>'
+
+
+@pytest.fixture()
+def csd_paths(tmp_path: Path) -> tuple[Path, Path]:
+    cert_path = tmp_path / "csd.cer"
+    key_path = tmp_path / "csd.key"
+    _generate_test_csd(cert_path, key_path, password=b"test")
+    return cert_path, key_path
+
+
+@pytest.fixture()
+def cadena_original_xslt_path(tmp_path: Path) -> Path:
+    utilerias_path = tmp_path / "utilerias.xslt"
+    utilerias_path.write_bytes(_TEST_UTILERIAS_XSLT)
+    entry_path = tmp_path / "cadenaoriginal_test.xslt"
+    entry_path.write_bytes(_TEST_CADENA_ORIGINAL_XSLT_TEMPLATE)
+    return entry_path
+
+
+def _sello_config(
+    csd_paths: tuple[Path, Path], cadena_original_xslt_path: Path
+) -> SelloDigitalSignerConfig:
+    cert_path, key_path = csd_paths
+    return SelloDigitalSignerConfig(
+        cert_path=str(cert_path),
+        key_path=str(key_path),
+        key_password="test",
+        no_certificado="30001000000500003416",
+        cadena_original_xslt_path=str(cadena_original_xslt_path),
+        xslt_include_paths={
+            "http://example.test/utilerias.xslt": str(
+                cadena_original_xslt_path.parent / "utilerias.xslt"
+            ),
+        },
+    )
+
+
+class TestSelloDigitalSigner:
+    def test_sign_populates_attributes(
+        self, csd_paths: tuple[Path, Path], cadena_original_xslt_path: Path
+    ) -> None:
+        config = _sello_config(csd_paths, cadena_original_xslt_path)
+        signer = SelloDigitalSigner(config)
+        result = signer.sign(MX_SAMPLE_XML)
+
+        root = etree.fromstring(result)
+        assert root.get("NoCertificado") == "30001000000500003416"
+        assert root.get("Certificado")
+        assert root.get("Sello")
+        base64.b64decode(root.get("Certificado"))
+        base64.b64decode(root.get("Sello"))
+
+    def test_sign_verify_roundtrip(
+        self, csd_paths: tuple[Path, Path], cadena_original_xslt_path: Path
+    ) -> None:
+        config = _sello_config(csd_paths, cadena_original_xslt_path)
+        signer = SelloDigitalSigner(config)
+        signed = signer.sign(MX_SAMPLE_XML)
+        assert SelloDigitalSigner(config).verify(signed) is True
+
+    def test_verify_rejects_tampered_document(
+        self, csd_paths: tuple[Path, Path], cadena_original_xslt_path: Path
+    ) -> None:
+        config = _sello_config(csd_paths, cadena_original_xslt_path)
+        signer = SelloDigitalSigner(config)
+        signed = signer.sign(MX_SAMPLE_XML)
+        tampered = signed.replace(b'Total="100.00"', b'Total="999.00"')
+        assert SelloDigitalSigner(config).verify(tampered) is False
+
+    def test_unresolved_include_is_stubbed_by_default(
+        self, csd_paths: tuple[Path, Path], cadena_original_xslt_path: Path
+    ) -> None:
+        # The config in _sello_config only maps utilerias.xslt; the second
+        # include (unused_complemento.xslt) is never mapped and must still
+        # compile via the stub resolver since sign() never invokes it.
+        config = _sello_config(csd_paths, cadena_original_xslt_path)
+        result = SelloDigitalSigner(config).sign(MX_SAMPLE_XML)
+        assert etree.fromstring(result).get("Sello")
+
+    def test_unresolved_include_raises_when_stubbing_disabled(
+        self, csd_paths: tuple[Path, Path], cadena_original_xslt_path: Path
+    ) -> None:
+        config = _sello_config(csd_paths, cadena_original_xslt_path)
+        config.stub_unresolved_includes = False
+        with pytest.raises(ValueError, match="Unresolved SAT cadena original include"):
+            SelloDigitalSigner(config).sign(MX_SAMPLE_XML)
+
+    def test_no_certificado_not_derived_from_cert(
+        self, csd_paths: tuple[Path, Path], cadena_original_xslt_path: Path
+    ) -> None:
+        # NoCertificado must come from config, not be silently derived from
+        # the certificate's ASN.1 serial number (no confirmed algorithm).
+        config = _sello_config(csd_paths, cadena_original_xslt_path)
+        config.no_certificado = "99999999999999999999"
+        result = SelloDigitalSigner(config).sign(MX_SAMPLE_XML)
+        assert etree.fromstring(result).get("NoCertificado") == "99999999999999999999"
+
+    def test_missing_root_element_raises(
+        self, csd_paths: tuple[Path, Path], cadena_original_xslt_path: Path
+    ) -> None:
+        config = _sello_config(csd_paths, cadena_original_xslt_path)
+        with pytest.raises(ValueError, match="No <Comprobante> element"):
+            SelloDigitalSigner(config).sign(b"<Otro/>")
+
+    def test_verify_missing_sello_raises(
+        self, csd_paths: tuple[Path, Path], cadena_original_xslt_path: Path
+    ) -> None:
+        config = _sello_config(csd_paths, cadena_original_xslt_path)
+        with pytest.raises(ValueError, match="no 'Sello' attribute"):
+            SelloDigitalSigner(config).verify(MX_SAMPLE_XML)
+
+    def test_cleanup_forces_reload(
+        self, csd_paths: tuple[Path, Path], cadena_original_xslt_path: Path
+    ) -> None:
+        config = _sello_config(csd_paths, cadena_original_xslt_path)
+        signer = SelloDigitalSigner(config)
+        signer.sign(MX_SAMPLE_XML)
+        assert signer._csd_info is not None
+        signer.cleanup()
+        assert signer._csd_info is None
+        result = signer.sign(MX_SAMPLE_XML)
+        assert len(result) > 0
+
+    def test_sign_is_not_mutating(
+        self, csd_paths: tuple[Path, Path], cadena_original_xslt_path: Path
+    ) -> None:
+        config = _sello_config(csd_paths, cadena_original_xslt_path)
+        signer = SelloDigitalSigner(config)
+        original = MX_SAMPLE_XML[:]
+        signer.sign(MX_SAMPLE_XML)
+        assert MX_SAMPLE_XML == original

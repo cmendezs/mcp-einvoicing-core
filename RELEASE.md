@@ -35,6 +35,24 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.30.0] - 2026-09-01
+#### Added
+- `SelloDigitalSigner` / `SelloDigitalSignerConfig` (`digital_signature.py`): MX CFDI 4.0
+  Sello Digital signing, promoted from the module's own forward-declared `[Future]` entry.
+  SHA-256 digest of the cadena original, RSA-PKCS#1v1.5-signed with the emisor's CSD
+  private key, Base64-encoded — algorithm confirmed directly against SAT's Anexo 20
+  ("Generación de sellos digitales"). Unlike the ES/BR/IT signers, the CSD is a separate
+  DER certificate (`.cer`) + encrypted PKCS#8 DER key (`.key`), not a PKCS#12 bundle, so a
+  dedicated `_load_csd()` loader was added. `NoCertificado` is taken from
+  `config.no_certificado` rather than derived from the certificate's ASN.1 serial number —
+  no supplied SAT source confirms that derivation, so it is not guessed. The signer compiles
+  the caller-supplied cadena original XSLT with a custom `xsl:include` resolver: known SAT
+  include URLs map to caller-supplied local files (`xslt_include_paths`), any other
+  `sat.gob.mx` include stubs to a no-op stylesheet by default (safe — those complemento
+  fragments are only reachable when the document contains that complemento). `sign()`/
+  `verify()` both round-trip through the same XSLT so a tampered document fails to verify.
+  Step 0 (second core change) of the `mcp-cfdi-mx` (Mexico, CFDI 4.0) scaffold.
+
 ### [1.29.0] - 2026-09-01
 #### Added
 - `TaxIdentifier.validate_mx_rfc()`: format-only validation of a Mexican RFC (Registro

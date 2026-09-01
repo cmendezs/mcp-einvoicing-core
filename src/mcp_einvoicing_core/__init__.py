@@ -49,6 +49,8 @@ from mcp_einvoicing_core.digital_signature import (
     BaseDocumentSigner,
     CAdESSigner,
     CAdESSignerConfig,
+    SelloDigitalSigner,
+    SelloDigitalSignerConfig,
     XAdESEPESSigner,
     XAdESSignerConfig,
     XMLDSigSigner,
@@ -240,7 +242,7 @@ from mcp_einvoicing_core.xml_utils import (
     xml_optional,
 )
 
-__version__ = "1.29.0"
+__version__ = "1.30.0"
 
 __all__ = [
     # Archive provider
@@ -467,6 +469,8 @@ __all__ = [
     "XAdESEPESSigner",
     "XMLDSigSignerConfig",
     "XMLDSigSigner",
+    "SelloDigitalSignerConfig",
+    "SelloDigitalSigner",
     "load_certificate_der",
     # Audit infrastructure (mcp-einvoicing-core[audit] optional extra)
     "DEFAULT_CORE_MODULES",
