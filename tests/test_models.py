@@ -402,3 +402,47 @@ class TestValidateSgUen:
         ok, error = TaxIdentifier.validate_sg_uen("R16FC0121D")
         assert ok is False
         assert "check digit" in error
+
+
+class TestValidateMxRfc:
+    """Format-only checks per validate_mx_rfc()'s docstring — the homoclave
+    check-character algorithm has no confirmed normative source, so these
+    tests exercise length/character-class/date-plausibility only."""
+
+    def test_valid_persona_fisica(self) -> None:
+        # SAT's own documented generic RFC for "público en general" (13 chars).
+        ok, error = TaxIdentifier.validate_mx_rfc("XAXX010101000")
+        assert ok is True
+        assert error == ""
+
+    def test_valid_persona_moral(self) -> None:
+        ok, error = TaxIdentifier.validate_mx_rfc("AAA010101AA1")
+        assert ok is True
+        assert error == ""
+
+    def test_ampersand_and_enye_allowed_in_prefix(self) -> None:
+        ok, error = TaxIdentifier.validate_mx_rfc("AÑ&010101AA1")
+        assert ok is True
+        assert error == ""
+
+    def test_lowercase_is_accepted(self) -> None:
+        ok, error = TaxIdentifier.validate_mx_rfc("xaxx010101000")
+        assert ok is True
+        assert error == ""
+
+    def test_wrong_length_rejected(self) -> None:
+        ok, error = TaxIdentifier.validate_mx_rfc("AAA0101")
+        assert ok is False
+        assert "12 or 13" in error
+
+    def test_invalid_month_rejected(self) -> None:
+        ok, error = TaxIdentifier.validate_mx_rfc("AAA011301AA1")
+        assert ok is False
+
+    def test_invalid_day_rejected(self) -> None:
+        ok, error = TaxIdentifier.validate_mx_rfc("AAA010132AA1")
+        assert ok is False
+
+    def test_homoclave_last_char_must_be_digit_or_a(self) -> None:
+        ok, error = TaxIdentifier.validate_mx_rfc("AAA010101AAB")
+        assert ok is False

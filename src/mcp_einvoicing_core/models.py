@@ -772,6 +772,49 @@ class TaxIdentifier(BaseModel):
             return False, f"Invalid check digit for other-entity UEN: expected {check!r}."
         return True, ""
 
+    # --- Mexico ---
+
+    @staticmethod
+    def validate_mx_rfc(identifier: str) -> tuple[bool, str]:
+        """Validate the format of a Mexican RFC (Registro Federal de Contribuyentes).
+
+        Format: 3-4 uppercase letters (or ``&``/``Ñ``) + 6-digit birth/incorporation
+        date (``YYMMDD``) + 3-character homoclave (2 alphanumerics + 1 digit or
+        ``A``), for a total length of 12 (moral / legal entities) or 13
+        (física / natural persons). Regex ported verbatim from the normative
+        ``t_RFC`` simple type in ``tdCFDI.xsd`` (SAT CFDI 4.0 shared types),
+        supplied by the user 2026-09-01
+        (`context-library/countries/mx.md`, "Party-identifier formats").
+
+        ``[NEED: homoclave check-digit algorithm]`` — no published normative
+        source for the RFC homoclave check-character algorithm was found in
+        any supplied SAT specification document as of 2026-09-01. Following
+        the ``validate_ae_trn`` precedent, this validator checks format only
+        (length, character classes, and calendar-plausible date component);
+        it does not and must not claim to verify a homoclave that has not
+        been confirmed from a primary source. If the algorithm is later
+        confirmed, extend this validator rather than fabricating one now.
+
+        Args:
+            identifier: Raw RFC string. Whitespace is stripped and the value
+                is upper-cased before checking.
+
+        Returns:
+            ``(True, "")`` on success, ``(False, error_message)`` on failure.
+        """
+        rfc = identifier.strip().upper()
+        pattern = (
+            r"^[A-Z&Ñ]{3,4}"
+            r"[0-9]{2}(0[1-9]|1[012])(0[1-9]|[12][0-9]|3[01])"
+            r"[A-Z0-9]{2}[0-9A]$"
+        )
+        if not re.match(pattern, rfc):
+            return False, (
+                "RFC must be 3-4 letters (or '&'/'Ñ'), a 6-digit YYMMDD date, "
+                "and a 3-character homoclave (12 or 13 characters total)."
+            )
+        return True, ""
+
 
 class PartyAddress(BaseModel):
     """Postal address of a party's registered office.
