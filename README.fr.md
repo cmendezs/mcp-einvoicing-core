@@ -23,7 +23,7 @@ dupliquer le code.
 
 | Module | Contenu |
 |--------|---------|
-| `models` | `InvoiceDocument`, `InvoiceParty`, `InvoiceLineItem`, `PartyAddress`, `VATSummary`, `PaymentTerms`, `DocumentValidationResult`, `TaxIdentifier` (validateurs de numeros fiscaux par pays : IT, FR, DE, BE, ES, PL, BR, AE, SG), `TaxIdValidationResult` |
+| `models` | `InvoiceDocument`, `InvoiceParty`, `InvoiceLineItem`, `PartyAddress`, `VATSummary`, `PaymentTerms`, `DocumentValidationResult`, `TaxIdentifier` (validateurs de numeros fiscaux par pays : IT, FR, DE, BE, ES, PL, BR, AE, SG, MX), `TaxIdValidationResult` |
 | `en16931` | `EN16931Invoice`, `EN16931Party`, `EN16931LineItem`, `EN16931Address`, `EN16931Tax`, `EN16931AllowanceCharge`, `EN16931PaymentMeans` |
 | `credit_note` | `EN16931CreditNote` (codes type 381/383/384/385), `BillingReference` |
 | `ubl_documents` | `BaseUBLDocument` — enveloppe partagée pour les familles de documents UBL/Peppol non-facture (Peppol Ordering, extensions juridictionnelles) ; explicitement en dehors de l'arbre `InvoiceDocument`/`EN16931Invoice` |
@@ -43,7 +43,7 @@ dupliquer le code.
 | `peppol.mls` | `parse_mls`, `validate_mls`, `build_mls` : modele et validation du Message Level Status (MLS) Peppol (Schematron fourni, extra optionnel `[xslt2]`) |
 | `schematron` | `SchematronValidator` (XSLT 1.0), `SaxonSchematronValidator` (XSLT 2.0/3.0, extra optionnel `[xslt2]`), `load_schematron_validator` (factory de selection automatique), `get_xslt_version`, `BaseStructuredValidator`, `BaseXSDValidator`, `XSDValidator` (validateur XSD concret generique), `BaseJSONValidator`, `ValidationMessage`, `ValidationResult` |
 | `schematron_artifacts` | `en16931_base_schematron_validator` (Schematron de base CEN EN16931 compile et fourni — regles `BR-*` uniquement, sans le surensemble Peppol ; extra optionnel `[xslt2]`) |
-| `digital_signature` | `BaseDocumentSigner`, `XAdESEPESSigner`, `XAdESSignerConfig`, `XMLDSigSigner`, `XMLDSigSignerConfig` |
+| `digital_signature` | `BaseDocumentSigner`, `XAdESEPESSigner`, `XAdESSignerConfig`, `XMLDSigSigner`, `XMLDSigSignerConfig`, `CAdESSigner`, `CAdESSignerConfig`, `SelloDigitalSigner`, `SelloDigitalSignerConfig`, `load_certificate_der` |
 | `endpoints` | `BaseEnvironmentEndpoints`, `EndpointSet`, `EndpointEnvironment` (routage d'URL sandbox/production) |
 | `routing` | `RoutingIdentifier` (validateurs statiques : `validate_de_leitweg`), `RoutingIdValidationResult` |
 | `profile_registry` | `ProfileEntry`, `ProfileRegistry`, `profile_registry`, `set_profile_registry` |

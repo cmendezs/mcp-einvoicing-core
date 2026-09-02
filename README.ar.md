@@ -22,7 +22,7 @@
 
 | الوحدة | المحتويات |
 |--------|----------|
-| `models` | `InvoiceDocument`, `InvoiceParty`, `InvoiceLineItem`, `PartyAddress`, `VATSummary`, `PaymentTerms`, `DocumentValidationResult`, `TaxIdentifier` (مدققات ارقام ضريبية حسب البلد: IT, FR, DE, BE, ES, PL, BR, AE, SG), `TaxIdValidationResult` |
+| `models` | `InvoiceDocument`, `InvoiceParty`, `InvoiceLineItem`, `PartyAddress`, `VATSummary`, `PaymentTerms`, `DocumentValidationResult`, `TaxIdentifier` (مدققات ارقام ضريبية حسب البلد: IT, FR, DE, BE, ES, PL, BR, AE, SG, MX), `TaxIdValidationResult` |
 | `en16931` | `EN16931Invoice`, `EN16931Party`, `EN16931LineItem`, `EN16931Address`, `EN16931Tax`, `EN16931AllowanceCharge`, `EN16931PaymentMeans` |
 | `credit_note` | `EN16931CreditNote` (رموز النوع 381/383/384/385), `BillingReference` |
 | `ubl_documents` | `BaseUBLDocument` — غلاف مشترك لعائلات مستندات UBL/Peppol غير الفاتورة (Peppol Ordering، امتدادات خاصة بالولاية القضائية)؛ خارج شجرة `InvoiceDocument`/`EN16931Invoice` صراحةً |
@@ -42,7 +42,7 @@
 | `peppol.mls` | `parse_mls`, `validate_mls`, `build_mls` — نموذج والتحقق من حالة مستوى الرسالة (MLS) الخاصة بـ Peppol (Schematron مرفق، اضافة اختيارية `[xslt2]`) |
 | `schematron` | `SchematronValidator` (XSLT 1.0), `SaxonSchematronValidator` (XSLT 2.0/3.0، اضافة اختيارية `[xslt2]`)، `load_schematron_validator` (اختيار تلقائي للمحرك)، `get_xslt_version`، `BaseStructuredValidator`، `BaseXSDValidator`، `XSDValidator` (مدقق XSD عام ملموس)، `BaseJSONValidator`، `ValidationMessage`، `ValidationResult` |
 | `schematron_artifacts` | `en16931_base_schematron_validator` (شيماترون CEN EN16931 الاساسي المجمع والمرفق — قواعد `BR-*` فقط، بدون تراكب Peppol؛ اضافة اختيارية `[xslt2]`) |
-| `digital_signature` | `BaseDocumentSigner`, `XAdESEPESSigner`, `XAdESSignerConfig`, `XMLDSigSigner`, `XMLDSigSignerConfig` |
+| `digital_signature` | `BaseDocumentSigner`, `XAdESEPESSigner`, `XAdESSignerConfig`, `XMLDSigSigner`, `XMLDSigSignerConfig`, `CAdESSigner`, `CAdESSignerConfig`, `SelloDigitalSigner`, `SelloDigitalSignerConfig`, `load_certificate_der` |
 | `endpoints` | `BaseEnvironmentEndpoints`, `EndpointSet`, `EndpointEnvironment` (توجيه عناوين URL للتجربة/الانتاج) |
 | `routing` | `RoutingIdentifier` (مدققات ثابتة: `validate_de_leitweg`), `RoutingIdValidationResult` |
 | `profile_registry` | `ProfileEntry`, `ProfileRegistry`, `profile_registry`, `set_profile_registry` |
