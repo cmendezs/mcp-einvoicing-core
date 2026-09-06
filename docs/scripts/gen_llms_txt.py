@@ -76,12 +76,13 @@ def _render(pyproject: dict[str, str], registry_id: str, repo: str) -> str:
     lines.append("")
     lines.append("## Docs")
     lines.append("")
-    lines.append(f"- [Overview]({base}): what this server does and how to install it")
-    lines.append(f"- [Installation]({base}installation/): install via uvx")
-    lines.append(f"- [Configuration]({base}configuration/): required environment variables")
+    lines.append(
+        f"- [Overview]({base}): the full README — what this server does, installation, configuration, available tools"
+    )
     lines.append(f"- [Tools]({base}tools/): full MCP tool reference")
-    lines.append(f"- [Standards]({base}standards/): standards and profiles implemented")
     lines.append(f"- [Changelog]({base}changelog/): version history")
+    lines.append(f"- [Contributing]({base}contributing/): dev setup and PR checklist")
+    lines.append(f"- [Security]({base}security/): vulnerability disclosure policy")
     lines.append("")
     lines.append("## Links")
     lines.append("")

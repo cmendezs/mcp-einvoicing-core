@@ -24,11 +24,11 @@ export default defineConfig({
       },
       sidebar: [
         { label: "Overview", link: "/" },
-        { label: "Installation", link: "/installation/" },
-        { label: "Configuration", link: "/configuration/" },
         { label: "Tools", link: "/tools/" },
-        { label: "Standards", link: "/standards/" },
         { label: "Changelog", link: "/changelog/" },
+        { label: "Contributing", link: "/contributing/" },
+        { label: "Security", link: "/security/" },
+        { label: "Code of Conduct", link: "/code-of-conduct/" },
       ],
       plugins: [
         starlightLlmsTxt({

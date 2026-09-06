@@ -1,7 +1,23 @@
 import { defineCollection } from "astro:content";
-import { docsLoader } from "@astrojs/starlight/loaders";
 import { docsSchema } from "@astrojs/starlight/schema";
+import { externalMarkdown } from "./loaders/external-md.mjs";
 
 export const collections = {
-  docs: defineCollection({ loader: docsLoader(), schema: docsSchema() }),
+  docs: defineCollection({
+    loader: externalMarkdown([
+      { id: "index", path: "../README.md" },
+      { id: "fr", path: "../README.fr.md" },
+      { id: "de", path: "../README.de.md" },
+      { id: "it", path: "../README.it.md" },
+      { id: "es", path: "../README.es.md" },
+      { id: "pt-br", path: "../README.pt-BR.md" },
+      { id: "ar", path: "../README.ar.md" },
+      { id: "changelog", path: "../CHANGELOG.md" },
+      { id: "tools", path: "TOOLS.md" },
+      { id: "contributing", path: "../CONTRIBUTING.md" },
+      { id: "security", path: "../SECURITY.md" },
+      { id: "code-of-conduct", path: "../CODE_OF_CONDUCT.md" },
+    ]),
+    schema: docsSchema(),
+  }),
 };
