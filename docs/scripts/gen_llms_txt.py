@@ -86,7 +86,9 @@ def _render(pyproject: dict[str, str], registry_id: str, repo: str) -> str:
     lines.append("## Links")
     lines.append("")
     lines.append(f"- [PyPI](https://pypi.org/project/{pyproject['name']}/)")
-    lines.append(f"- [MCP registry](https://registry.modelcontextprotocol.io/v0/servers?search={registry_id})")
+    lines.append(
+        f"- [MCP registry](https://registry.modelcontextprotocol.io/v0/servers?search={registry_id})"
+    )
     lines.append(f"- [GitHub](https://github.com/cmendezs/{repo})")
     return "\n".join(lines).rstrip() + "\n"
 
