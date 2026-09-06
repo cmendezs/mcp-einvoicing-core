@@ -45,6 +45,14 @@ jobs:
           cache: "npm"
           cache-dependency-path: docs/package-lock.json
 
+      - name: Upgrade npm
+        # The npm bundled with actions/setup-node's Node 22 image has a bug validating
+        # optional peer dependencies during `npm ci` (starlight-llms-txt nests an older
+        # @astrojs/mdx whose optional peer on @astrojs/markdown-satteri trips it up),
+        # confirmed during the mcp-einvoicing-core/mcp-einvoicing-be pilot rollout. npm 11
+        # (verified locally) does not have this bug.
+        run: npm install -g npm@11
+
       - name: Set up Python
         # tomllib (used by scripts/gen_llms_txt.py) is stdlib only from 3.11+.
         uses: actions/setup-python@v5
