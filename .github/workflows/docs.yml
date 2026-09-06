@@ -1,12 +1,3 @@
-# TEMPLATE — create-country docs-site scaffold.
-# Destination: .github/workflows/docs.yml (this file is copied out of docs/ into
-# .github/workflows/ — it does not stay inside docs/ itself).
-# No substitution needed: the theme drift check fetches the canonical docs-theme.css directly
-# from the root monorepo's raw GitHub URL, so no hash needs to be baked in or kept in sync here.
-# [Unverified] this assumes github.com/cmendezs/mcp-einvoicing is reachable (public, or this
-# repo's CI has read access) — confirm this at first rollout; see the docs-site-template.md
-# "Theme (do not fork)" section.
-# Delete this comment block after copying.
 name: Docs
 
 on:
@@ -39,15 +30,13 @@ jobs:
       - name: Theme drift check
         # Fails the build if this repo's docs-theme.css has diverged from the canonical copy
         # in the root monorepo — see context-library/decisions/docs-site.md ("no per-repo
-        # recoloring") and docs-site-template.md ("Theme (do not fork)").
+        # recoloring") and docs-site-template.md ("Theme (do not fork)"). The expected hash is
+        # embedded here (not fetched live) because cmendezs/mcp-einvoicing is a private repo.
+        # Update the literal hash below, in every repo's docs.yml, whenever the canonical
+        # docs-theme.css intentionally changes.
         run: |
-          curl -fsSL -o /tmp/canonical-docs-theme.css \
-            https://raw.githubusercontent.com/cmendezs/mcp-einvoicing/main/.claude/skills/create-country/templates/docs/src/styles/docs-theme.css
-          if ! diff -q /tmp/canonical-docs-theme.css docs/src/styles/docs-theme.css; then
-            echo "::error::docs/src/styles/docs-theme.css has diverged from the canonical theme in cmendezs/mcp-einvoicing. Do not fork the theme per repo — update the canonical file instead."
-            exit 1
-          fi
-          echo "Theme OK: matches canonical docs-theme.css"
+          echo "e5eb0d3508e075db1260a2c7eefb9807bf0c10dac59830d1f5f9dd1587494779  docs/src/styles/docs-theme.css" | shasum -a 256 -c - \
+            || { echo "::error::docs/src/styles/docs-theme.css has diverged from the canonical theme in cmendezs/mcp-einvoicing. Do not fork the theme per repo — update the canonical file instead."; exit 1; }
 
       - name: Set up Node
         uses: actions/setup-node@v4
