@@ -8,6 +8,23 @@
  * .github/workflows/docs.yml runs a drift check against this file's hash; edit the source here,
  * never a repo's local copy.
  *
+ * TOKEN MODEL — read before editing: Starlight's `--sl-color-white` / `--sl-color-black` are
+ * NOT literal colors. They are theme-relative roles: `white` is the highest-contrast
+ * foreground (headings, sidebar links) and `black` is the page background — Starlight's own
+ * light-mode override SWAPS them (white becomes a dark value, black becomes a light value), and
+ * nearly everything else (--sl-color-bg, --sl-color-text, --sl-color-bg-nav,
+ * --sl-color-bg-sidebar, hairlines, even the search button) derives from white/black/the
+ * gray-1..7 ramp rather than being set directly. An earlier version of this file set
+ * `--sl-color-white`/`--sl-color-black` as if they were literal colors (white=#fff-ish,
+ * black=#000-ish) in BOTH themes; because this stylesheet is unlayered and correctly beats
+ * Starlight's own layered CSS, that mistake didn't just get overridden — it actively broke
+ * every page (invisible headings, invisible sidebar links, a black search button in light
+ * mode), confirmed live on mcp-einvoicing-core and mcp-einvoicing-be. Only ever set
+ * `--sl-color-white`, `--sl-color-gray-1` through `--sl-color-gray-7`, `--sl-color-black`, and
+ * the three `--sl-color-accent*` tokens here — do not set --sl-color-bg / --sl-color-text /
+ * --sl-color-bg-nav / etc. directly; they inherit correctly from the tokens above once those
+ * are right.
+ *
  * Palette: WCAG 2.1 AA. Violet-700 on white (light) and violet-400 on deep-slate (dark) both meet
  * AA contrast for the accent role.
  */
@@ -15,80 +32,56 @@
 :root {
   --sl-font: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
-  /* Light mode (default) */
-  --sl-color-bg: #f8fafc;
-  --sl-color-bg-nav: #ffffff;
-  --sl-color-bg-sidebar: #f8fafc;
-  --sl-color-bg-inline-code: #ffffff;
-  --sl-color-black: #0f172a;
-  --sl-color-white: #ffffff;
-  --sl-color-text: #0f172a;
-  --sl-color-text-accent: #6d28d9;
-  --sl-color-text-invert: #ffffff;
+  /* Light mode (default). Starlight's ramp runs darkest (white) to lightest (black) in light
+     mode: white/gray-1/gray-2 carry primary text (Slate 900), gray-3/gray-4 carry muted text
+     (Slate 600/500), gray-5/gray-6 carry borders (Slate 300/200), gray-7 is the nav/surface
+     color (White), and black is the page background (Slate 50). */
+  --sl-color-white: #0f172a;
   --sl-color-gray-1: #0f172a;
-  --sl-color-gray-2: #1e293b;
-  --sl-color-gray-3: #334155;
-  --sl-color-gray-4: #475569;
-  --sl-color-gray-5: #94a3b8;
+  --sl-color-gray-2: #0f172a;
+  --sl-color-gray-3: #475569;
+  --sl-color-gray-4: #64748b;
+  --sl-color-gray-5: #cbd5e1;
   --sl-color-gray-6: #e2e8f0;
-  --sl-color-gray-7: #f1f5f9;
+  --sl-color-gray-7: #ffffff;
+  --sl-color-black: #f8fafc;
   --sl-color-accent-low: #ede9fe;
   --sl-color-accent: #6d28d9;
   --sl-color-accent-high: #4c1d95;
-  --sl-color-hairline-light: #e2e8f0;
-  --sl-color-hairline: #e2e8f0;
-  --sl-color-hairline-shade: #cbd5e1;
 }
 
 :root[data-theme="dark"],
 :root:not([data-theme="light"]) {
-  --sl-color-bg: #090d16;
-  --sl-color-bg-nav: #1e293b;
-  --sl-color-bg-sidebar: #090d16;
-  --sl-color-bg-inline-code: #1e293b;
-  --sl-color-black: #090d16;
+  /* Dark mode. Ramp runs lightest (white) to darkest (black): white/gray-1/gray-2 carry
+     primary text (Slate 50), gray-3/gray-4 carry muted text (Slate 400/500), gray-5/gray-6
+     carry borders/surfaces (Slate 700/800), and black is the page background (Deep Midnight). */
   --sl-color-white: #f8fafc;
-  --sl-color-text: #f8fafc;
-  --sl-color-text-accent: #a78bfa;
-  --sl-color-text-invert: #090d16;
   --sl-color-gray-1: #f8fafc;
-  --sl-color-gray-2: #e2e8f0;
+  --sl-color-gray-2: #f1f5f9;
   --sl-color-gray-3: #94a3b8;
   --sl-color-gray-4: #64748b;
   --sl-color-gray-5: #334155;
   --sl-color-gray-6: #1e293b;
   --sl-color-gray-7: #0f172a;
+  --sl-color-black: #090d16;
   --sl-color-accent-low: #312244;
   --sl-color-accent: #a78bfa;
   --sl-color-accent-high: #ddd6fe;
-  --sl-color-hairline-light: #334155;
-  --sl-color-hairline: #334155;
-  --sl-color-hairline-shade: #1e293b;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --sl-color-bg: #090d16;
-    --sl-color-bg-nav: #1e293b;
-    --sl-color-bg-sidebar: #090d16;
-    --sl-color-bg-inline-code: #1e293b;
-    --sl-color-black: #090d16;
     --sl-color-white: #f8fafc;
-    --sl-color-text: #f8fafc;
-    --sl-color-text-accent: #a78bfa;
-    --sl-color-text-invert: #090d16;
     --sl-color-gray-1: #f8fafc;
-    --sl-color-gray-2: #e2e8f0;
+    --sl-color-gray-2: #f1f5f9;
     --sl-color-gray-3: #94a3b8;
     --sl-color-gray-4: #64748b;
     --sl-color-gray-5: #334155;
     --sl-color-gray-6: #1e293b;
     --sl-color-gray-7: #0f172a;
+    --sl-color-black: #090d16;
     --sl-color-accent-low: #312244;
     --sl-color-accent: #a78bfa;
     --sl-color-accent-high: #ddd6fe;
-    --sl-color-hairline-light: #334155;
-    --sl-color-hairline: #334155;
-    --sl-color-hairline-shade: #1e293b;
   }
 }
