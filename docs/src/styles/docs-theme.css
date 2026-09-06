@@ -1,0 +1,94 @@
+/*
+ * Canonical mcp-einvoicing docs-site theme.
+ *
+ * This file is copied byte-identical into every package repo's docs/src/styles/docs-theme.css.
+ * Do not fork or recolor it per repo — see context-library/decisions/docs-site.md for why a
+ * single shared identity across all sites is a deliberate decision, and
+ * context-library/templates/docs-site-template.md for the theme contract. Each repo's
+ * .github/workflows/docs.yml runs a drift check against this file's hash; edit the source here,
+ * never a repo's local copy.
+ *
+ * Palette: WCAG 2.1 AA. Violet-700 on white (light) and violet-400 on deep-slate (dark) both meet
+ * AA contrast for the accent role.
+ */
+
+:root {
+  --sl-font: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* Light mode (default) */
+  --sl-color-bg: #f8fafc;
+  --sl-color-bg-nav: #ffffff;
+  --sl-color-bg-sidebar: #f8fafc;
+  --sl-color-bg-inline-code: #ffffff;
+  --sl-color-black: #0f172a;
+  --sl-color-white: #ffffff;
+  --sl-color-text: #0f172a;
+  --sl-color-text-accent: #6d28d9;
+  --sl-color-text-invert: #ffffff;
+  --sl-color-gray-1: #0f172a;
+  --sl-color-gray-2: #1e293b;
+  --sl-color-gray-3: #334155;
+  --sl-color-gray-4: #475569;
+  --sl-color-gray-5: #94a3b8;
+  --sl-color-gray-6: #e2e8f0;
+  --sl-color-gray-7: #f1f5f9;
+  --sl-color-accent-low: #ede9fe;
+  --sl-color-accent: #6d28d9;
+  --sl-color-accent-high: #4c1d95;
+  --sl-color-hairline-light: #e2e8f0;
+  --sl-color-hairline: #e2e8f0;
+  --sl-color-hairline-shade: #cbd5e1;
+}
+
+:root[data-theme="dark"],
+:root:not([data-theme="light"]) {
+  --sl-color-bg: #090d16;
+  --sl-color-bg-nav: #1e293b;
+  --sl-color-bg-sidebar: #090d16;
+  --sl-color-bg-inline-code: #1e293b;
+  --sl-color-black: #090d16;
+  --sl-color-white: #f8fafc;
+  --sl-color-text: #f8fafc;
+  --sl-color-text-accent: #a78bfa;
+  --sl-color-text-invert: #090d16;
+  --sl-color-gray-1: #f8fafc;
+  --sl-color-gray-2: #e2e8f0;
+  --sl-color-gray-3: #94a3b8;
+  --sl-color-gray-4: #64748b;
+  --sl-color-gray-5: #334155;
+  --sl-color-gray-6: #1e293b;
+  --sl-color-gray-7: #0f172a;
+  --sl-color-accent-low: #312244;
+  --sl-color-accent: #a78bfa;
+  --sl-color-accent-high: #ddd6fe;
+  --sl-color-hairline-light: #334155;
+  --sl-color-hairline: #334155;
+  --sl-color-hairline-shade: #1e293b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --sl-color-bg: #090d16;
+    --sl-color-bg-nav: #1e293b;
+    --sl-color-bg-sidebar: #090d16;
+    --sl-color-bg-inline-code: #1e293b;
+    --sl-color-black: #090d16;
+    --sl-color-white: #f8fafc;
+    --sl-color-text: #f8fafc;
+    --sl-color-text-accent: #a78bfa;
+    --sl-color-text-invert: #090d16;
+    --sl-color-gray-1: #f8fafc;
+    --sl-color-gray-2: #e2e8f0;
+    --sl-color-gray-3: #94a3b8;
+    --sl-color-gray-4: #64748b;
+    --sl-color-gray-5: #334155;
+    --sl-color-gray-6: #1e293b;
+    --sl-color-gray-7: #0f172a;
+    --sl-color-accent-low: #312244;
+    --sl-color-accent: #a78bfa;
+    --sl-color-accent-high: #ddd6fe;
+    --sl-color-hairline-light: #334155;
+    --sl-color-hairline: #334155;
+    --sl-color-hairline-shade: #1e293b;
+  }
+}

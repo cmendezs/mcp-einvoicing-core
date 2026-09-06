@@ -56,3 +56,6 @@ coverage.xml
 
 # Claude Code (local settings, memory, session data)
 .claude/
+docs/node_modules/
+docs/dist/
+docs/.astro/

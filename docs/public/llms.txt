@@ -1,0 +1,18 @@
+# mcp-einvoicing-core
+
+> Base package for European electronic invoicing MCP servers
+
+## Docs
+
+- [Overview](https://cmendezs.github.io/mcp-einvoicing-core/): what this server does and how to install it
+- [Installation](https://cmendezs.github.io/mcp-einvoicing-core/installation/): install via uvx
+- [Configuration](https://cmendezs.github.io/mcp-einvoicing-core/configuration/): required environment variables
+- [Tools](https://cmendezs.github.io/mcp-einvoicing-core/tools/): full MCP tool reference
+- [Standards](https://cmendezs.github.io/mcp-einvoicing-core/standards/): standards and profiles implemented
+- [Changelog](https://cmendezs.github.io/mcp-einvoicing-core/changelog/): version history
+
+## Links
+
+- [PyPI](https://pypi.org/project/mcp-einvoicing-core/)
+- [MCP registry](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.cmendezs/mcp-einvoicing-core)
+- [GitHub](https://github.com/cmendezs/mcp-einvoicing-core)

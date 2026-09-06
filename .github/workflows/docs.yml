@@ -1,0 +1,92 @@
+# TEMPLATE — create-country docs-site scaffold.
+# Destination: .github/workflows/docs.yml (this file is copied out of docs/ into
+# .github/workflows/ — it does not stay inside docs/ itself).
+# No substitution needed: the theme drift check fetches the canonical docs-theme.css directly
+# from the root monorepo's raw GitHub URL, so no hash needs to be baked in or kept in sync here.
+# [Unverified] this assumes github.com/cmendezs/mcp-einvoicing is reachable (public, or this
+# repo's CI has read access) — confirm this at first rollout; see the docs-site-template.md
+# "Theme (do not fork)" section.
+# Delete this comment block after copying.
+name: Docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "README*"
+      - "docs/**"
+      - "CHANGELOG.md"
+      - "src/**/tools/**"
+      - "src/**/server.py"
+  workflow_dispatch: {}
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    name: Build docs site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Theme drift check
+        # Fails the build if this repo's docs-theme.css has diverged from the canonical copy
+        # in the root monorepo — see context-library/decisions/docs-site.md ("no per-repo
+        # recoloring") and docs-site-template.md ("Theme (do not fork)").
+        run: |
+          curl -fsSL -o /tmp/canonical-docs-theme.css \
+            https://raw.githubusercontent.com/cmendezs/mcp-einvoicing/main/.claude/skills/create-country/templates/docs/src/styles/docs-theme.css
+          if ! diff -q /tmp/canonical-docs-theme.css docs/src/styles/docs-theme.css; then
+            echo "::error::docs/src/styles/docs-theme.css has diverged from the canonical theme in cmendezs/mcp-einvoicing. Do not fork the theme per repo — update the canonical file instead."
+            exit 1
+          fi
+          echo "Theme OK: matches canonical docs-theme.css"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: docs/package-lock.json
+
+      - name: Set up Python
+        # tomllib (used by scripts/gen_llms_txt.py) is stdlib only from 3.11+.
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        working-directory: docs
+        run: npm ci
+
+      - name: Regenerate llms.txt
+        working-directory: docs
+        run: python3 scripts/gen_llms_txt.py
+
+      - name: Build
+        working-directory: docs
+        run: npm run build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/dist
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
