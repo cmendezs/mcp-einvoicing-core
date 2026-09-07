@@ -35,6 +35,20 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.31.0] - 2026-09-07
+#### Added
+- `TaxIdentifier.validate_in_gstin()` (`models.py`): format-only India GSTIN validator, added
+  ahead of `mcp-einvoicing-in` scaffolding, per its Step 0.5 core-reuse check. Confirmed
+  against GSTN's FORM GST INV-01 schema v1.1: total length (15) and the digits-first-two/
+  alphanumeric shape only. No source confirms a full state+PAN+entity+check-digit structural
+  breakdown or a check-digit algorithm — the schema's own sample values are inconsistent with
+  a hardcoded 14th-character `"Z"` (compare field 5.3 vs field 10.8), so none is asserted.
+
+#### Deferred
+- `TaxIdentifier.validate_in_pan()` was planned alongside `validate_in_gstin()` but is not
+  added: the only staged document mentions PAN once, in passing, with no length or format
+  fact confirmed. Tracked in `gaps_registry.toml` as `core.tax_id.in_pan` (unresolved).
+
 ### [1.30.0] - 2026-09-01
 #### Added
 - `SelloDigitalSigner` / `SelloDigitalSignerConfig` (`digital_signature.py`): MX CFDI 4.0
