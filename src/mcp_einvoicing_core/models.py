@@ -815,6 +815,50 @@ class TaxIdentifier(BaseModel):
             )
         return True, ""
 
+    # --- India ---
+
+    @staticmethod
+    def validate_in_gstin(identifier: str) -> tuple[bool, str]:
+        """Validate the format of an Indian GSTIN (GST Identification Number).
+
+        Confirmed directly from GSTN's FORM GST INV-01 schema v1.1 (the GST
+        e-invoice data dictionary), supplied by the user 2026-09-07
+        (`context-library/countries/in.md`, "Party-identifier formats"):
+        every GSTIN field (``Supplier_GSTIN``, ``Recipient_GSTIN``,
+        ``ShipTo_GSTIN``, ``ECOM_GSTIN``) is declared ``String (Length: 15)``,
+        and in every worked example in the schema the first two characters of
+        the GSTIN match the entity's own two-digit ``State_Code`` field.
+
+        ``[NEED: full structural breakdown]`` — the commonly described GSTIN
+        layout (2-digit state code + 10-character PAN + 1-character entity
+        code + a fixed ``Z`` + 1 check character) is **not** spelled out as a
+        formal pattern anywhere in the staged schema PDF, unlike SAT's
+        ``t_RFC`` XSD simple type that ``validate_mx_rfc`` ports verbatim.
+        The schema's own sample values are not even fully consistent with
+        that layout (compare the field 5.3 sample ``29ABCCR1832C1ZX`` against
+        the field 10.8 sample ``29ABCCR1832C1CX`` — same prefix, different
+        14th character), so this validator does not assert the fixed ``Z``
+        or the embedded-PAN sub-structure. It checks only what is directly
+        confirmed: total length and the alphanumeric, digits-first-two shape.
+        If a normative source for the full structure and check-digit
+        algorithm is later supplied, extend this validator rather than
+        fabricating one now.
+
+        Args:
+            identifier: Raw GSTIN string. Whitespace is stripped and the
+                value is upper-cased before checking.
+
+        Returns:
+            ``(True, "")`` on success, ``(False, error_message)`` on failure.
+        """
+        gstin = identifier.strip().upper()
+        if not re.match(r"^\d{2}[A-Z0-9]{13}$", gstin):
+            return False, (
+                "GSTIN must be exactly 15 characters: a 2-digit state code "
+                "followed by 13 alphanumeric characters."
+            )
+        return True, ""
+
 
 class PartyAddress(BaseModel):
     """Postal address of a party's registered office.

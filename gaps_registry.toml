@@ -30,3 +30,13 @@ resolved_in = "1.14.0"
 description = "xml_escape() only neutralizes the 5 XML metacharacters; it does not filter W3C XML 1.0 Appendix C 'discouraged' code points (C1 controls + DEL U+007F-U+009F, noncharacters U+FDD0-U+FDEF and U+nFFFE/U+nFFFF). These are valid per the Char production and pass XSD validation, but KSeF API v2.4.0 (PRD-live 2026-07-16) rejects documents containing them. mcp-ksef-pl had no local workaround (field values were inserted verbatim via xml_escape() in generator.py) — this was a live-compliance gap, not a workaround needing removal. Resolved by adding sanitize_xml_text()/DiscouragedCharacterError to xml_utils.py. Tracked in context-library/audit-history.md as PL-DISC-1."
 resolved = true
 resolved_in = "1.27.0"
+
+[gap."core.tax_id.in_gstin"]
+description = "TaxIdentifier had no India GSTIN validator. Confirmed [NO-CORE-MATCH] via context-library/core-state.md + a grep of TaxIdentifier in models.py during mcp-einvoicing-in's Step 0.5 core-reuse check, ahead of the country package itself being scaffolded (no [GAP id=...] marker exists yet since no India package exists). Resolved by adding TaxIdentifier.validate_in_gstin() — format-only (length 15 + digits-first-two/alphanumeric shape), per FORM GST INV-01 schema v1.1. No check-digit algorithm or full state+PAN+entity+check-char structural breakdown is confirmed by any locally staged NIC/GSTN document, so this validator does not assert either. See context-library/countries/in.md."
+resolved = true
+resolved_in = "1.31.0"
+
+[gap."core.tax_id.in_pan"]
+description = "TaxIdentifier.validate_in_pan() was planned alongside validate_in_gstin() (mcp-einvoicing-in Step 0.5) but is NOT added in this pass: the only staged document (FORM GST INV-01 schema v1.1) mentions PAN just once, in passing, on Supplier_Legal_Name's explanatory note ('Legal Name, as appearing in PAN of the Supplier') — no length, character-class, or check-digit fact is confirmed by any locally supplied source, not even PAN's length. Per the hallucination guardrail in .claude/skills/modify-core/SKILL.md ('if the context file does not contain the needed value, mark it with [NEED:] and stop'), this is deferred rather than fabricated. Needs either a staged Income Tax Department PAN-format document, or an explicit user decision to scope PAN validation out of mcp-einvoicing-in Phase 1."
+resolved = false
+resolved_in = ""

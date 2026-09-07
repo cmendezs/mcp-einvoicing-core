@@ -11,6 +11,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.31.0] - 2026-09-07
+
+### Added
+- `models.py`: `TaxIdentifier.validate_in_gstin()` — format-only validation of an
+  Indian GSTIN (GST Identification Number), added ahead of the `mcp-einvoicing-in`
+  country package's own scaffolding, per its Step 0.5 core-reuse check. Confirmed
+  directly against GSTN's FORM GST INV-01 schema v1.1: total length (15) and the
+  digits-first-two/alphanumeric shape. The full state-code + PAN + entity-code +
+  check-character structural breakdown, and any check-digit algorithm, are not
+  confirmed by any locally supplied NIC/GSTN document, so this validator does not
+  assert either — see the method's docstring and `context-library/countries/in.md`
+  in the `mcp-einvoicing` monorepo.
+
+### Deferred
+- `TaxIdentifier.validate_in_pan()` was planned alongside `validate_in_gstin()` but
+  is **not** added in this release: the only staged local document mentions PAN
+  once, in passing, with no length, character-class, or check-digit fact confirmed.
+  Tracked in `gaps_registry.toml` as `core.tax_id.in_pan` (unresolved).
+
+---
+
 ## [1.28.0] - 2026-08-31
 
 ### Fixed

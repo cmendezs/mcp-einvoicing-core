@@ -446,3 +446,50 @@ class TestValidateMxRfc:
     def test_homoclave_last_char_must_be_digit_or_a(self) -> None:
         ok, error = TaxIdentifier.validate_mx_rfc("AAA010101AAB")
         assert ok is False
+
+
+class TestValidateInGstin:
+    """Format-only checks per validate_in_gstin()'s docstring — only total
+    length and the digits-first-two/alphanumeric shape are confirmed against
+    the staged FORM GST INV-01 schema; the full state+PAN+entity+check-digit
+    breakdown has no confirmed normative source."""
+
+    def test_valid_gstin_supplier_sample(self) -> None:
+        # Schema field 4.3 (Supplier_GSTIN) sample value.
+        ok, error = TaxIdentifier.validate_in_gstin("29AADFV7589C1ZX")
+        assert ok is True
+        assert error == ""
+
+    def test_valid_gstin_recipient_sample(self) -> None:
+        # Schema field 5.3 (Recipient_GSTIN) sample value.
+        ok, error = TaxIdentifier.validate_in_gstin("29ABCCR1832C1ZX")
+        assert ok is True
+        assert error == ""
+
+    def test_valid_gstin_not_ending_in_z(self) -> None:
+        # Schema field 10.8 (ECOM_GSTIN) sample value — same prefix as the
+        # recipient sample above but a different 14th character, which is
+        # exactly why this validator does not hardcode a fixed 'Z'.
+        ok, error = TaxIdentifier.validate_in_gstin("29ABCCR1832C1CX")
+        assert ok is True
+        assert error == ""
+
+    def test_lowercase_is_accepted(self) -> None:
+        ok, error = TaxIdentifier.validate_in_gstin("29aadfv7589c1zx")
+        assert ok is True
+        assert error == ""
+
+    def test_wrong_length_rejected(self) -> None:
+        ok, error = TaxIdentifier.validate_in_gstin("29AADFV7589C1Z")
+        assert ok is False
+        assert "15 characters" in error
+
+    def test_non_numeric_state_prefix_rejected(self) -> None:
+        ok, error = TaxIdentifier.validate_in_gstin("XXAADFV7589C1ZX")
+        assert ok is False
+
+    def test_urp_placeholder_rejected(self) -> None:
+        # Schema field 5.3's documented placeholder for exports/unregistered
+        # recipients ("URP") is not itself a valid GSTIN shape.
+        ok, error = TaxIdentifier.validate_in_gstin("URP")
+        assert ok is False
