@@ -66,6 +66,7 @@
 | 🇧🇷 البرازيل | [`mcp-nfe-br`](https://github.com/cmendezs/mcp-nfe-br) | NF-e / NFC-e (modelo 55/65, schema 4.00) / NFS-e Nacional | B2B (NF-e) + B2C (NFC-e)، كلاهما الزامي منذ 2008 | نشط؛ اصلاح ضريبي IBS/CBS جار حتى 2033 |
 | 🇫🇷 فرنسا | [`mcp-facture-electronique-fr`](https://github.com/cmendezs/mcp-facture-electronique-fr) | NF XP Z12-012 / NF XP Z12-013 / Factur-X / UBL 2.1 / CII | B2B، طرح تدريجي اعتبارا من 1 سبتمبر 2026 | نشط |
 | 🇩🇪 المانيا | [`mcp-einvoicing-de`](https://github.com/cmendezs/mcp-einvoicing-de) | ZUGFeRD 2.x / XRechnung 3.x | B2B، تدريجي من 2025 الى 2028 | نشط |
+| 🇮🇳 الهند | [`mcp-einvoicing-in`](https://github.com/cmendezs/mcp-einvoicing-in) | GST e-invoicing / FORM GST INV-01 schema v1.1 / IRP-IRN (INV + CRN + DBN) | B2B + B2G، الزامي للفئات الضريبية المبلغ عنها بموجب CGST Rule 48(4)؛ عتبة الايراد الدقيقة لم يتم التحقق منها بعد | نسخة اولية (v0.1.0، غير منشورة)؛ المرحلة A فقط (البناء + التحقق دون اتصال + عرض رمز QR) — الارسال المباشر الى IRP بانتظار مواصفات NIC API |
 | 🇮🇹 ايطاليا | [`mcp-fattura-elettronica-it`](https://github.com/cmendezs/mcp-fattura-elettronica-it) | FatturaPA / SDI | B2G + B2B + B2C، الزامي منذ 2019 (B2G منذ 2014) | نشط |
 | 🇲🇽 المكسيك | [`mcp-cfdi-mx`](https://github.com/cmendezs/mcp-cfdi-mx) | CFDI 4.0 / Complemento de Pagos 2.0 | B2B + B2G، الزامي على مستوى الدولة | نشط؛ نقل التقديم عبر PAC معلق |
 | 🇵🇱 بولندا | [`mcp-ksef-pl`](https://github.com/cmendezs/mcp-ksef-pl) | KSeF FA(3) / FA(2) / Peppol BIS 3.0 | B2B، تدريجي من فبراير 2026 الى يناير 2027 | نشط؛ تدفق جلسة الدفعات غير مطبق |
