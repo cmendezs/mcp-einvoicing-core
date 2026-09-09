@@ -35,6 +35,36 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.32.0] - 2026-09-09
+#### Added
+- `run_check_resource_paths` (`audit.py`, CHECK 7): verifies each of a package's declared
+  runtime resource directories exists and resolves inside the installed package root, rather
+  than outside it via a `.parent`-hop chain that does not survive being packaged into a
+  wheel. Opt-in per package. Resolves CORE-1 (`audit/2026-09-audit-core.md` in the workspace
+  root repo), the fourth occurrence of this bug class, live in `mcp-facturacion-electronica-es`
+  and `mcp-cfdi-mx` at the time of that audit.
+- `APIKeyConfig` (`http_client.py`) and `AuthMode.API_KEY` implementation: a static key sent
+  in a request header, the dominant auth shape for a vendor that issues one opaque key with
+  no OAuth2/JWT flow. Previously `AuthMode.API_KEY` raised `NotImplementedError`. Resolves
+  CORE-4.
+- `EN16931UBLSerializer._get_party_legal_entity_company_id` (`wire_formats.py`): opt-in hook
+  for a subclass to emit `cac:PartyLegalEntity/cbc:CompanyID`, `None` by default (no output
+  change for existing packages). Resolves CORE-6.
+- `XSDValidator(xsd_path, known_imports=...)` (`schematron.py`): optional resolver for
+  schema sets that `xs:import`/`xs:include` each other by a URL that does not resolve
+  offline. Resolves CORE-7.
+- `BaseScopeInfo` (`base_server.py`): shared base for a package's scope-introspection tool
+  response, for subclassing instead of each package defining its own overlapping
+  `ScopeInfo`. Resolves CORE-8.
+
+#### Fixed
+- `set_profile_registry` docstring (`profile_registry.py`) no longer claims multi-tenant
+  isolation; describes what it actually does (rebind the process-wide module-level global).
+  No behavior change. Resolves CORE-13.
+
+All additions are additive and non-breaking. 644/644 tests passing; cross-package audit run
+against all 11 country packages with zero BLOCKING findings.
+
 ### [1.31.0] - 2026-09-07
 #### Added
 - `TaxIdentifier.validate_in_gstin()` (`models.py`): format-only India GSTIN validator, added
