@@ -35,6 +35,25 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.33.0] - 2026-09-09
+#### Added
+- `build_default_ssl_context`, `build_hardened_async_client` (`http_client.py`): the transport
+  hardening `BaseEInvoicingClient._get_httpx_client` already applied (TLS 1.2 floor, SHA-256
+  certificate pinning via `EINVOICING_CERT_PINS`, `trust_env=False`) factored into a shared
+  layer. Resolves CORE-3 (`audit/2026-09-audit-core.md` in the workspace root repo).
+
+#### Changed
+- `AS4TransportClient.send()` (`peppol/transport/client.py`): previously built a raw,
+  unhardened `httpx.AsyncClient` (no TLS floor, no pinning, no retry on failure). Now builds
+  through `build_hardened_async_client`/`build_default_ssl_context` and retries 429/503
+  responses via the existing `compute_retry_delay`/`DEFAULT_MAX_RETRIES` policy. New optional
+  `max_retries` constructor parameter, default unchanged. No existing signature removed or
+  changed; `PeppolTransmitter`/`AS4TransportClient` has zero consumers in any country package
+  today, so no country package needs a floor-pin bump for this release alone.
+
+All changes are additive and non-breaking. 653/653 tests passing (644 prior + 9 new);
+cross-package audit run against all 11 country packages with zero BLOCKING findings.
+
 ### [1.32.0] - 2026-09-09
 #### Added
 - `run_check_resource_paths` (`audit.py`, CHECK 7): verifies each of a package's declared
