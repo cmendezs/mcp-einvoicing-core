@@ -2,15 +2,21 @@
 
 from __future__ import annotations
 
+import asyncio
 import gzip
 import logging
 import uuid
 
-import httpx
 from cryptography.hazmat.primitives import serialization
 from cryptography.x509 import load_pem_x509_certificate
 
 from mcp_einvoicing_core.exceptions import PlatformError
+from mcp_einvoicing_core.http_client import (
+    DEFAULT_MAX_RETRIES,
+    build_default_ssl_context,
+    build_hardened_async_client,
+    compute_retry_delay,
+)
 from mcp_einvoicing_core.peppol.transport.envelope import AS4MessageEnvelope
 from mcp_einvoicing_core.peppol.transport.models import AS4Credentials, AS4Receipt
 from mcp_einvoicing_core.peppol.transport.receipt import AS4ReceiptHandler
@@ -28,8 +34,9 @@ class AS4TransportClient:
     and X.509 message-level signing per the Peppol AS4 profile.
     """
 
-    def __init__(self, http_timeout: float = 30.0) -> None:
+    def __init__(self, http_timeout: float = 30.0, max_retries: int = DEFAULT_MAX_RETRIES) -> None:
         self._http_timeout = http_timeout
+        self._max_retries = max_retries
         self._receipt_handler = AS4ReceiptHandler()
 
     async def send(
@@ -50,6 +57,14 @@ class AS4TransportClient:
 
         Raises:
             PlatformError: On HTTP errors or invalid receipt responses.
+
+        Note:
+            The client is built via ``build_hardened_async_client()`` (TLS
+            1.2 floor, ``trust_env=False``, ``EINVOICING_CERT_PINS``
+            checking) and retries 429/503 responses per the same
+            ``compute_retry_delay()`` policy ``BaseEInvoicingClient._request``
+            uses, so this raw-bytes transport is no less hardened than the
+            JSON-shaped request path (CORE-3).
         """
         soap_bytes = envelope.build()
         compressed_payload = gzip.compress(envelope.payload_xml)
@@ -71,13 +86,33 @@ class AS4TransportClient:
 
         logger.debug("AS4 send to %s (message_id=%s)", endpoint_url, envelope.message_id)
 
-        async with httpx.AsyncClient(timeout=self._http_timeout) as client:
-            response = await client.post(
-                endpoint_url,
-                content=body,
-                headers=headers,
-            )
+        ssl_context = build_default_ssl_context()
+        response = None
+        for attempt in range(self._max_retries + 1):
+            async with build_hardened_async_client(
+                endpoint_url, timeout=self._http_timeout, ssl_context=ssl_context
+            ) as client:
+                response = await client.post(
+                    endpoint_url,
+                    content=body,
+                    headers=headers,
+                )
 
+            if response.status_code in (429, 503) and attempt < self._max_retries:
+                delay = compute_retry_delay(response, attempt)
+                logger.warning(
+                    "AS4 endpoint returned HTTP %d — retrying in %.1fs (attempt %d/%d)",
+                    response.status_code,
+                    delay,
+                    attempt + 1,
+                    self._max_retries,
+                )
+                await asyncio.sleep(delay)
+                continue
+
+            break
+
+        assert response is not None  # loop always runs at least once
         if not response.is_success:
             raise PlatformError(
                 status_code=response.status_code,

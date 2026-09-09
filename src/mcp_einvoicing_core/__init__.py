@@ -245,7 +245,7 @@ from mcp_einvoicing_core.xml_utils import (
     xml_optional,
 )
 
-__version__ = "1.32.0"
+__version__ = "1.33.0"
 
 __all__ = [
     # Archive provider

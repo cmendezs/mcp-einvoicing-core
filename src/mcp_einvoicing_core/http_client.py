@@ -206,6 +206,59 @@ def _build_mtls_ssl_context(cert_path: str, cert_password: str | None) -> ssl.SS
 
 
 # ---------------------------------------------------------------------------
+# Shared transport hardening (CORE-3, v1.33.0)
+# ---------------------------------------------------------------------------
+#
+# TLS context construction, certificate pinning, and trust_env=False were
+# previously duplicated (or, in the AS4 client's case, simply missing) at
+# every call site that needed a raw httpx.AsyncClient rather than the
+# JSON/form/multipart-shaped BaseEInvoicingClient.request(). These two
+# functions are the single place that policy is defined; both
+# BaseEInvoicingClient._get_httpx_client() and AS4TransportClient.send()
+# build their client through them.
+
+
+def build_default_ssl_context() -> ssl.SSLContext:
+    """Return a default-trust SSL context with this workspace's TLS 1.2 floor."""
+    ctx = ssl.create_default_context()
+    ctx.minimum_version = ssl.TLSVersion.TLSv1_2
+    return ctx
+
+
+def build_hardened_async_client(
+    target_url: str,
+    *,
+    timeout: float,
+    ssl_context: ssl.SSLContext,
+) -> httpx.AsyncClient:
+    """Build an ``httpx.AsyncClient`` with the workspace's standard hardening.
+
+    Applies uniformly, regardless of caller:
+    - ``trust_env=False``: HTTP_PROXY / HTTPS_PROXY env vars are ignored.
+    - SHA-256 certificate pinning: if ``EINVOICING_CERT_PINS`` is set and
+      *target_url*'s host is listed, a response hook verifies the peer
+      cert fingerprint on every response.
+
+    *ssl_context* is supplied by the caller (mTLS or default-trust with the
+    TLS 1.2 floor already applied via ``build_default_ssl_context()``) so
+    callers that need to cache and reuse an expensive-to-build mTLS context
+    across requests (see ``BaseEInvoicingClient._get_httpx_client``) remain
+    free to do so.
+    """
+    host = urlparse(target_url).hostname or ""
+    event_hooks: dict[str, list] = {}
+    if host and host.lower() in _CERT_PINS:
+        event_hooks["response"] = [_make_pin_hook(host.lower(), _CERT_PINS[host.lower()])]
+
+    return httpx.AsyncClient(
+        timeout=timeout,
+        verify=ssl_context,
+        trust_env=False,
+        event_hooks=event_hooks,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Auth mode enum
 # ---------------------------------------------------------------------------
 
@@ -595,44 +648,28 @@ class BaseEInvoicingClient:
         """Build and return a new ``httpx.AsyncClient`` for the active auth mode.
 
         Called once by ``_get_client()`` to initialise the long-lived client.
-        The SSL context for MTLS is built here and cached on the instance.
+        The SSL context for MTLS is built here and cached on the instance;
+        the client itself is built via ``build_hardened_async_client()`` so
+        this class shares TLS/pinning/trust_env policy with every other
+        caller (see the CORE-3 note above ``build_hardened_async_client``).
 
         Override in a subclass to inject a custom transport (e.g. ``respx``
         mock), a non-default trust store, or per-environment cert rotation.
         The returned client is kept alive for the lifetime of this instance —
         do not close it inside this method.
-
-        Security properties applied to every client:
-        - ``trust_env=False``: HTTP_PROXY / HTTPS_PROXY env vars are ignored.
-          Proxy configuration must be explicit (pass ``proxies=`` if needed).
-        - Certificate pinning: if ``EINVOICING_CERT_PINS`` is set and the
-          target host is listed, a response hook verifies the peer cert SHA-256.
         """
-        host = urlparse(self._base_url).hostname or ""
-        event_hooks: dict[str, list] = {}
-        if host and host.lower() in _CERT_PINS:
-            event_hooks["response"] = [_make_pin_hook(host.lower(), _CERT_PINS[host.lower()])]
-
         if self._auth_mode == AuthMode.MTLS:
             if self._mtls_ssl_context is None:
                 assert self._cert_path is not None
                 self._mtls_ssl_context = _build_mtls_ssl_context(
                     self._cert_path, self._cert_password
                 )
-            return httpx.AsyncClient(
-                timeout=self._http_timeout,
-                verify=self._mtls_ssl_context,
-                trust_env=False,
-                event_hooks=event_hooks,
-            )
-        # Non-mTLS: create a default-trust SSL context and pin TLS 1.2 minimum.
-        ssl_ctx = ssl.create_default_context()
-        ssl_ctx.minimum_version = ssl.TLSVersion.TLSv1_2
-        return httpx.AsyncClient(
-            timeout=self._http_timeout,
-            verify=ssl_ctx,
-            trust_env=False,
-            event_hooks=event_hooks,
+            ssl_ctx = self._mtls_ssl_context
+        else:
+            ssl_ctx = build_default_ssl_context()
+
+        return build_hardened_async_client(
+            self._base_url, timeout=self._http_timeout, ssl_context=ssl_ctx
         )
 
     async def _get_client(self) -> httpx.AsyncClient:
