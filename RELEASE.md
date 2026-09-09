@@ -40,7 +40,9 @@ git push origin vX.X.X
 - `build_default_ssl_context`, `build_hardened_async_client` (`http_client.py`): the transport
   hardening `BaseEInvoicingClient._get_httpx_client` already applied (TLS 1.2 floor, SHA-256
   certificate pinning via `EINVOICING_CERT_PINS`, `trust_env=False`) factored into a shared
-  layer. Resolves CORE-3 (`audit/2026-09-audit-core.md` in the workspace root repo).
+  layer. Partially resolves CORE-3 (`audit/2026-09-audit-core.md` in the workspace root
+  repo) — the shared layer plus its AS4-client adopter; BR's raw-SOAP bypass of `_request`,
+  named in CORE-3's own recommended fix, is a separate downstream release.
 
 #### Changed
 - `AS4TransportClient.send()` (`peppol/transport/client.py`): previously built a raw,
