@@ -28,7 +28,7 @@ auditoria de conformidade para que os pacotes por pais compartilhem uma base com
 | `ubl_documents` | `BaseUBLDocument` — envelope compartilhado para familias de documentos UBL/Peppol que nao sao fatura (Peppol Ordering, extensoes jurisdicionais); explicitamente fora da arvore `InvoiceDocument`/`EN16931Invoice` |
 | `wire_formats` | `EN16931UBLSerializer`, `EN16931UBLParser`, `EN16931CIISerializer`, `EN16931CIIParser`, `UBL_NSMAP`, `CII_NSMAP` |
 | `convert` | `Syntax` (UBL, CII), `convert_wire_format` (deteccao automatica da origem, serializacao para o destino) |
-| `base_server` | `EInvoicingMCPServer`, `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BaseLifecycleManager`, `BasePartyValidator`, `BaseScopeInfo`, `SubmitResult`, `assert_not_read_only`, `scrub` |
+| `base_server` | `EInvoicingMCPServer`, `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BaseLifecycleManager`, `BasePartyValidator`, `BaseScopeInfo`, `SubmissionMetadata`, `SearchCriteria`, `SubmitResult`, `assert_not_read_only`, `scrub` |
 | `http_client` | `BaseEInvoicingClient` (OAuth2, mTLS, bearer, API key, JWS, nenhum), `OAuthConfig`, `OAuthValues`, `JWSConfig`, `APIKeyConfig`, `TokenCache`, `AuthMode` |
 | `peppol` | `PeppolSMPClient`, `PeppolParticipantId`, `PeppolServiceInfo`, `PeppolLookupResult`, `PeppolEnvironment`, `PEPPOL_BIS_BILLING_30`, `resolve_naptr` (diagnostico de DNS U-NAPTR/SML autonomo) |
 | `peppol.tools` | `register_peppol_tools` (plugin FastMCP montavel: lookup de participante, endpoint de servico, diagnostico de DNS, envio AS4, busca no Directory, alem de 8 ferramentas de listas de codigos eDEC), `default_id_adapter`, `IdentifierAdapter` (contrato do adaptador de identificador nacional) |

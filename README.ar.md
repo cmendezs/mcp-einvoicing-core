@@ -28,7 +28,7 @@
 | `ubl_documents` | `BaseUBLDocument` — غلاف مشترك لعائلات مستندات UBL/Peppol غير الفاتورة (Peppol Ordering، امتدادات خاصة بالولاية القضائية)؛ خارج شجرة `InvoiceDocument`/`EN16931Invoice` صراحةً |
 | `wire_formats` | `EN16931UBLSerializer`, `EN16931UBLParser`, `EN16931CIISerializer`, `EN16931CIIParser`, `UBL_NSMAP`, `CII_NSMAP` |
 | `convert` | `Syntax` (UBL, CII), `convert_wire_format` (كشف تلقائي للمصدر، تسلسل الى الهدف) |
-| `base_server` | `EInvoicingMCPServer`, `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BaseLifecycleManager`, `BasePartyValidator`, `BaseScopeInfo`, `SubmitResult`, `assert_not_read_only`, `scrub` |
+| `base_server` | `EInvoicingMCPServer`, `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BaseLifecycleManager`, `BasePartyValidator`, `BaseScopeInfo`, `SubmissionMetadata`, `SearchCriteria`, `SubmitResult`, `assert_not_read_only`, `scrub` |
 | `http_client` | `BaseEInvoicingClient` (OAuth2, mTLS, bearer, مفتاح API, JWS, بدون), `OAuthConfig`, `OAuthValues`, `JWSConfig`, `APIKeyConfig`, `TokenCache`, `AuthMode` |
 | `peppol` | `PeppolSMPClient`, `PeppolParticipantId`, `PeppolServiceInfo`, `PeppolLookupResult`, `PeppolEnvironment`, `PEPPOL_BIS_BILLING_30`, `resolve_naptr` (تشخيص DNS مستقل عبر U-NAPTR/SML) |
 | `peppol.tools` | `register_peppol_tools` (اضافة FastMCP قابلة للتركيب: بحث عن مشارك، نقطة نهاية خدمة، تشخيص DNS، ارسال AS4، بحث في الدليل، بالاضافة الى 8 ادوات لقوائم رموز eDEC)، `default_id_adapter`، `IdentifierAdapter` (عقد مهايئ المعرف الوطني) |
