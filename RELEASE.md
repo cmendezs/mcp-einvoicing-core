@@ -35,6 +35,26 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.34.0] - 2026-09-09
+#### Added
+- `SubmissionMetadata`, `SearchCriteria` (`base_server.py`): typed, subclassable pydantic
+  `BaseModel` bases (`extra="allow"`) for `BaseLifecycleManager`'s previously-untyped
+  `dict[str, Any]` arguments, following the same subclass-and-extend pattern already used
+  for `BaseScopeInfo` and the canonical invoice tree. Resolves CORE-2
+  (`audit/2026-09-audit-core.md` in the workspace root repo), core side.
+
+#### Changed
+- `BaseLifecycleManager.submit_document`, `.search_documents`, and
+  `.submit_lifecycle_status` now type their `metadata`/`criteria` arguments as
+  `SubmissionMetadata`/`SearchCriteria` instead of `dict`. Potentially breaking for the two
+  current implementors (PL, IT) per the audit's own framing, but nothing broke on this
+  release: Python does not enforce the parameter type hint, and both packages still pass
+  plain dicts at their own call sites unchanged. Their adoption of the typed subclasses is a
+  separate, later release (country wave 3).
+
+Cross-package audit run against all 11 country packages with zero BLOCKING findings.
+662/662 core tests passing (653 prior + 9 new).
+
 ### [1.33.0] - 2026-09-09
 #### Added
 - `build_default_ssl_context`, `build_hardened_async_client` (`http_client.py`): the transport
