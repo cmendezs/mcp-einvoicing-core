@@ -138,6 +138,23 @@ class EN16931UBLSerializer:
     #: serialized output is unchanged; a subclass sets it to True to opt in.
     _emit_item_price_extension: bool = False
 
+    def _get_party_legal_entity_company_id(
+        self, party: EN16931Party
+    ) -> tuple[str, str | None] | None:
+        """Return ``(company_id, scheme_agency_id)`` to emit under PartyLegalEntity, or None.
+
+        Opt-in hook (v1.32.0) for country subclasses that must emit a
+        party-level ``cac:PartyLegalEntity/cbc:CompanyID`` beyond the base
+        ``PartyTaxScheme/CompanyID`` — e.g. PINT AE's trade license number
+        (BTAE-11/12/15/16) or PINT-SG's UEN (BT-30/47). Base implementation
+        returns ``None`` (no ``CompanyID`` emitted here), so output is
+        unchanged for packages that do not override it. *scheme_agency_id*
+        becomes the element's ``schemeAgencyID`` attribute when not None.
+        A subclass overrides this instead of re-implementing ``_build_party``'s
+        element traversal wholesale (see CORE-6 in ``audit/2026-09-audit-core.md``).
+        """
+        return None
+
     def serialize(self, invoice: EN16931Invoice) -> bytes:
         root = self._build_root(invoice)
         return self._to_bytes(root)
@@ -257,6 +274,13 @@ class EN16931UBLSerializer:
 
         legal = _sub(p, _CAC, "PartyLegalEntity")
         _sub(legal, _CBC, "RegistrationName", party.name)
+
+        legal_entity_company_id = self._get_party_legal_entity_company_id(party)
+        if legal_entity_company_id is not None:
+            value, scheme_agency_id = legal_entity_company_id
+            company_id_el = _sub(legal, _CBC, "CompanyID", value)
+            if scheme_agency_id:
+                company_id_el.set("schemeAgencyID", scheme_agency_id)
 
         if party.contact_name or party.contact_phone or party.contact_email:
             contact = _sub(p, _CAC, "Contact")

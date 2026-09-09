@@ -15,8 +15,12 @@ Future countries:
  (any Bearer token with expires_in) to serve future countries.]
 
 [DECISION: The base client supports OAUTH2_CLIENT_CREDENTIALS, NONE, BEARER_TOKEN,
- and MTLS. API_KEY remains a placeholder (raise NotImplementedError) — subclass and
- override _get_headers() when a country needs it.]
+ MTLS, JWS, and API_KEY (v1.32.0). API_KEY covers the dominant auth shape for a
+ vendor that issues one opaque key or token expected verbatim in a header (see
+ APIKeyConfig) — the shape most Model C intermediaries (Mexican PACs, Indian GSPs;
+ see context-library/decisions/intermediation-models.md) use. A vendor needing a
+ query-param key or a multi-step login exchange still needs a subclass overriding
+ _get_headers().]
 """
 
 from __future__ import annotations
@@ -226,8 +230,17 @@ class AuthMode(StrEnum):
     """
 
     API_KEY = "api_key"
-    """API-key authentication (header or query param).
-    [GAP: Not yet implemented. Subclass and override _get_headers().]"""
+    """Static API-key authentication, sent as a request header (v1.32.0).
+
+    Pass an ``APIKeyConfig`` to ``BaseEInvoicingClient`` to activate. Covers a
+    vendor that issues one opaque key expected verbatim (or with a fixed
+    prefix like ``Bearer ``) in a named header, with no OAuth2/JWT flow — the
+    dominant shape for Model C intermediaries (Mexican PACs, Indian GSPs; see
+    ``context-library/decisions/intermediation-models.md``). A vendor that
+    instead expects the key as a URL query parameter, or needs a multi-step
+    login exchange, is out of scope: subclass and override ``_get_headers()``
+    for that shape.
+    """
 
     JWS = "jws"
     """JWS-signed JWT bearer token (e.g. ES FACe integrator API).
@@ -312,6 +325,33 @@ class JWSConfig(BaseModel):
     extra_header: dict[str, Any] = Field(
         default_factory=dict,
         description="Additional JOSE header fields merged in alongside typ/alg/x5c.",
+    )
+
+
+class APIKeyConfig(BaseModel):
+    """Configuration for ``AuthMode.API_KEY``: a static key sent in a request header.
+
+    Covers the dominant auth shape for the Model C intermediaries this workspace
+    has seen so far (Mexican PACs, Indian GSPs; see
+    ``context-library/decisions/intermediation-models.md``) — the vendor issues
+    one opaque key or token and expects it verbatim (or with a fixed prefix) in
+    a header, with no OAuth2/JWT flow. A vendor that instead expects the key as
+    a URL query parameter, or that needs a multi-step login exchange, is out of
+    scope here: subclass ``BaseEInvoicingClient`` and override ``_get_headers()``
+    for that shape, same as before this class existed.
+    """
+
+    key: str = Field(..., description="The API key or token value.")
+    header_name: str = Field(
+        default="X-API-Key",
+        description="Header name the key is sent under.",
+    )
+    value_prefix: str = Field(
+        default="",
+        description=(
+            "Optional prefix before the key value, e.g. 'Bearer ' or 'ApiKey '. "
+            "Empty by default — the raw key is sent verbatim."
+        ),
     )
 
 
@@ -526,6 +566,7 @@ class BaseEInvoicingClient:
         cert_password: str | None = None,
         max_retries: int = DEFAULT_MAX_RETRIES,
         jws_config: JWSConfig | None = None,
+        api_key_config: APIKeyConfig | None = None,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._auth_mode = auth_mode
@@ -537,6 +578,7 @@ class BaseEInvoicingClient:
         self._cert_password = cert_password
         self._max_retries = max_retries
         self._jws_config = jws_config
+        self._api_key_config = api_key_config
         self._mtls_ssl_context: ssl.SSLContext | None = None
         self._client: httpx.AsyncClient | None = None  # long-lived; built on first use
 
@@ -546,6 +588,8 @@ class BaseEInvoicingClient:
             raise ValueError("cert_path is required for MTLS auth mode")
         if auth_mode == AuthMode.JWS and jws_config is None:
             raise ValueError("jws_config is required for JWS auth mode")
+        if auth_mode == AuthMode.API_KEY and api_key_config is None:
+            raise ValueError("api_key_config is required for API_KEY auth mode")
 
     def _get_httpx_client(self) -> httpx.AsyncClient:
         """Build and return a new ``httpx.AsyncClient`` for the active auth mode.
@@ -738,10 +782,9 @@ class BaseEInvoicingClient:
             pass
 
         elif self._auth_mode == AuthMode.API_KEY:
-            # [GAP: API_KEY — subclass and override _get_headers()]
-            raise NotImplementedError(
-                "API_KEY auth requires subclassing BaseEInvoicingClient and overriding "
-                "_get_headers() to inject the key header."
+            assert self._api_key_config is not None
+            headers[self._api_key_config.header_name] = (
+                f"{self._api_key_config.value_prefix}{self._api_key_config.key}"
             )
 
         return headers

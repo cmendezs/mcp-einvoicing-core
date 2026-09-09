@@ -8,7 +8,7 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "mcp-einvoicing-core",
-      description: "Base package for European electronic invoicing MCP servers",
+      description: "Base package for electronic invoicing MCP servers: compliance logic and signing keys stay yours, never a vendor's",
       customCss: ["./src/styles/docs-theme.css"],
       social: [
         { icon: "github", label: "GitHub", href: "https://github.com/cmendezs/mcp-einvoicing-core" },
@@ -33,7 +33,7 @@ export default defineConfig({
       plugins: [
         starlightLlmsTxt({
           projectName: "mcp-einvoicing-core",
-          description: "Base package for European electronic invoicing MCP servers",
+          description: "Base package for electronic invoicing MCP servers: compliance logic and signing keys stay yours, never a vendor's",
           customSets: [
             {
               label: "Key links",

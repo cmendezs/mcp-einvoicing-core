@@ -482,22 +482,65 @@ class BaseXSDValidator(BaseStructuredValidator):
     """
 
 
+class _KnownURLResolver(etree.Resolver):
+    """Resolve a fixed map of ``xs:import``/``xs:include`` URLs to local files.
+
+    Used by ``XSDValidator``'s optional ``known_imports`` (v1.32.0, CORE-7)
+    for schema sets that ``xs:import`` each other by an absolute URL that
+    does not resolve offline (e.g. SAT's CFDI schemas import
+    ``http://www.sat.gob.mx/...`` catalogue/type XSDs by URL). Mirrors
+    ``digital_signature._SATIncludeResolver``'s known-URL-to-local-file
+    pattern. Any URL not in the map falls through to lxml's default
+    resolution, which the parser's ``no_network=True`` then blocks, exactly
+    as before this hook existed.
+    """
+
+    def __init__(self, known: dict[str, str]) -> None:
+        super().__init__()
+        self._known = known
+
+    def resolve(self, url: str, pubid: object, context: object) -> object:  # type: ignore[override]
+        if url in self._known:
+            return self.resolve_filename(self._known[url], context)  # type: ignore[attr-defined]
+        return None
+
+
 class XSDValidator(BaseXSDValidator):
     """Generic concrete XSD validator: loads one schema, validates any document.
 
     For formats that need only stock XML Schema validation with no
     format-specific behaviour (e.g. no multi-schema resolution). Country
-    packages with more elaborate needs (schema sets that reference each
-    other, custom error mapping) should still subclass `BaseXSDValidator`
-    directly, as documented above.
+    packages with more elaborate needs (custom error mapping, non-XSD
+    schema families) should still subclass `BaseXSDValidator` directly, as
+    documented above.
 
     Usage:
         validator = XSDValidator(RESOURCES_DIR / "my-format.xsd")
         result = validator.validate(xml_bytes, profile="my-format")
+
+        # Schema xs:imports another schema by a URL that doesn't resolve offline:
+        validator = XSDValidator(
+            RESOURCES_DIR / "cfdv40.xsd.xml",
+            known_imports={
+                "http://www.sat.gob.mx/sitio_internet/cfd/catalogos/catCFDI.xsd":
+                    str(RESOURCES_DIR / "catCFDI.xsd"),
+            },
+        )
     """
 
-    def __init__(self, xsd_path: Path | str) -> None:
+    def __init__(
+        self, xsd_path: Path | str, *, known_imports: dict[str, str] | None = None
+    ) -> None:
         """Load and compile an XSD schema.
+
+        Args:
+            xsd_path: Path to the entry-point XSD file.
+            known_imports: Optional map of ``xs:import``/``xs:include`` URL to
+                local file path, for schema sets that reference each other by
+                an absolute URL that does not resolve offline. Added v1.32.0
+                (CORE-7) so this no longer requires a package-local subclass
+                of `BaseXSDValidator` duplicating this class's `validate()`
+                method — see ``audit/2026-09-audit-core.md``.
 
         Raises:
             FileNotFoundError: If the file does not exist.
@@ -506,8 +549,11 @@ class XSDValidator(BaseXSDValidator):
         path = Path(xsd_path)
         if not path.exists():
             raise FileNotFoundError(f"XSD schema not found: {path}.")
+        parser = safe_parser(load_dtd=True)
+        if known_imports:
+            parser.resolvers.add(_KnownURLResolver(known_imports))
         try:
-            self._schema = etree.XMLSchema(etree.parse(str(path), safe_parser(load_dtd=True)))
+            self._schema = etree.XMLSchema(etree.parse(str(path), parser))
         except etree.XMLSchemaParseError as exc:
             raise ValueError(f"Failed to parse XSD schema {path}: {exc}") from exc
         self._xsd_path = path

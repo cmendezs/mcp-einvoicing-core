@@ -828,6 +828,118 @@ def run_check_known_shared_helpers(
 
 
 # ---------------------------------------------------------------------------
+# CHECK 7 — Runtime resource paths (packaging safety net, CORE-1)
+# ---------------------------------------------------------------------------
+
+
+def run_check_resource_paths(
+    *,
+    package_root: Path,
+    resource_paths: dict[str, Path],
+) -> CheckResult:
+    """CHECK 7 — Runtime resource paths stay inside the installed package.
+
+    A module that resolves a runtime resource directory (an XSD bundle, a
+    schema directory) by hopping a fixed number of ``.parent``s from
+    ``__file__`` can silently point outside the installed wheel once the
+    package is pip-installed rather than run from a source checkout — the
+    directory layout that made the hop count correct in a source checkout
+    does not survive packaging. This bug class has recurred four times
+    (FR, PL, ES, MX; see CORE-1 in ``audit/2026-09-audit-core.md``), twice
+    past a careful manual review of the exact line. This CHECK converts it
+    into a blocking pre-publish failure instead of a silent runtime
+    fallback or crash.
+
+    Args:
+        package_root: The installed package's own root directory (e.g.
+            ``Path(mcp_cfdi_mx.__file__).parent``) — every declared
+            resource path must resolve to somewhere inside this tree.
+        resource_paths: Maps a human-readable label (e.g.
+            ``"mcp_cfdi_mx.utils.xsd_validator.SPECS_DIR"``) to the `Path`
+            that label's module resolves at import time. Declare every
+            runtime resource directory the package's own modules reference
+            here — pass the actual resolved `Path` object the running code
+            computes, not a re-derivation, so this CHECK exercises the same
+            resolution logic as the real import path.
+
+    Returns:
+        CheckResult with id ``"CHECK_7"``. BLOCKING if a declared path does
+        not exist, or exists but resolves outside `package_root`. WARNING
+        (not a hard failure) if no *resource_paths* are declared at all,
+        since an empty declaration is indistinguishable from "this package
+        genuinely has no runtime resource directories" without a human
+        confirming it — a package that does resolve one but never declared
+        it here gets no protection from this CHECK.
+    """
+    result = CheckResult(check_id="CHECK_7", name="Runtime resource paths")
+    package_root = package_root.resolve()
+
+    if not resource_paths:
+        result.findings.append(
+            CheckFinding(
+                check_id="CHECK_7",
+                tag="[SKIP]",
+                severity=SEVERITY_WARNING,
+                symbol="(none declared)",
+                message=(
+                    "No resource_paths declared for CHECK 7. If this package resolves "
+                    "any runtime resource directory (XSD bundle, schema directory) "
+                    "relative to __file__, declare it here so a packaging regression "
+                    "is caught before publish rather than after."
+                ),
+            )
+        )
+        return result
+
+    for label, path in resource_paths.items():
+        resolved = path.resolve()
+        if not resolved.exists():
+            result.findings.append(
+                CheckFinding(
+                    check_id="CHECK_7",
+                    tag="[MISSING]",
+                    severity=SEVERITY_BLOCKING,
+                    symbol=label,
+                    message=(
+                        f"{label} resolves to {resolved}, which does not exist. This "
+                        "resource directory did not survive packaging into the "
+                        "installed wheel."
+                    ),
+                )
+            )
+            continue
+        try:
+            resolved.relative_to(package_root)
+        except ValueError:
+            result.findings.append(
+                CheckFinding(
+                    check_id="CHECK_7",
+                    tag="[OUTSIDE_PACKAGE_ROOT]",
+                    severity=SEVERITY_BLOCKING,
+                    symbol=label,
+                    message=(
+                        f"{label} resolves to {resolved}, outside the installed "
+                        f"package root {package_root}. A path resolved this way will "
+                        "not survive being packaged into a wheel — move the resource "
+                        "under the package's own src/<module>/ tree."
+                    ),
+                )
+            )
+            continue
+        result.findings.append(
+            CheckFinding(
+                check_id="CHECK_7",
+                tag="[OK]",
+                severity=SEVERITY_OK,
+                symbol=label,
+                message=f"{label} resolves to {resolved}, inside the installed package.",
+            )
+        )
+
+    return result
+
+
+# ---------------------------------------------------------------------------
 # load_rates — file-driven tax rate loading (compliance audit 4.2)
 # ---------------------------------------------------------------------------
 

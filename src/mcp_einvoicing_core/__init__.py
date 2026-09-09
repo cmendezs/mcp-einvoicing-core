@@ -28,6 +28,7 @@ from mcp_einvoicing_core.audit import (
     render_summary_table,
     run_check_core_coverage,
     run_check_known_shared_helpers,
+    run_check_resource_paths,
     run_check_version_compatibility,
 )
 from mcp_einvoicing_core.audit_log import AuditAction, AuditLog, get_audit_log
@@ -37,6 +38,7 @@ from mcp_einvoicing_core.base_server import (
     BaseDocumentValidator,
     BaseLifecycleManager,
     BasePartyValidator,
+    BaseScopeInfo,
     EInvoicingMCPServer,
     SubmitResult,
     assert_not_read_only,
@@ -84,6 +86,7 @@ from mcp_einvoicing_core.exceptions import (
     XSDValidationError,
 )
 from mcp_einvoicing_core.http_client import (
+    APIKeyConfig,
     AuthMode,
     BaseEInvoicingClient,
     JWSConfig,
@@ -242,7 +245,7 @@ from mcp_einvoicing_core.xml_utils import (
     xml_optional,
 )
 
-__version__ = "1.31.1"
+__version__ = "1.32.0"
 
 __all__ = [
     # Archive provider
@@ -254,6 +257,7 @@ __all__ = [
     "BaseDocumentValidator",
     "BaseLifecycleManager",
     "BasePartyValidator",
+    "BaseScopeInfo",
     "EInvoicingMCPServer",
     "SubmitResult",
     # Exceptions
@@ -271,6 +275,7 @@ __all__ = [
     "OAuthValues",
     "OAuthConfig",
     "JWSConfig",
+    "APIKeyConfig",
     "TokenCache",
     # Country-agnostic models
     "TaxIdentifier",
@@ -489,5 +494,6 @@ __all__ = [
     "render_summary_table",
     "run_check_core_coverage",
     "run_check_known_shared_helpers",
+    "run_check_resource_paths",
     "run_check_version_compatibility",
 ]

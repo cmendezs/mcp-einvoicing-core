@@ -1,6 +1,6 @@
 # mcp-einvoicing-core
 
-> Base package for European electronic invoicing MCP servers
+> Base package for electronic invoicing MCP servers: compliance logic and signing keys stay yours, never a vendor's
 
 ## Docs
 

@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-einvoicing-core"
-version = "1.31.1"
-description = "Base package for European electronic invoicing MCP servers"
+version = "1.32.0"
+description = "Base package for electronic invoicing MCP servers: compliance logic and signing keys stay yours, never a vendor's"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
