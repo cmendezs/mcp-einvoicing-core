@@ -35,7 +35,7 @@ from collections.abc import Callable
 from typing import Any, Generic, TypeVar
 
 from fastmcp import FastMCP
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from mcp_einvoicing_core.models import (
     DocumentValidationResult,
@@ -290,6 +290,38 @@ class BaseScopeInfo(BaseModel):
     )
 
 
+class SubmissionMetadata(BaseModel):
+    """Typed base for BaseLifecycleManager.submit_document's metadata argument.
+
+    Added v1.34.0 (CORE-2): submit_document previously took an untyped
+    ``dict[str, Any]`` bag whose meaning was documented only in each
+    adapter's own docstring (KSeF's ``session_token``/``form_code``, SDI's
+    ``filename``/``channel_id``). Country packages subclass this and add
+    their own typed fields — the same subclass-and-extend pattern already
+    used for ``BaseScopeInfo`` and the canonical invoice tree (see
+    `CLAUDE.md` "Canonical invoice tree"). Also used as the metadata type
+    for `submit_lifecycle_status`.
+
+    ``model_config`` allows extra fields so an adapter mid-migration can
+    still pass ad hoc keys without a validation error; new fields should be
+    declared as typed attributes on a subclass instead of left as extras.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+
+class SearchCriteria(BaseModel):
+    """Typed base for BaseLifecycleManager.search_documents's criteria argument.
+
+    Added v1.34.0 (CORE-2) alongside `SubmissionMetadata` — see its
+    docstring for the rationale. Country packages subclass this to add
+    their own typed search fields (e.g. KSeF's ``date_from``/``date_to``/
+    ``subject_type``/``date_type``).
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+
 class BaseLifecycleManager(ABC):
     """Abstract lifecycle manager for national e-invoicing platforms.
 
@@ -303,7 +335,9 @@ class BaseLifecycleManager(ABC):
     """
 
     @abstractmethod
-    async def submit_document(self, document: bytes | str, metadata: dict) -> SubmitResult:
+    async def submit_document(
+        self, document: bytes | str, metadata: SubmissionMetadata
+    ) -> SubmitResult:
         """Submit a document to the national platform.
 
         FR: POST /v1/flows (multipart: file + flowInfo JSON)
@@ -312,7 +346,8 @@ class BaseLifecycleManager(ABC):
 
         Args:
             document: The binary or text document to submit.
-            metadata: Platform-specific metadata (flowSyntax, processingRule, etc.)
+            metadata: Platform-specific metadata, as a `SubmissionMetadata`
+                subclass (flowSyntax, processingRule, etc.)
 
         Returns:
             SubmitResult with invoice_ref, optional session_ref, status, and raw
@@ -328,11 +363,15 @@ class BaseLifecycleManager(ABC):
         """
 
     @abstractmethod
-    async def search_documents(self, criteria: dict) -> list[dict]:
+    async def search_documents(self, criteria: SearchCriteria) -> list[dict]:
         """Search for submitted documents by criteria.
 
         FR: POST /v1/flows/search (processingRule, flowType, status, updatedAfter)
         PL: POST /invoices/query/metadata (subjectType, dateRange)
+
+        Args:
+            criteria: Platform-specific search filters, as a `SearchCriteria`
+                subclass.
 
         Returns a list of document metadata dicts (empty list when no results).
         """
@@ -341,7 +380,7 @@ class BaseLifecycleManager(ABC):
         self,
         document_id: str,
         status: str,
-        metadata: dict | None = None,
+        metadata: SubmissionMetadata | None = None,
     ) -> dict:
         """Submit a lifecycle status update (Approved, Refused, Cashed, etc.).
 

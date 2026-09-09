@@ -40,6 +40,8 @@ from mcp_einvoicing_core.base_server import (
     BasePartyValidator,
     BaseScopeInfo,
     EInvoicingMCPServer,
+    SearchCriteria,
+    SubmissionMetadata,
     SubmitResult,
     assert_not_read_only,
     scrub,
@@ -245,7 +247,7 @@ from mcp_einvoicing_core.xml_utils import (
     xml_optional,
 )
 
-__version__ = "1.33.0"
+__version__ = "1.34.0"
 
 __all__ = [
     # Archive provider
@@ -259,6 +261,8 @@ __all__ = [
     "BasePartyValidator",
     "BaseScopeInfo",
     "EInvoicingMCPServer",
+    "SearchCriteria",
+    "SubmissionMetadata",
     "SubmitResult",
     # Exceptions
     "EInvoicingError",
