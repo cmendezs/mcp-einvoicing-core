@@ -28,8 +28,8 @@
 | `ubl_documents` | `BaseUBLDocument` — غلاف مشترك لعائلات مستندات UBL/Peppol غير الفاتورة (Peppol Ordering، امتدادات خاصة بالولاية القضائية)؛ خارج شجرة `InvoiceDocument`/`EN16931Invoice` صراحةً |
 | `wire_formats` | `EN16931UBLSerializer`, `EN16931UBLParser`, `EN16931CIISerializer`, `EN16931CIIParser`, `UBL_NSMAP`, `CII_NSMAP` |
 | `convert` | `Syntax` (UBL, CII), `convert_wire_format` (كشف تلقائي للمصدر، تسلسل الى الهدف) |
-| `base_server` | `EInvoicingMCPServer`, `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BaseLifecycleManager`, `BasePartyValidator`, `SubmitResult`, `assert_not_read_only`, `scrub` |
-| `http_client` | `BaseEInvoicingClient` (OAuth2, mTLS, bearer, مفتاح API, بدون), `OAuthConfig`, `OAuthValues`, `TokenCache`, `AuthMode` |
+| `base_server` | `EInvoicingMCPServer`, `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BaseLifecycleManager`, `BasePartyValidator`, `BaseScopeInfo`, `SubmitResult`, `assert_not_read_only`, `scrub` |
+| `http_client` | `BaseEInvoicingClient` (OAuth2, mTLS, bearer, مفتاح API, JWS, بدون), `OAuthConfig`, `OAuthValues`, `JWSConfig`, `APIKeyConfig`, `TokenCache`, `AuthMode` |
 | `peppol` | `PeppolSMPClient`, `PeppolParticipantId`, `PeppolServiceInfo`, `PeppolLookupResult`, `PeppolEnvironment`, `PEPPOL_BIS_BILLING_30`, `resolve_naptr` (تشخيص DNS مستقل عبر U-NAPTR/SML) |
 | `peppol.tools` | `register_peppol_tools` (اضافة FastMCP قابلة للتركيب: بحث عن مشارك، نقطة نهاية خدمة، تشخيص DNS، ارسال AS4، بحث في الدليل، بالاضافة الى 8 ادوات لقوائم رموز eDEC)، `default_id_adapter`، `IdentifierAdapter` (عقد مهايئ المعرف الوطني) |
 | `peppol.codelists` | `CodeList`، `CodelistNotConfiguredError`، `load_codelist` ودوال بحث eDEC (انواع المستندات، العمليات، مخططات معرفات المشاركين، ملفات تعريف النقل، حالات استخدام SPIS). يتطلب `EINVOICING_PEPPOL_CODELIST_DIR`، انظر الاعدادات ادناه |
@@ -56,7 +56,7 @@
 | `confirmation` | `ConfirmationGate`, `ConfirmationStore` (بوابة تحقق بشري) |
 | `exceptions` | `EInvoicingError`, `ValidationError`, `PartyValidationError`, `XSDValidationError`, `SchematronValidationError`, `DocumentGenerationError`, `AuthenticationError`, `PlatformError` |
 | `logging_utils` | `setup_logging`, `get_logger` |
-| `audit` | اطار عمل تدقيق الامتثال: `AuditReport`, `CheckResult`, `CheckFinding`, ثوابت الشدة, `make_report`, `render_summary_table`, `parse_audit_args`, `run_check_core_coverage`, `run_check_version_compatibility`, `run_check_known_shared_helpers`, `TaxRate`, `load_rates` (اضافة اختيارية `[audit]`) |
+| `audit` | اطار عمل تدقيق الامتثال: `AuditReport`, `CheckResult`, `CheckFinding`, ثوابت الشدة, `make_report`, `render_summary_table`, `parse_audit_args`, `run_check_core_coverage`, `run_check_version_compatibility`, `run_check_known_shared_helpers`, `run_check_resource_paths`, `TaxRate`, `load_rates` (اضافة اختيارية `[audit]`) |
 
 ## حزم البلدان
 
@@ -121,6 +121,30 @@ mcp-einvoicing-core
   ├── EInvoicingMCPServer               ← سجل اضافات يغلف FastMCP
   └── اطار عمل التدقيق                  ← فحوصات امتثال لكل حزمة
 ```
+
+## الحياد تجاه الموردين
+
+كل خادم في هذه العائلة ينفذ المعيار بنفسه. فهو يبني الوثيقة ويتحقق منها ويوقعها محليا، وتبقى
+مفاتيح التوقيع داخل بنيتك التحتية. لا تعد اي من هذه الحزم عميلا لمنصة فوترة تجارية، ولا حاجة
+الى حساب لدى اي مورد لتشغيل احداها.
+
+ما يختلف بين البلدان هو الميل الاخير: من الذي، ان وجد، يجب ان يقف بينك وبين هيئة الضرائب.
+يدعم `mcp-einvoicing-core` الترتيبات الثلاثة جميعا، وتنفذ كل حزمة بلد بالضبط الترتيب الذي
+تستخدمه ولايتها القضائية:
+
+- **مباشرة الى الهيئة.** لا حاجة قانونيا الى وسيط؛ تتواصل الحزمة مع نقطة النهاية الحكومية
+  باستخدام اعتمادك الخاص. *(ايطاليا، بولندا، البرازيل، اسبانيا)*
+- **وسيط قابل للاستبدال.** يلزم وجود وسيط، لكن واجهته البرمجية موحدة قياسيا، لذا فان تغيير
+  المزود هو تغيير في الاعدادات وليس في الشيفرة. *(منصة PDP الفرنسية بموجب XP Z12-013؛ نقاط
+  وصول Peppol لبلجيكا وسنغافورة والامارات)*
+- **وسيط خاص بكل مورد.** يلزم وجود وسيط وتختلف واجهة كل مورد. تبقى الوثيقة والمفاتيح ملكك؛
+  محول النقل وحده هو الخاص بالمورد. *(مزود PAC المكسيكي، مزود GSP الهندي)*
+
+في الحالات الثلاث، تبقى منطق الامتثال والمفاتيح الخاصة لديك. راجع
+[`context-library/decisions/intermediation-models.md`](https://github.com/cmendezs/mcp-einvoicing/blob/main/context-library/decisions/intermediation-models.md)
+و
+[`context-library/decisions/vendor-neutrality-positioning.md`](https://github.com/cmendezs/mcp-einvoicing/blob/main/context-library/decisions/vendor-neutrality-positioning.md)
+في المستودع الجذري لمساحة العمل للاطلاع على التفكير الكامل ومصدر كل بلد.
 
 ## نمط تسجيل الاضافات
 

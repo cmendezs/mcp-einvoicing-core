@@ -29,8 +29,8 @@ dupliquer le code.
 | `ubl_documents` | `BaseUBLDocument` — enveloppe partagée pour les familles de documents UBL/Peppol non-facture (Peppol Ordering, extensions juridictionnelles) ; explicitement en dehors de l'arbre `InvoiceDocument`/`EN16931Invoice` |
 | `wire_formats` | `EN16931UBLSerializer`, `EN16931UBLParser`, `EN16931CIISerializer`, `EN16931CIIParser`, `UBL_NSMAP`, `CII_NSMAP` |
 | `convert` | `Syntax` (UBL, CII), `convert_wire_format` (detection automatique de la source, serialisation vers la cible) |
-| `base_server` | `EInvoicingMCPServer`, `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BaseLifecycleManager`, `BasePartyValidator`, `SubmitResult`, `assert_not_read_only`, `scrub` |
-| `http_client` | `BaseEInvoicingClient` (OAuth2, mTLS, bearer, cle API, aucun), `OAuthConfig`, `OAuthValues`, `TokenCache`, `AuthMode` |
+| `base_server` | `EInvoicingMCPServer`, `BaseDocumentGenerator`, `BaseDocumentValidator`, `BaseDocumentParser`, `BaseLifecycleManager`, `BasePartyValidator`, `BaseScopeInfo`, `SubmitResult`, `assert_not_read_only`, `scrub` |
+| `http_client` | `BaseEInvoicingClient` (OAuth2, mTLS, bearer, cle API, JWS, aucun), `OAuthConfig`, `OAuthValues`, `JWSConfig`, `APIKeyConfig`, `TokenCache`, `AuthMode` |
 | `peppol` | `PeppolSMPClient`, `PeppolParticipantId`, `PeppolServiceInfo`, `PeppolLookupResult`, `PeppolEnvironment`, `PEPPOL_BIS_BILLING_30`, `resolve_naptr` (diagnostic DNS U-NAPTR/SML autonome) |
 | `peppol.tools` | `register_peppol_tools` (plugin FastMCP montable : recherche de participant, point de terminaison de service, diagnostic DNS, envoi AS4, recherche Directory, plus 8 outils de listes de codes eDEC), `default_id_adapter`, `IdentifierAdapter` (contrat d'adaptateur d'identifiant national) |
 | `peppol.codelists` | `CodeList`, `CodelistNotConfiguredError`, `load_codelist` et les fonctions de recherche eDEC (types de documents, processus, schemas d'identifiants participants, profils de transport, cas d'usage SPIS). Necessite `EINVOICING_PEPPOL_CODELIST_DIR`, voir Configuration ci-dessous |
@@ -57,7 +57,7 @@ dupliquer le code.
 | `confirmation` | `ConfirmationGate`, `ConfirmationStore` (porte de validation humaine) |
 | `exceptions` | `EInvoicingError`, `ValidationError`, `PartyValidationError`, `XSDValidationError`, `SchematronValidationError`, `DocumentGenerationError`, `AuthenticationError`, `PlatformError` |
 | `logging_utils` | `setup_logging`, `get_logger` |
-| `audit` | Framework d'audit de conformite : `AuditReport`, `CheckResult`, `CheckFinding`, constantes de severite, `make_report`, `render_summary_table`, `parse_audit_args`, `run_check_core_coverage`, `run_check_version_compatibility`, `run_check_known_shared_helpers`, `TaxRate`, `load_rates` (extra optionnel `[audit]`) |
+| `audit` | Framework d'audit de conformite : `AuditReport`, `CheckResult`, `CheckFinding`, constantes de severite, `make_report`, `render_summary_table`, `parse_audit_args`, `run_check_core_coverage`, `run_check_version_compatibility`, `run_check_known_shared_helpers`, `run_check_resource_paths`, `TaxRate`, `load_rates` (extra optionnel `[audit]`) |
 
 ## Paquets pays
 
@@ -122,6 +122,35 @@ mcp-einvoicing-core
   ├── EInvoicingMCPServer               ← registre de plugins encapsulant FastMCP
   └── Framework d'audit                 ← controles de conformite par paquet
 ```
+
+## Neutralite vis-a-vis des prestataires
+
+Chaque serveur de cette famille implemente lui-meme la norme. Il construit, valide et signe
+le document localement, et les cles de signature restent dans votre infrastructure. Aucun de
+ces paquets n'est un client pour une plateforme de facturation commerciale, et aucun compte
+prestataire n'est necessaire pour en faire fonctionner un.
+
+Ce qui differe d'un pays a l'autre, c'est le dernier maillon : qui, le cas echeant, doit se
+tenir entre vous et l'administration fiscale. `mcp-einvoicing-core` prend en charge les trois
+configurations, et chaque paquet pays implemente exactement celle qu'utilise sa juridiction :
+
+- **Direct vers l'administration.** Aucun intermediaire n'est legalement requis ; le paquet
+  dialogue avec le point de terminaison gouvernemental avec votre propre accreditation.
+  *(Italie, Pologne, Bresil, Espagne)*
+- **Intermediaire substituable.** Un intermediaire est requis, mais son API est normalisee,
+  donc changer de prestataire est un changement de configuration, pas de code. *(La PDP
+  francaise sous XP Z12-013 ; les points d'acces Peppol pour la Belgique, Singapour, les
+  Emirats arabes unis)*
+- **Intermediaire specifique par prestataire.** Un intermediaire est requis et l'API de
+  chaque prestataire differe. Le document et les cles restent les votres ; seul l'adaptateur
+  de transport est specifique au prestataire. *(Le PAC mexicain, le GSP indien)*
+
+Dans les trois cas, la logique de conformite et les cles privees restent chez vous. Voir
+[`context-library/decisions/intermediation-models.md`](https://github.com/cmendezs/mcp-einvoicing/blob/main/context-library/decisions/intermediation-models.md)
+et
+[`context-library/decisions/vendor-neutrality-positioning.md`](https://github.com/cmendezs/mcp-einvoicing/blob/main/context-library/decisions/vendor-neutrality-positioning.md)
+dans le depot racine de l'espace de travail pour le raisonnement complet et la provenance par
+pays.
 
 ## Patron d'enregistrement de plugins
 
