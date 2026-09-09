@@ -101,6 +101,7 @@ pip install mcp-einvoicing-core[xslt2]
 | `EINVOICING_EN16931_CODELIST_DIR` | `en16931_codelists` (and its FastMCP tools) | Local directory containing your own copy of the CEF EN 16931 semantic code lists (country, currency, ICD, UNCL1001/1153/4461/5305, allowance/item/charge reason, MIME, EAS, VATEX). **Not bundled**, same posture as the eDEC lists above — download the "as GeneriCode" export bundle from the CEF EN 16931 code lists page. Filenames match exactly (`Country.gc`, not a version-prefixed name). Without this set, tools return `configured: false`. |
 | `EINVOICING_PEPPOL_PKI_DIR` | `peppol.trust` | Local directory with `test/` and `prod/` subdirectories of PEM-encoded OpenPeppol PKI root/intermediate CA certificates, for AS4 message signature and SMP response signature chain validation. Not yet published by OpenPeppol as bundled data anywhere — trust functions report `trust_anchors_configured: false` until this is set. |
 | `EINVOICING_SMP_ALLOWLIST` | `peppol` (`PeppolSMPClient`, `resolve_naptr`) | Comma-separated hostname suffixes to extend the built-in Peppol Access Point allowlist used when validating a resolved SMP hostname. |
+| `EINVOICING_CERT_PINS` | `http_client` (`BaseEInvoicingClient`) and `peppol.transport.client` (`AS4TransportClient`) | Comma-separated `host:sha256hex` pairs enabling SHA-256 certificate pinning on outbound HTTP requests. Without this set, pinning is not enforced. |
 
 ## Architecture
 

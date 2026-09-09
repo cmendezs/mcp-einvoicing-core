@@ -100,6 +100,7 @@ pip install mcp-einvoicing-core[xslt2]
 | `EINVOICING_EN16931_CODELIST_DIR` | `en16931_codelists` (وادواتها في FastMCP) | دليل محلي يحتوي على نسختك الخاصة من قوائم رموز EN 16931 الدلالية الصادرة عن CEF (البلد، العملة، ICD، UNCL1001/1153/4461/5305، سبب الخصم/الصنف/الرسم، MIME، EAS، VATEX). **غير مرفقة**، بنفس وضعية قوائم eDEC اعلاه — قم بتنزيل حزمة التصدير "as GeneriCode" من صفحة قوائم رموز EN 16931 الخاصة بـ CEF. اسماء الملفات تتطابق تماما (`Country.gc`، وليس اسما مسبوقا برقم اصدار). عند عدم ضبط هذا المتغير، تعيد الادوات `configured: false`. |
 | `EINVOICING_PEPPOL_PKI_DIR` | `peppol.trust` | دليل محلي يحتوي على دليلين فرعيين `test/` و `prod/` لشهادات جهة التصديق الجذرية/الوسيطة الخاصة بـ OpenPeppol PKI بترميز PEM، للتحقق من سلسلة توقيع رسائل AS4 وتوقيع استجابات SMP. لم تُنشر بعد من قبل OpenPeppol كبيانات مرفقة في اي مكان — تعيد دوال الثقة `trust_anchors_configured: false` الى ان يتم ضبط هذا المتغير. |
 | `EINVOICING_SMP_ALLOWLIST` | `peppol` (`PeppolSMPClient`، `resolve_naptr`) | لواحق اسماء مضيف مفصولة بفواصل لتوسيع القائمة البيضاء المدمجة لنقاط وصول Peppol المستخدمة عند التحقق من اسم مضيف SMP الذي تم حله. |
+| `EINVOICING_CERT_PINS` | `http_client` (`BaseEInvoicingClient`) و `peppol.transport.client` (`AS4TransportClient`) | ازواج `host:sha256hex` مفصولة بفواصل تُفعّل تثبيت الشهادات (certificate pinning) بخوارزمية SHA-256 على طلبات HTTP الصادرة. بدون ضبط هذا المتغير، لا يتم فرض التثبيت. |
 
 ## البنية المعمارية
 
