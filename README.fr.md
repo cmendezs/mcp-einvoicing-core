@@ -146,12 +146,7 @@ configurations, et chaque paquet pays implemente exactement celle qu'utilise sa 
   chaque prestataire differe. Le document et les cles restent les votres ; seul l'adaptateur
   de transport est specifique au prestataire. *(Le PAC mexicain, le GSP indien)*
 
-Dans les trois cas, la logique de conformite et les cles privees restent chez vous. Voir
-[`context-library/decisions/intermediation-models.md`](https://github.com/cmendezs/mcp-einvoicing/blob/main/context-library/decisions/intermediation-models.md)
-et
-[`context-library/decisions/vendor-neutrality-positioning.md`](https://github.com/cmendezs/mcp-einvoicing/blob/main/context-library/decisions/vendor-neutrality-positioning.md)
-dans le depot racine de l'espace de travail pour le raisonnement complet et la provenance par
-pays.
+Dans les trois cas, la logique de conformite et les cles privees restent chez vous.
 
 ## Patron d'enregistrement de plugins
 

@@ -2,8 +2,7 @@
 
 Verified 2026-08-25 against NF EN 16931-1:2017+A1:2019 (AFNOR), Article 6.3,
 Tableau 2 -- BT-1 through BT-161, BG-1 through BG-32. See
-mcp-einvoicing-core/src/mcp_einvoicing_core/en16931.py module docstring and
-context-library/decisions/en16931-2026-deferral.md in the root repo for the
+mcp-einvoicing-core/src/mcp_einvoicing_core/en16931.py module docstring for the
 verification record. This test pins each field's declared BT reference so an
 accidental edit to a Field(description=...) string cannot silently drift the
 field -> BT mapping without a test failure.

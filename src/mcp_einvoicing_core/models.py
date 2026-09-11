@@ -668,8 +668,8 @@ class TaxIdentifier(BaseModel):
         checksum algorithm is later confirmed, extend this validator rather
         than fabricating one now.
 
-        Source: `context-library/countries/ae.md` (`mcp-einvoicing` monorepo),
-        section "TRN (Tax Registration Number)".
+        Source: the package's own compliance reference, section
+        "TRN (Tax Registration Number)".
 
         Args:
             identifier: Raw TRN string. Whitespace is stripped before checking.
@@ -702,7 +702,7 @@ class TaxIdentifier(BaseModel):
             characters).
 
         Format source: ACRA UEN structure, supplied by the user 2026-08-27
-        (`context-library/countries/sg.md`, "Party-identifier formats").
+        (see the package's own compliance reference, "Party-identifier formats").
 
         Check-digit algorithm source (added 2026-08-28): **ACRA does not
         publish a standalone specification of the check-digit formula** —
@@ -784,7 +784,7 @@ class TaxIdentifier(BaseModel):
         (física / natural persons). Regex ported verbatim from the normative
         ``t_RFC`` simple type in ``tdCFDI.xsd`` (SAT CFDI 4.0 shared types),
         supplied by the user 2026-09-01
-        (`context-library/countries/mx.md`, "Party-identifier formats").
+        (see the package's own compliance reference, "Party-identifier formats").
 
         ``[NEED: homoclave check-digit algorithm]`` — no published normative
         source for the RFC homoclave check-character algorithm was found in
@@ -823,7 +823,7 @@ class TaxIdentifier(BaseModel):
 
         Confirmed directly from GSTN's FORM GST INV-01 schema v1.1 (the GST
         e-invoice data dictionary), supplied by the user 2026-09-07
-        (`context-library/countries/in.md`, "Party-identifier formats"):
+        (see the package's own compliance reference, "Party-identifier formats"):
         every GSTIN field (``Supplier_GSTIN``, ``Recipient_GSTIN``,
         ``ShipTo_GSTIN``, ``ECOM_GSTIN``) is declared ``String (Length: 15)``,
         and in every worked example in the schema the first two characters of

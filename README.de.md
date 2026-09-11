@@ -147,12 +147,7 @@ verwendet:
   Anbieters unterscheidet sich. Das Dokument und die Schluessel bleiben weiterhin Ihre; nur
   der Transportadapter ist anbieterspezifisch. *(Mexikos PAC, Indiens GSP)*
 
-In allen drei Faellen bleiben die Compliance-Logik und die privaten Schluessel bei Ihnen. Siehe
-[`context-library/decisions/intermediation-models.md`](https://github.com/cmendezs/mcp-einvoicing/blob/main/context-library/decisions/intermediation-models.md)
-und
-[`context-library/decisions/vendor-neutrality-positioning.md`](https://github.com/cmendezs/mcp-einvoicing/blob/main/context-library/decisions/vendor-neutrality-positioning.md)
-im Root-Repository des Arbeitsbereichs fuer die vollstaendige Begruendung und die
-laenderspezifische Herkunft.
+In allen drei Faellen bleiben die Compliance-Logik und die privaten Schluessel bei Ihnen.
 
 ## Plugin-Registrierungsmuster
 

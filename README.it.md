@@ -146,12 +146,6 @@ ogni pacchetto per paese implementa esattamente quella usata dalla propria giuri
   di trasporto e specifico del fornitore. *(Il PAC messicano, il GSP indiano)*
 
 In tutti e tre i casi, la logica di conformita e le chiavi private restano presso di voi.
-Vedere
-[`context-library/decisions/intermediation-models.md`](https://github.com/cmendezs/mcp-einvoicing/blob/main/context-library/decisions/intermediation-models.md)
-e
-[`context-library/decisions/vendor-neutrality-positioning.md`](https://github.com/cmendezs/mcp-einvoicing/blob/main/context-library/decisions/vendor-neutrality-positioning.md)
-nel repository radice dell'area di lavoro per il ragionamento completo e la provenienza per
-paese.
 
 ## Modello di registrazione dei plugin
 

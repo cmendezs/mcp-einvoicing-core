@@ -40,8 +40,7 @@ git push origin vX.X.X
 - `SubmissionMetadata`, `SearchCriteria` (`base_server.py`): typed, subclassable pydantic
   `BaseModel` bases (`extra="allow"`) for `BaseLifecycleManager`'s previously-untyped
   `dict[str, Any]` arguments, following the same subclass-and-extend pattern already used
-  for `BaseScopeInfo` and the canonical invoice tree. Resolves CORE-2
-  (`audit/2026-09-audit-core.md` in the workspace root repo), core side.
+  for `BaseScopeInfo` and the canonical invoice tree. Resolves CORE-2, core side.
 
 #### Changed
 - `BaseLifecycleManager.submit_document`, `.search_documents`, and
@@ -60,8 +59,7 @@ Cross-package audit run against all 11 country packages with zero BLOCKING findi
 - `build_default_ssl_context`, `build_hardened_async_client` (`http_client.py`): the transport
   hardening `BaseEInvoicingClient._get_httpx_client` already applied (TLS 1.2 floor, SHA-256
   certificate pinning via `EINVOICING_CERT_PINS`, `trust_env=False`) factored into a shared
-  layer. Partially resolves CORE-3 (`audit/2026-09-audit-core.md` in the workspace root
-  repo) — the shared layer plus its AS4-client adopter; BR's raw-SOAP bypass of `_request`,
+  layer. Partially resolves CORE-3 — the shared layer plus its AS4-client adopter; BR's raw-SOAP bypass of `_request`,
   named in CORE-3's own recommended fix, is a separate downstream release.
 
 #### Changed
@@ -81,8 +79,7 @@ cross-package audit run against all 11 country packages with zero BLOCKING findi
 - `run_check_resource_paths` (`audit.py`, CHECK 7): verifies each of a package's declared
   runtime resource directories exists and resolves inside the installed package root, rather
   than outside it via a `.parent`-hop chain that does not survive being packaged into a
-  wheel. Opt-in per package. Resolves CORE-1 (`audit/2026-09-audit-core.md` in the workspace
-  root repo), the fourth occurrence of this bug class, live in `mcp-facturacion-electronica-es`
+  wheel. Opt-in per package. Resolves CORE-1, the fourth occurrence of this bug class, live in `mcp-facturacion-electronica-es`
   and `mcp-cfdi-mx` at the time of that audit.
 - `APIKeyConfig` (`http_client.py`) and `AuthMode.API_KEY` implementation: a static key sent
   in a request header, the dominant auth shape for a vendor that issues one opaque key with
@@ -287,8 +284,7 @@ against all 11 country packages with zero BLOCKING findings.
 - `PeppolServiceInfo.signature_verification` field and `PeppolSMPClient(verify_smp_signatures=...)`
   opt-in flag, non-breaking (default off).
 
-All changes additive and non-breaking. Full detail:
-`context-library/launches/changelog.md` (2026-08-24 entry) and `core-state.md` in the root repo.
+All changes additive and non-breaking.
 
 ### [1.19.1] - 2026-08-23
 #### Changed
@@ -307,7 +303,7 @@ Not a breaking change; no public API/interface changes. 430/430 core tests pass.
 - `resolve_naptr` (`peppol/__init__.py`), a standalone U-NAPTR (SML) DNS diagnostic promoted out of the previously-protected `PeppolSMPClient._resolve_smp_hostname`, which now delegates to it (no behavior change).
 - `PDFEmbedder.extract(filename=None)` canonical hybrid-PDF filename fallback (`CANONICAL_HYBRID_PDF_FILENAMES`), absorbing DE's `_ZUGFERD_ATTACHMENT_FILENAMES` loop. Backward compatible: explicit `filename=` keeps returning `bytes | None` unchanged.
 - `PDFEmbedder.identify()`, reading XMP metadata to detect Factur-X/ZUGFeRD hybrid PDFs and report conformance level/document type/version. Verified against a real Factur-X 1.09.2 sample XMP supplied under `mcp-einvoicing-de/specs/documentation/zugferd/`.
-- Peppol eDEC code list tools (`peppol/codelists.py`): `list_document_type_ids`, `list_process_ids`, `list_participant_id_schemes`, `list_transport_profiles`, `list_spis_use_case_ids`, `check_document_type_id_in_codelist`, `check_process_id_in_codelist`, `check_participant_id_scheme_in_codelist`, `get_peppol_codelist_version`. Data is deliberately not bundled in the wheel: the OpenPeppol eDEC Code Lists carry no confirmed redistribution grant (checked both the file headers and the `docs.peppol.eu/edelivery/codelists/` page text), the identical situation `context-library/decisions/peppol-schematron-artifact.md` in the root repo already found for `PEPPOL-EN16931-UBL.sch`. Each deployment supplies its own local copy via `EINVOICING_PEPPOL_CODELIST_DIR`; every tool returns `configured: false` with setup guidance when unset.
+- Peppol eDEC code list tools (`peppol/codelists.py`): `list_document_type_ids`, `list_process_ids`, `list_participant_id_schemes`, `list_transport_profiles`, `list_spis_use_case_ids`, `check_document_type_id_in_codelist`, `check_process_id_in_codelist`, `check_participant_id_scheme_in_codelist`, `get_peppol_codelist_version`. Data is deliberately not bundled in the wheel: the OpenPeppol eDEC Code Lists carry no confirmed redistribution grant (checked both the file headers and the `docs.peppol.eu/edelivery/codelists/` page text), the same situation already found for `PEPPOL-EN16931-UBL.sch`. Each deployment supplies its own local copy via `EINVOICING_PEPPOL_CODELIST_DIR`; every tool returns `configured: false` with setup guidance when unset.
 - New `Configuration` section in `README.md` (and all six translated READMEs) documenting `EINVOICING_PEPPOL_CODELIST_DIR` and `EINVOICING_SMP_ALLOWLIST`, plus a Peppol plugin usage example.
 
 #### Fixed
@@ -324,8 +320,8 @@ Not a breaking change; all additions are new symbols/tools, and the one signatur
 
 ### [1.18.0] - 2026-08-20
 #### Added
-- `schematron_artifacts.py`: `en16931_base_schematron_validator()`, a ready-to-use, bundled, compiled CEN EN 16931 base Schematron validator (the `BR-*` rules — structural + arithmetic/totals checks). Compiled from the vendored, EUPL-1.2-licensed `CEN-EN16931-UBL-3.0.20.sch` via SchXslt2 v1.11.2 (MIT), ships inside the wheel under `resources/schematron/en16931_base/` — no compile step at install or call time. Scope is EN16931 base rules only; does NOT include the Peppol-specific overlay (no confirmed OpenPeppol redistribution rights — see `context-library/decisions/peppol-schematron-artifact.md` in the root repo). Reproducible compile step: `scripts/compile_en16931_base_schematron.py`.
-- Closes the base-rule portion of `[CORE-PEPPOL-SCHEMATRON-1]` / `mcp-einvoicing-be` BE-SC-11 — see `context-library/roadmap-2026.md` `[CORE-EN16931-BASE-SCHEMATRON-1]`.
+- `schematron_artifacts.py`: `en16931_base_schematron_validator()`, a ready-to-use, bundled, compiled CEN EN 16931 base Schematron validator (the `BR-*` rules — structural + arithmetic/totals checks). Compiled from the vendored, EUPL-1.2-licensed `CEN-EN16931-UBL-3.0.20.sch` via SchXslt2 v1.11.2 (MIT), ships inside the wheel under `resources/schematron/en16931_base/` — no compile step at install or call time. Scope is EN16931 base rules only; does NOT include the Peppol-specific overlay (no confirmed OpenPeppol redistribution rights). Reproducible compile step: `scripts/compile_en16931_base_schematron.py`.
+- Closes the base-rule portion of `[CORE-PEPPOL-SCHEMATRON-1]` / `mcp-einvoicing-be` BE-SC-11 (tracked as `[CORE-EN16931-BASE-SCHEMATRON-1]`).
 
 ### [1.16.2] - 2026-08-09
 #### Fixed

@@ -16,9 +16,7 @@ License:             European Union Public Licence (EUPL) v1.2, per the explicit
 This directory contains only the CEN EN 16931 base rules. It does NOT
 contain, and this NOTICE does NOT cover, the Peppol-specific overlay
 (PEPPOL-EN16931-UBL-*.sch) — that file carries no redistribution grant and
-is never compiled or bundled by this package. See
-context-library/decisions/peppol-schematron-artifact.md (root repo) for the
-full licensing investigation.
+is never compiled or bundled by this package.
 
 Compiled artefact: CEN-EN16931-UBL.xslt
 Compiler:          SchXslt2 v1.11.2 (MIT, David Maus) — see

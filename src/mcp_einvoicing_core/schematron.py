@@ -21,7 +21,7 @@ SaxonSchematronValidator
     stylesheets (notably the FNFE-MPE Factur-X 1.08 / ZUGFeRD rules) use XPath
     2.0 constructs (``every ... satisfies``, ``string-join``, ``cast as``) that
     ``lxml``/``libxslt`` (XSLT 1.0 only) cannot compile — this is the gap
-    tracked as DE-XSLT2-1 / FR-XSLT2-1 in context-library/audit-history.md.
+    tracked as DE-XSLT2-1 / FR-XSLT2-1.
 
 get_xslt_version, load_schematron_validator
     ``get_xslt_version()`` reads the ``version`` attribute off a stylesheet's
@@ -540,7 +540,7 @@ class XSDValidator(BaseXSDValidator):
                 an absolute URL that does not resolve offline. Added v1.32.0
                 (CORE-7) so this no longer requires a package-local subclass
                 of `BaseXSDValidator` duplicating this class's `validate()`
-                method — see ``audit/2026-09-audit-core.md``.
+                method.
 
         Raises:
             FileNotFoundError: If the file does not exist.

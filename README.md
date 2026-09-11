@@ -144,11 +144,7 @@ package implements exactly the one its jurisdiction uses:
   differs. The document and the keys still stay yours; only the transport adapter is
   vendor-specific. *(Mexico's PAC, India's GSP)*
 
-In all three, the compliance logic and the private keys stay with you. See
-[`context-library/decisions/intermediation-models.md`](https://github.com/cmendezs/mcp-einvoicing/blob/main/context-library/decisions/intermediation-models.md)
-and
-[`context-library/decisions/vendor-neutrality-positioning.md`](https://github.com/cmendezs/mcp-einvoicing/blob/main/context-library/decisions/vendor-neutrality-positioning.md)
-in the workspace root repo for the full reasoning and the per-country provenance.
+In all three, the compliance logic and the private keys stay with you.
 
 ## Plugin registration pattern
 

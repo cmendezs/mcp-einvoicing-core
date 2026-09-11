@@ -28,8 +28,7 @@ Source: the "as Genericode" export bundle from the CEF EN 16931 code lists page 
 by the user as `digital-genericodes-2026-05-15.zip`, not fetched by Claude).
 
 **Licensing: same posture as the Peppol eDEC code lists** (see
-`../peppol/README.md` and `core-state.md`'s "Peppol eDEC code lists" section for the full
-investigation this mirrors). The `.gc` files carry only an "automatically generated, do not edit"
+`../peppol/README.md` for the full investigation this mirrors). The `.gc` files carry only an "automatically generated, do not edit"
 annotation — no copyright or redistribution grant. **Data is NOT bundled** in the published wheel;
 each deployment supplies its own local copy and points `EINVOICING_EN16931_CODELIST_DIR` at the
 directory containing it. Every `list_*`/`check_*` tool returns `configured: false` with guidance

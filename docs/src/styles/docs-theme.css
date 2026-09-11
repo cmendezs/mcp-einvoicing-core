@@ -2,9 +2,8 @@
  * Canonical mcp-einvoicing docs-site theme.
  *
  * This file is copied byte-identical into every package repo's docs/src/styles/docs-theme.css.
- * Do not fork or recolor it per repo — see context-library/decisions/docs-site.md for why a
- * single shared identity across all sites is a deliberate decision, and
- * context-library/templates/docs-site-template.md for the theme contract. Each repo's
+ * Do not fork or recolor it per repo — a single shared identity across all sites is a
+ * deliberate decision. Each repo's
  * .github/workflows/docs.yml runs a drift check against this file's hash; edit the source here,
  * never a repo's local copy.
  *

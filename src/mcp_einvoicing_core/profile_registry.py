@@ -153,8 +153,7 @@ def set_profile_registry(registry: ProfileRegistry) -> None:
 
     This replaces the process-wide global; it does not provide per-tenant
     isolation within a single process. The deployment model for this
-    workspace is one process per legal entity (see
-    ``context-library/decisions/deployment-tenancy.md``), so isolation
+    workspace is one process per legal entity, so isolation
     between tenants comes from running separate processes, not from
     swapping registries inside one. Useful for test suites that must start
     from a clean state without sharing registrations across test modules.

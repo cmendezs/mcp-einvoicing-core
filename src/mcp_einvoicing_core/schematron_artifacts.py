@@ -16,8 +16,6 @@ Point. Callers must label results accordingly (e.g. a
 ``scope="en16931-base-only"`` key in their own tool response metadata) and
 must never present this as full Peppol BIS3 conformance.
 
-Full licensing investigation and decision:
-context-library/decisions/peppol-schematron-artifact.md (root repo).
 Compiled-artefact provenance (source .sch, compiler, retrieved dates):
 specs/peppol/README.md.
 

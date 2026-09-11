@@ -21,8 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   digits-first-two/alphanumeric shape. The full state-code + PAN + entity-code +
   check-character structural breakdown, and any check-digit algorithm, are not
   confirmed by any locally supplied NIC/GSTN document, so this validator does not
-  assert either — see the method's docstring and `context-library/countries/in.md`
-  in the `mcp-einvoicing` monorepo.
+  assert either — see the method's docstring.
 
 ### Deferred
 - `TaxIdentifier.validate_in_pan()` was planned alongside `validate_in_gstin()` but
@@ -44,8 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   platform-specific error schema (e.g. mcp-ksef-pl's `_raise_ksef_error`,
   which keys on `exc.response_body`) was unreachable dead code — `PlatformError`
   never set that attribute, so `hasattr(exc, "response_body")` was always
-  `False`. Surfaced during the KSeF v2.7.1 delta review; see PL-ERR-1 in
-  `mcp-ksef-pl`'s `audit-history.md`.
+  `False`. Surfaced during the KSeF v2.7.1 delta review (PL-ERR-1).
 
 ---
 
@@ -60,8 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   does not filter them, but a receiving platform can enforce a stricter policy
   and reject an otherwise schema-valid document. Opt-in and additive; no
   effect on existing callers. Surfaced by the KSeF API v2.4.0 discouraged-
-  Unicode rejection (PRD since 2026-07-16); see PL-DISC-1 in
-  `mcp-ksef-pl`'s `audit-history.md` for the consuming change.
+  Unicode rejection (PRD since 2026-07-16); see PL-DISC-1 for the consuming change.
 
 ---
 

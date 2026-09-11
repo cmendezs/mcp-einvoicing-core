@@ -57,7 +57,7 @@ xml-sign = []
 # saxonche bundles the Saxon-HE C/C++ runtime as a Python wheel (no JVM
 # required). Needed by SaxonSchematronValidator for Schematron-derived
 # stylesheets using XPath 2.0+ constructs lxml/libxslt cannot compile
-# (DE-XSLT2-1, FR-XSLT2-1 — see context-library/audit-history.md).
+# (DE-XSLT2-1, FR-XSLT2-1).
 xslt2 = [
     "saxonche>=12.4.0",
 ]

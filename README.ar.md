@@ -141,11 +141,7 @@ mcp-einvoicing-core
 - **وسيط خاص بكل مورد.** يلزم وجود وسيط وتختلف واجهة كل مورد. تبقى الوثيقة والمفاتيح ملكك؛
   محول النقل وحده هو الخاص بالمورد. *(مزود PAC المكسيكي، مزود GSP الهندي)*
 
-في الحالات الثلاث، تبقى منطق الامتثال والمفاتيح الخاصة لديك. راجع
-[`context-library/decisions/intermediation-models.md`](https://github.com/cmendezs/mcp-einvoicing/blob/main/context-library/decisions/intermediation-models.md)
-و
-[`context-library/decisions/vendor-neutrality-positioning.md`](https://github.com/cmendezs/mcp-einvoicing/blob/main/context-library/decisions/vendor-neutrality-positioning.md)
-في المستودع الجذري لمساحة العمل للاطلاع على التفكير الكامل ومصدر كل بلد.
+في الحالات الثلاث، تبقى منطق الامتثال والمفاتيح الخاصة لديك.
 
 ## نمط تسجيل الاضافات
 

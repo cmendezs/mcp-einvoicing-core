@@ -845,7 +845,7 @@ def run_check_resource_paths(
     package is pip-installed rather than run from a source checkout — the
     directory layout that made the hop count correct in a source checkout
     does not survive packaging. This bug class has recurred four times
-    (FR, PL, ES, MX; see CORE-1 in ``audit/2026-09-audit-core.md``), twice
+    (FR, PL, ES, MX; CORE-1), twice
     past a careful manual review of the exact line. This CHECK converts it
     into a blocking pre-publish failure instead of a silent runtime
     fallback or crash.

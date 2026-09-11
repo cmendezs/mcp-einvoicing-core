@@ -31,8 +31,7 @@ defined in EN 16931-1:2017 Table 2.
 the full semantic model, BT-1 through BT-161 and BG-1 through BG-32 -- on
 2026-08-25. Every BT/BG reference in this module's field descriptions was
 checked against the normative text and confirmed correct; no mislabeled BT
-number was found. See context-library/decisions/en16931-2026-deferral.md in
-the mcp-einvoicing root repo for the verification record, and
+number was found. See
 tests/test_en16931_bt_mapping.py in this package for the regression test that
 pins each field's BT reference.]
 

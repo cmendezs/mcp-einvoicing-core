@@ -13,8 +13,7 @@ SchXslt2 itself is dev-tooling, never imported at runtime.
 
 Only the CEN base file is compiled here. The Peppol overlay
 (PEPPOL-EN16931-UBL-3.0.20.sch) has no confirmed redistribution rights and
-must never be run through this script or bundled as output — see
-context-library/decisions/peppol-schematron-artifact.md.
+must never be run through this script or bundled as output.
 
 Usage (from the workspace root main checkout, not a worktree):
 

@@ -144,11 +144,7 @@ implementa exatamente aquele usado pela sua jurisdicao:
   fornecedor difere. O documento e as chaves continuam sendo seus; apenas o adaptador de
   transporte e especifico do fornecedor. *(O PAC mexicano, o GSP indiano)*
 
-Nos tres casos, a logica de conformidade e as chaves privadas permanecem com voce. Veja
-[`context-library/decisions/intermediation-models.md`](https://github.com/cmendezs/mcp-einvoicing/blob/main/context-library/decisions/intermediation-models.md)
-e
-[`context-library/decisions/vendor-neutrality-positioning.md`](https://github.com/cmendezs/mcp-einvoicing/blob/main/context-library/decisions/vendor-neutrality-positioning.md)
-no repositorio raiz do workspace para o raciocinio completo e a procedencia por pais.
+Nos tres casos, a logica de conformidade e as chaves privadas permanecem com voce.
 
 ## Padrao de registro de plugins
 

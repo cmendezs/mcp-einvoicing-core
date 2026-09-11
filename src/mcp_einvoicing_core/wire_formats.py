@@ -151,7 +151,7 @@ class EN16931UBLSerializer:
         unchanged for packages that do not override it. *scheme_agency_id*
         becomes the element's ``schemeAgencyID`` attribute when not None.
         A subclass overrides this instead of re-implementing ``_build_party``'s
-        element traversal wholesale (see CORE-6 in ``audit/2026-09-audit-core.md``).
+        element traversal wholesale (see CORE-6).
         """
         return None
 

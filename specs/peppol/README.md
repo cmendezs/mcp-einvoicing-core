@@ -54,9 +54,7 @@ The BIS Billing 3.0 specification itself is published as a web document at `http
 permission from CEN" without stating redistribution terms, and the source repo
 (`OpenPEPPOL/peppol-bis-invoice-3`) carries no root `LICENSE`/`NOTICE` file. Confirmed against
 `docs.peppol.eu/poacc/billing/3.0/bis/`'s current copyright statement, which requires OpenPeppol
-AISBL's prior consent for any redistribution or modification. Full investigation and decision in
-[`context-library/decisions/peppol-schematron-artifact.md`](../../../context-library/decisions/peppol-schematron-artifact.md)
-(root repo). **Practical effect:** only `CEN-EN16931-UBL-3.0.20.sch` may be compiled and shipped in
+AISBL's prior consent for any redistribution or modification. **Practical effect:** only `CEN-EN16931-UBL-3.0.20.sch` may be compiled and shipped in
 a package wheel; `PEPPOL-EN16931-UBL-3.0.20.sch` and `stylesheet-ubl.xslt` stay here as
 compile-input/verification references only, never as build output.
 
@@ -84,8 +82,7 @@ targets XSLT 3.0, a strict superset of the XPath 2.0 our `.sch` files declare
 `codelists/*.gc` (Document types, Participant identifier schemes, Processes, Transport profiles,
 SPIS use case, all v9.7) are OASIS Genericode 1.0 reference copies used only to develop/test
 `peppol.codelists` locally — **not shipped in the published wheel**. The eDEC Code Lists carry no
-in-file redistribution grant (see `core-state.md`'s "Peppol eDEC code lists" section for the full
-licensing investigation); every real deployment supplies its own copy via
+in-file redistribution grant; every real deployment supplies its own copy via
 `EINVOICING_PEPPOL_CODELIST_DIR`. The parser (`mcp_einvoicing_core.genericode.parse_genericode`,
 extracted from `peppol.codelists` in v1.20.0) is shared with the EN 16931 semantic code lists at
 `../en16931/codelists/` — see `../en16931/README.md`.
@@ -127,8 +124,8 @@ real until the certs land here.
 
 ## Breaking changes identified in 2025 specs
 
-These changes affect `peppol.py` and are tracked in `context-library/roadmap-2026.md` as
-`CORE-PEPPOL-1` through `CORE-PEPPOL-7`.
+These changes affect `peppol.py` (tracked internally as `CORE-PEPPOL-1` through
+`CORE-PEPPOL-7`).
 
 | Spec | Change | Impact |
 |---|---|---|
@@ -153,5 +150,5 @@ When OpenPeppol publishes a new version of any included spec:
 1. Download the new file from `https://docs.peppol.eu/edelivery/`.
 2. Replace the file here and update the version and retrieved date in the table above.
 3. Review the revision history section of the new spec for breaking changes.
-4. Update `context-library/roadmap-2026.md` with any new `CORE-PEPPOL-*` items.
+4. Record any new `CORE-PEPPOL-*` items in the roadmap backlog.
 5. Update the breaking changes table above.

@@ -17,8 +17,8 @@ Future countries:
 [DECISION: The base client supports OAUTH2_CLIENT_CREDENTIALS, NONE, BEARER_TOKEN,
  MTLS, JWS, and API_KEY (v1.32.0). API_KEY covers the dominant auth shape for a
  vendor that issues one opaque key or token expected verbatim in a header (see
- APIKeyConfig) — the shape most Model C intermediaries (Mexican PACs, Indian GSPs;
- see context-library/decisions/intermediation-models.md) use. A vendor needing a
+ APIKeyConfig) — the shape most Model C intermediaries (Mexican PACs, Indian GSPs) use.
+ A vendor needing a
  query-param key or a multi-step login exchange still needs a subclass overriding
  _get_headers().]
 """
@@ -288,8 +288,7 @@ class AuthMode(StrEnum):
     Pass an ``APIKeyConfig`` to ``BaseEInvoicingClient`` to activate. Covers a
     vendor that issues one opaque key expected verbatim (or with a fixed
     prefix like ``Bearer ``) in a named header, with no OAuth2/JWT flow — the
-    dominant shape for Model C intermediaries (Mexican PACs, Indian GSPs; see
-    ``context-library/decisions/intermediation-models.md``). A vendor that
+    dominant shape for Model C intermediaries (Mexican PACs, Indian GSPs). A vendor that
     instead expects the key as a URL query parameter, or needs a multi-step
     login exchange, is out of scope: subclass and override ``_get_headers()``
     for that shape.
@@ -385,8 +384,7 @@ class APIKeyConfig(BaseModel):
     """Configuration for ``AuthMode.API_KEY``: a static key sent in a request header.
 
     Covers the dominant auth shape for the Model C intermediaries this workspace
-    has seen so far (Mexican PACs, Indian GSPs; see
-    ``context-library/decisions/intermediation-models.md``) — the vendor issues
+    has seen so far (Mexican PACs, Indian GSPs) — the vendor issues
     one opaque key or token and expects it verbatim (or with a fixed prefix) in
     a header, with no OAuth2/JWT flow. A vendor that instead expects the key as
     a URL query parameter, or that needs a multi-step login exchange, is out of

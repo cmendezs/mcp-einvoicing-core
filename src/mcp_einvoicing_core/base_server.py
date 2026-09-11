@@ -262,7 +262,7 @@ class BaseScopeInfo(BaseModel):
     for the canonical invoice tree (see CLAUDE.md "Canonical invoice tree").
     Added v1.32.0 (CORE-8): MX and IN each independently defined an
     unrelated ``ScopeInfo`` model with overlapping fields before this base
-    existed — see ``audit/2026-09-audit-core.md``.
+    existed.
 
     Fields
     ------
@@ -270,8 +270,8 @@ class BaseScopeInfo(BaseModel):
         The wire-format schema version this package targets (e.g. CFDI
         "4.0", FORM GST INV-01 "1.1").
     phase : int
-        The package's own delivery-phase number, as tracked in its
-        ``context-library/countries/<cc>.md`` scope note.
+        The package's own delivery-phase number, as tracked in the package's
+        own scope note.
     supported_document_types : list[str]
         Document-type codes this package can build/validate today.
     out_of_scope : list[str]

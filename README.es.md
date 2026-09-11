@@ -145,12 +145,7 @@ cada paquete por pais implementa exactamente la que usa su jurisdiccion:
   proveedor difiere. El documento y las claves siguen siendo suyos; solo el adaptador de
   transporte es especifico del proveedor. *(El PAC mexicano, el GSP indio)*
 
-En los tres casos, la logica de cumplimiento y las claves privadas permanecen con usted. Vea
-[`context-library/decisions/intermediation-models.md`](https://github.com/cmendezs/mcp-einvoicing/blob/main/context-library/decisions/intermediation-models.md)
-y
-[`context-library/decisions/vendor-neutrality-positioning.md`](https://github.com/cmendezs/mcp-einvoicing/blob/main/context-library/decisions/vendor-neutrality-positioning.md)
-en el repositorio raiz del espacio de trabajo para el razonamiento completo y la procedencia
-por pais.
+En los tres casos, la logica de cumplimiento y las claves privadas permanecen con usted.
 
 ## Patron de registro de plugins
 

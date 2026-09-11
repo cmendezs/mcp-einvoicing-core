@@ -4,10 +4,9 @@ processes, transport profiles, SPIS use cases.
 Unlike most of mcp-einvoicing-core, this module does NOT bundle the
 underlying data inside the wheel. The OpenPeppol eDEC Code Lists carry no
 in-file redistribution grant, the identical situation already investigated
-for the Peppol Schematron overlay (see
-context-library/decisions/peppol-schematron-artifact.md, root repo, which
-found no redistribution grant for PEPPOL-EN16931-UBL.sch and declined to
-bundle it). Shipping these files inside the published wheel would mean core
+for the Peppol Schematron overlay (which similarly found no redistribution
+grant for PEPPOL-EN16931-UBL.sch and declined to bundle it). Shipping these
+files inside the published wheel would mean core
 redistributing OpenPeppol content to every installer without confirmed
 rights to do so.
 
@@ -77,8 +76,7 @@ def _codelist_dir() -> Path:
         raise CodelistNotConfiguredError(
             f"{_ENV_VAR} is not set. Peppol eDEC code list tools require a "
             "local copy of the OpenPeppol code lists (not bundled with this "
-            "package, no confirmed redistribution rights, see "
-            "context-library/decisions/peppol-schematron-artifact.md for the "
+            "package, no confirmed redistribution rights, the "
             'identical Schematron precedent). Download the "as GeneriCode" '
             "export for each artifact from "
             "https://docs.peppol.eu/edelivery/codelists/ and set "
