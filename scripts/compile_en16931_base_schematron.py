@@ -15,10 +15,9 @@ Only the CEN base file is compiled here. The Peppol overlay
 (PEPPOL-EN16931-UBL-3.0.20.sch) has no confirmed redistribution rights and
 must never be run through this script or bundled as output.
 
-Usage (from the workspace root main checkout, not a worktree):
+Usage (from this repo's own root):
 
-    uv run --package mcp-einvoicing-core --extra xslt2 \\
-        python mcp-einvoicing-core/scripts/compile_en16931_base_schematron.py
+    uv run --extra xslt2 python scripts/compile_en16931_base_schematron.py
 """
 
 from __future__ import annotations

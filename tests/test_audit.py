@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 import textwrap
 from pathlib import Path
 
@@ -15,6 +16,7 @@ from mcp_einvoicing_core.audit import (
     _read_core_version_spec,
     load_rates,
     run_check_known_shared_helpers,
+    run_check_no_internal_references,
 )
 
 # ---------------------------------------------------------------------------
@@ -202,3 +204,100 @@ class TestLoadRates:
         toml.write_text('[rates]\nstandard = "not a table"\n')
         with pytest.raises(ValueError, match="expected a table"):
             load_rates(toml)
+
+
+# ---------------------------------------------------------------------------
+# CHECK_PUBLIC_HYGIENE — no references to the private orchestration repo
+# ---------------------------------------------------------------------------
+
+
+def _init_git_repo(root: Path) -> None:
+    subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+
+
+class TestCheckNoInternalReferences:
+    def test_clean_repo_passes(self, tmp_path: Path) -> None:
+        _init_git_repo(tmp_path)
+        (tmp_path / "README.md").write_text("Nothing to see here.\n")
+        subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
+
+        result = run_check_no_internal_references(repo_root=tmp_path)
+
+        assert result.blocking_count == 0
+        assert any(f.tag == "[OK]" for f in result.findings)
+
+    def test_context_library_reference_is_blocking(self, tmp_path: Path) -> None:
+        _init_git_repo(tmp_path)
+        (tmp_path / "README.md").write_text(
+            "See context-library/countries/xx.md for the full reference.\n"
+        )
+        subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
+
+        result = run_check_no_internal_references(repo_root=tmp_path)
+
+        assert result.blocking_count == 1
+        finding = result.findings[0]
+        assert finding.severity == SEVERITY_BLOCKING
+        assert finding.symbol == "README.md:1"
+        assert "context-library/" in finding.message
+
+    def test_reports_one_finding_per_match_with_line_numbers(self, tmp_path: Path) -> None:
+        _init_git_repo(tmp_path)
+        (tmp_path / "NOTES.md").write_text(
+            "line one\nsee sub-agents/mcp-audit-fr.md\nline three\nand .claude/skills/publish/SKILL.md too\n"
+        )
+        subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
+
+        result = run_check_no_internal_references(repo_root=tmp_path)
+
+        assert result.blocking_count == 2
+        symbols = {f.symbol for f in result.findings}
+        assert symbols == {"NOTES.md:2", "NOTES.md:4"}
+
+    def test_audit_vs_core_py_is_self_excluded(self, tmp_path: Path) -> None:
+        _init_git_repo(tmp_path)
+        audit_dir = tmp_path / "audit"
+        audit_dir.mkdir()
+        (audit_dir / "audit_vs_core.py").write_text(
+            "# defines the check; legitimately says context-library/ and sub-agents/\n"
+        )
+        subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
+
+        result = run_check_no_internal_references(repo_root=tmp_path)
+
+        assert result.blocking_count == 0
+
+    def test_binary_and_oversized_files_are_skipped_not_erroring(self, tmp_path: Path) -> None:
+        _init_git_repo(tmp_path)
+        (tmp_path / "spec.bin").write_bytes(b"\x00\x01context-library/\xff\xfe")
+        subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
+
+        result = run_check_no_internal_references(repo_root=tmp_path)
+
+        assert result.blocking_count == 0
+
+    def test_extra_excluded_paths_are_skipped(self, tmp_path: Path) -> None:
+        _init_git_repo(tmp_path)
+        (tmp_path / "LEGACY.md").write_text("context-library/ mentioned deliberately here.\n")
+        subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
+
+        result = run_check_no_internal_references(
+            repo_root=tmp_path, extra_excluded_paths=frozenset({"LEGACY.md"})
+        )
+
+        assert result.blocking_count == 0
+
+    def test_not_a_git_repo_skips_rather_than_blocks(self, tmp_path: Path) -> None:
+        result = run_check_no_internal_references(repo_root=tmp_path)
+
+        assert result.skipped
+        assert result.blocking_count == 0
+
+    def test_this_repo_itself_passes(self) -> None:
+        """Dogfooding: mcp-einvoicing-core is a public repo too."""
+        repo_root = Path(__file__).resolve().parent.parent
+        result = run_check_no_internal_references(repo_root=repo_root)
+
+        assert result.blocking_count == 0, [
+            f"{f.symbol}: {f.message}" for f in result.findings if f.severity == SEVERITY_BLOCKING
+        ]

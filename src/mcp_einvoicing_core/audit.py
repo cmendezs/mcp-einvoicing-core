@@ -23,6 +23,8 @@ import ast
 import importlib
 import importlib.metadata
 import inspect
+import re
+import subprocess
 import textwrap
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -933,6 +935,173 @@ def run_check_resource_paths(
                 severity=SEVERITY_OK,
                 symbol=label,
                 message=f"{label} resolves to {resolved}, inside the installed package.",
+            )
+        )
+
+    return result
+
+
+# ---------------------------------------------------------------------------
+# CHECK_PUBLIC_HYGIENE — no references to the private orchestration repo
+# ---------------------------------------------------------------------------
+
+# Each pattern is (regex, human-readable label used in the finding message).
+# Every one of these was found leaking from a public package into the
+# private orchestration repo's own paths and internal terminology during the
+# 2026-09-11 fleet-wide sweep (READMEs, CHANGELOGs, and source docstrings
+# alike) before this check existed. Extend this list rather than special-
+# casing a new leak by hand the next time one turns up.
+_INTERNAL_REFERENCE_PATTERNS: tuple[tuple[str, str], ...] = (
+    (r"context-library/", "a reference-docs directory that lives only in the private orchestration repo"),
+    (r"sub-agents/", "a sub-agent directory that lives only in the private orchestration repo"),
+    (r"\.claude/skills/", "a skill directory that lives only in the private orchestration repo"),
+    (r"audit/\d{4}-\d{2}-audit-[a-z]+\.md", "a dated audit report that lives only in the private orchestration repo"),
+    (r"\broadmap-\d{4}\.md\b", "a backlog file that lives only in the private orchestration repo"),
+    (r"\baudit-history\.md\b", "a finding tracker that lives only in the private orchestration repo"),
+    (r"\bcore-state\.md\b", "an API-surface reference that lives only in the private orchestration repo"),
+    (r"\bmonorepo\b", 'the word "monorepo", which names the private orchestration repo'),
+    (r"\bworkspace root\b", '"workspace root", which implies a private sibling repo'),
+    (r"\broot repo\b", '"root repo", which implies a private sibling repo'),
+)
+
+# Files that must legitimately contain the patterns above (they define or
+# document the check itself) and would otherwise flag themselves.
+_PUBLIC_HYGIENE_SELF_EXCLUDED_FILENAMES = frozenset(
+    {
+        "audit.py",  # defines the patterns
+        "audit_vs_core.py",  # invokes the check; may cite a finding's own patterns in comments
+        "test_audit.py",  # tests the patterns with literal fixture strings
+        "report.json",  # generated audit output — may echo a past run's own finding text
+    }
+)
+
+_PUBLIC_HYGIENE_EXCLUDED_DIR_PARTS = frozenset(
+    {
+        ".git",
+        "node_modules",
+        ".venv",
+        "__pycache__",
+        ".pytest_cache",
+        ".mypy_cache",
+        ".ruff_cache",
+        ".astro",
+        "dist",
+        "build",
+        "htmlcov",
+        ".benchmarks",
+    }
+)
+
+# Above this size a tracked file is a vendored spec binary (PDF, XSD bundle,
+# xlsx codelist, …), never hand-authored prose — skip reading it at all
+# rather than pay the cost of a doomed UTF-8 decode attempt.
+_PUBLIC_HYGIENE_MAX_FILE_BYTES = 1_000_000
+
+
+def run_check_no_internal_references(
+    *,
+    repo_root: Path,
+    extra_excluded_paths: frozenset[str] = frozenset(),
+) -> CheckResult:
+    """CHECK_PUBLIC_HYGIENE — no references to the private orchestration repo.
+
+    This package's repo is public. The `mcp-einvoicing` orchestration repo
+    that plans and audits it is not, and never will be — so a README,
+    CHANGELOG entry, or code comment that cites one of its internal paths
+    (reference-docs directories, sub-agent definitions, skill definitions,
+    dated audit reports, the backlog/finding-tracker files) reads fine to
+    someone working inside that repo but is a dead link or an unexplained
+    internal reference to every other reader. This class of leak was found
+    across all 12 published packages — READMEs, CHANGELOGs, RELEASE notes,
+    and source docstrings alike — in a manual sweep on 2026-09-11, none of
+    it caught by any existing check. This CHECK exists so the next instance
+    is a blocking pre-publish failure instead of something a human has to
+    notice by inspection.
+
+    Scans every file `git ls-files` reports as tracked under *repo_root* for
+    the patterns in `_INTERNAL_REFERENCE_PATTERNS`. Binary and oversized
+    files (vendored specs — PDFs, XSD bundles, xlsx codelists) are skipped
+    without being read. This module's own defining file, its own test
+    module, and the per-package `audit_vs_core.py` runner are excluded,
+    since all three must state these patterns literally to define, test, or
+    invoke this check.
+
+    Args:
+        repo_root: The package repo's own root directory (the directory
+            containing `.git`, `pyproject.toml`, and `audit/`) — NOT the
+            installed package root used by CHECK 7.
+        extra_excluded_paths: Repo-relative paths (as `git ls-files` prints
+            them) to skip beyond the built-in exclusions. No package
+            currently needs this; a legitimate exception should be rare
+            enough to question before adding one.
+
+    Returns:
+        CheckResult with id "CHECK_PUBLIC_HYGIENE". BLOCKING for every
+        match — there is no WARNING tier here, because the fix is always a
+        rewording, never a legitimate reference a public repo should keep.
+        SKIP (not BLOCKING) if `git ls-files` itself fails, e.g. run outside
+        a git checkout.
+    """
+    result = CheckResult(check_id="CHECK_PUBLIC_HYGIENE", name="No internal (private-repo) references")
+
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(repo_root), "ls-files"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (OSError, subprocess.CalledProcessError) as exc:
+        result.skipped = True
+        result.skip_reason = f"could not list git-tracked files under {repo_root}: {exc}"
+        return result
+
+    compiled = [(re.compile(pattern, re.IGNORECASE), label) for pattern, label in _INTERNAL_REFERENCE_PATTERNS]
+    found_any = False
+
+    for rel_path in completed.stdout.splitlines():
+        if not rel_path:
+            continue
+        path = Path(rel_path)
+        if path.name in _PUBLIC_HYGIENE_SELF_EXCLUDED_FILENAMES or rel_path in extra_excluded_paths:
+            continue
+        if any(part in _PUBLIC_HYGIENE_EXCLUDED_DIR_PARTS for part in path.parts):
+            continue
+
+        full_path = repo_root / path
+        try:
+            if full_path.stat().st_size > _PUBLIC_HYGIENE_MAX_FILE_BYTES:
+                continue
+            text = full_path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue  # binary, unreadable, or vanished since ls-files ran
+
+        for regex, label in compiled:
+            for match in regex.finditer(text):
+                found_any = True
+                line_no = text.count("\n", 0, match.start()) + 1
+                result.findings.append(
+                    CheckFinding(
+                        check_id="CHECK_PUBLIC_HYGIENE",
+                        tag="[INTERNAL_REFERENCE]",
+                        severity=SEVERITY_BLOCKING,
+                        symbol=f"{rel_path}:{line_no}",
+                        message=(
+                            f"References {label} (matched {match.group(0)!r}). "
+                            "Reword to drop the citation, or state the claim "
+                            "without naming a file from the private repo."
+                        ),
+                    )
+                )
+
+    if not found_any:
+        result.findings.append(
+            CheckFinding(
+                check_id="CHECK_PUBLIC_HYGIENE",
+                tag="[OK]",
+                severity=SEVERITY_OK,
+                symbol="(repo-wide)",
+                message="No references to the private orchestration repo found.",
             )
         )
 
