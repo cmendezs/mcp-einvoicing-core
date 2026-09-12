@@ -35,6 +35,25 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.34.1] - 2026-09-12
+#### Added
+- `run_check_no_internal_references()` (`audit.py`): scans a package's git-tracked files for
+  references to this project's private orchestration repo — internal-only reference-docs and
+  skill directories, dated audit reports, backlog/finding-tracker/API-surface files, and a
+  handful of terms that only make sense to someone working inside that other repo — failing
+  BLOCKING on any match. Added after a fleet-wide sweep found this leak (READMEs, CHANGELOGs,
+  RELEASE notes, and source docstrings alike) across all 12 published packages, with no
+  existing check catching it. Not opt-in like CHECK 7 — every package's `audit_vs_core.py`
+  calls it unconditionally.
+
+#### Fixed
+- Two internal-repo references in this repo's own usage docstrings, surfaced by the new
+  check's own dogfooding test against this repo.
+
+Cross-package audit run against all 11 country packages with zero BLOCKING findings for this
+check (each already had it wired in ahead of this release). 670/670 core tests passing
+(645 prior + 25 new/updated).
+
 ### [1.34.0] - 2026-09-09
 #### Added
 - `SubmissionMetadata`, `SearchCriteria` (`base_server.py`): typed, subclassable pydantic
