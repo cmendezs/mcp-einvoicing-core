@@ -952,13 +952,25 @@ def run_check_resource_paths(
 # alike) before this check existed. Extend this list rather than special-
 # casing a new leak by hand the next time one turns up.
 _INTERNAL_REFERENCE_PATTERNS: tuple[tuple[str, str], ...] = (
-    (r"context-library/", "a reference-docs directory that lives only in the private orchestration repo"),
+    (
+        r"context-library/",
+        "a reference-docs directory that lives only in the private orchestration repo",
+    ),
     (r"sub-agents/", "a sub-agent directory that lives only in the private orchestration repo"),
     (r"\.claude/skills/", "a skill directory that lives only in the private orchestration repo"),
-    (r"audit/\d{4}-\d{2}-audit-[a-z]+\.md", "a dated audit report that lives only in the private orchestration repo"),
+    (
+        r"audit/\d{4}-\d{2}-audit-[a-z]+\.md",
+        "a dated audit report that lives only in the private orchestration repo",
+    ),
     (r"\broadmap-\d{4}\.md\b", "a backlog file that lives only in the private orchestration repo"),
-    (r"\baudit-history\.md\b", "a finding tracker that lives only in the private orchestration repo"),
-    (r"\bcore-state\.md\b", "an API-surface reference that lives only in the private orchestration repo"),
+    (
+        r"\baudit-history\.md\b",
+        "a finding tracker that lives only in the private orchestration repo",
+    ),
+    (
+        r"\bcore-state\.md\b",
+        "an API-surface reference that lives only in the private orchestration repo",
+    ),
     (r"\bmonorepo\b", 'the word "monorepo", which names the private orchestration repo'),
     (r"\bworkspace root\b", '"workspace root", which implies a private sibling repo'),
     (r"\broot repo\b", '"root repo", which implies a private sibling repo'),
@@ -1042,7 +1054,9 @@ def run_check_no_internal_references(
         SKIP (not BLOCKING) if `git ls-files` itself fails, e.g. run outside
         a git checkout.
     """
-    result = CheckResult(check_id="CHECK_PUBLIC_HYGIENE", name="No internal (private-repo) references")
+    result = CheckResult(
+        check_id="CHECK_PUBLIC_HYGIENE", name="No internal (private-repo) references"
+    )
 
     try:
         completed = subprocess.run(
@@ -1056,7 +1070,10 @@ def run_check_no_internal_references(
         result.skip_reason = f"could not list git-tracked files under {repo_root}: {exc}"
         return result
 
-    compiled = [(re.compile(pattern, re.IGNORECASE), label) for pattern, label in _INTERNAL_REFERENCE_PATTERNS]
+    compiled = [
+        (re.compile(pattern, re.IGNORECASE), label)
+        for pattern, label in _INTERNAL_REFERENCE_PATTERNS
+    ]
     found_any = False
 
     for rel_path in completed.stdout.splitlines():
