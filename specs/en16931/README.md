@@ -45,6 +45,23 @@ shared `mcp_einvoicing_core.genericode.parse_genericode` (extracted out of `pepp
 v1.20.0 specifically so this module could reuse it) and every `check_*` tool returns correct
 results against real entries (e.g. `EUR`, `VATEX-EU-79-C`).
 
+## Pending refresh: EN 16931 code lists v18 (effective 2026-11-15)
+
+Published 2026-10-09 in the EC "Registry of supporting artefacts to implement EN16931". Only the
+`.xlsx` workbooks were supplied (no Genericode yet), so the `.gc` files above are still the
+2026-05-15 release and lag these workbooks:
+
+| Workbook (in `codelists/`) | Version | Change vs the `.gc` files |
+|---|---|---|
+| `EN16931 code lists values v18 - used from 2026-11-15.xlsx` | v18 | ICD adds `0249`, `0250`, `0251`; EAS adds `9960`; VATEX adds 18 Spanish codes; all other lists unchanged |
+| `Electronic Address Scheme Code list - version 17 - published Sep2026.xlsx` | EAS v17 | Adds `9960` (Taiwan UBN); flags `9901`, `9902`, `9904`, `9905`, `9906`, `9907`, `9917`, `9921`, `9955`, `9956`, `9958` as deprecated (still listed) |
+| `VAT Exemption Reason Code list VATEX - version 9.xlsx` | VATEX v9 | Adds `VATEX-ES-N1`, `-N2`, `-IVA20/21/22/23/24/25/140BIS`, `-OTROS`, `-IGIC1TR/11/12/13/25/47/90`, `-IPSI7/8` |
+
+The older EAS v16 and VATEX v8 workbooks stay until the `.gc` files are regenerated from a Genericode
+bundle. `[Unverified]` the v18 5305 tab lists 9 codes, while the CEN 1.3.17 Schematron (BR-CL-17/18)
+also accepts `B`. The v18 Index notes a known `VATEX-EU-D` / `VATEX-EU-F` name mismatch, postponed to a
+later release.
+
 ## Update process
 
 When the CEF publishes a new version of the code list bundle:
