@@ -4,6 +4,14 @@ Reference files for the EN 16931 semantic code-list lookup implemented in
 `mcp_einvoicing_core.en16931_codelists` (CORE-EN16931-CODELIST-1, shipped v1.20.0). All files
 sourced from the CEF "Digital Building Blocks for Europe" code list distribution.
 
+## Validation Schematron (compiled and bundled)
+
+| File | Description | Version | Retrieved |
+|---|---|---|---|
+| `CEN-EN16931-UBL-1.3.17.sch` | CEN EN 16931 UBL validation rules (preprocessed Schematron, EUPL 1.2 in-file grant). Compiled by `scripts/compile_en16931_base_schematron.py` into the bundled `resources/schematron/en16931_base/CEN-EN16931-UBL.xslt`. Differences from the previous 1.3.15 source: `BR-CO-25` retired, `BR-AF-*`/`BR-AG-*` replaced by `BR-IG-*`/`BR-IP-*`, new `UBL-SR-56..59`. | 1.3.17 (2026-10-09) | 2026-11-17 |
+
+Source: the CEN `ConnectingEurope/eInvoicing-EN16931` release `validation-1.3.17`, supplied locally by the user.
+
 ## Code lists (deployer-supplied — not bundled)
 
 | File | Description | Version | Retrieved |

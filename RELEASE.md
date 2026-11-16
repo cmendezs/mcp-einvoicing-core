@@ -35,6 +35,13 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.35.0] - 2026-11-17
+#### Changed
+- The bundled compiled CEN EN 16931 base Schematron (`en16931_base_schematron_validator()`) is now built from the CEN EN 16931 validation artefacts 1.3.17 (UBL, 2026-10-09).
+- Rule changes visible to callers: `BR-CO-25` is no longer emitted (retired upstream in 1.3.16); `BR-AF-01..10` and `BR-AG-01..10` are replaced by `BR-IG-01..10` and `BR-IP-01..10`; `UBL-SR-56..59` are added.
+- Provenance notice, vendored source (`specs/en16931/CEN-EN16931-UBL-1.3.17.sch`) and the compile script are updated.
+- 671 tests passing.
+
 ### [1.34.1] - 2026-09-12
 #### Added
 - `run_check_no_internal_references()` (`audit.py`): scans a package's git-tracked files for

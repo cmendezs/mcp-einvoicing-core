@@ -2,7 +2,7 @@
 
 Not shipped in the wheel and not run at install time. Regenerates the bundled
 artefact at src/mcp_einvoicing_core/resources/schematron/en16931_base/ from
-the vendored .sch source in specs/peppol/.
+the vendored .sch source in specs/en16931/ (CEN EN 16931 validation artefacts 1.3.17).
 
 Compiler: SchXslt2 (MIT, David Maus), vendored at scripts/vendor/schxslt2-*/.
 Provenance for both the .sch input and the SchXslt2 compiler is documented in
@@ -12,7 +12,7 @@ Runtime dependency: saxonche only (the [xslt2] extra core already ships).
 SchXslt2 itself is dev-tooling, never imported at runtime.
 
 Only the CEN base file is compiled here. The Peppol overlay
-(PEPPOL-EN16931-UBL-3.0.20.sch) has no confirmed redistribution rights and
+(PEPPOL-EN16931-UBL-*.sch) has no confirmed redistribution rights and
 must never be run through this script or bundled as output.
 
 Usage (from this repo's own root):
@@ -25,7 +25,7 @@ from __future__ import annotations
 from pathlib import Path
 
 _CORE_ROOT = Path(__file__).resolve().parent.parent
-_SCH_SOURCE = _CORE_ROOT / "specs" / "peppol" / "CEN-EN16931-UBL-3.0.20.sch"
+_SCH_SOURCE = _CORE_ROOT / "specs" / "en16931" / "CEN-EN16931-UBL-1.3.17.sch"
 _OUTPUT_XSLT = (
     _CORE_ROOT
     / "src"

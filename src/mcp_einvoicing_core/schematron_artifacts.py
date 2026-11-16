@@ -40,7 +40,7 @@ _EN16931_BASE_XSLT = _RESOURCES_DIR / "en16931_base" / "CEN-EN16931-UBL.xslt"
 def en16931_base_schematron_validator() -> BaseStructuredValidator:
     """Return a validator for the CEN EN 16931 base Schematron (``BR-*`` rules).
 
-    Compiled from the vendored ``CEN-EN16931-UBL-3.0.20.sch`` (EUPL 1.2) via
+    Compiled from the vendored CEN EN 16931 validation artefacts 1.3.17 UBL schematron (EUPL 1.2) via
     SchXslt2; bundled inside the wheel so no compile step runs at install or
     call time. Backed by ``SaxonSchematronValidator`` (XSLT 3.0, via the
     optional ``[xslt2]`` extra) since the compiled stylesheet targets XSLT 3.0.

@@ -3,8 +3,9 @@
 Covers:
   - en16931_base_schematron_validator() returns a working validator
   - A golden Peppol BIS3 example invoice validates clean (zero failed-assert)
-  - A mutated invoice (DueDate and PaymentTerms/Note both removed on a
-    positive PayableAmount) trips BR-CO-25 and only BR-CO-25
+  - A mutated invoice (IssueDate removed) trips BR-03
+  - Rules renamed or added in CEN 1.3.17 (BR-IG-*, BR-IP-*, UBL-SR-57..59) are
+    present in the bundled stylesheet, and the retired BR-AF-*/BR-AG-* are gone
 """
 
 from __future__ import annotations
@@ -29,11 +30,10 @@ def _read_golden_invoice() -> bytes:
         return zf.read(_GOLDEN_MEMBER)
 
 
-def _break_br_co_25(xml_bytes: bytes) -> bytes:
-    """Strip DueDate and PaymentTerms so BR-CO-25 fires on a positive PayableAmount."""
+def _break_br_03(xml_bytes: bytes) -> bytes:
+    """Strip the invoice IssueDate so BR-03 (an invoice shall have an issue date) fires."""
     text = xml_bytes.decode("utf-8")
-    text = re.sub(r"<cbc:DueDate>.*?</cbc:DueDate>", "", text)
-    text = re.sub(r"<cac:PaymentTerms>.*?</cac:PaymentTerms>", "", text, flags=re.DOTALL)
+    text = re.sub(r"<cbc:IssueDate>.*?</cbc:IssueDate>", "", text, count=1)
     return text.encode("utf-8")
 
 
@@ -58,9 +58,18 @@ class TestEn16931BaseSchematronValidator:
         assert result.errors == []
 
     @pytest.mark.skipif(not _EXAMPLES_ZIP.exists(), reason="BIS-Billing3-Examples.zip not present")
-    def test_missing_due_date_and_payment_terms_trips_br_co_25(self, validator):
-        broken = _break_br_co_25(_read_golden_invoice())
+    def test_missing_issue_date_trips_br_03(self, validator):
+        broken = _break_br_03(_read_golden_invoice())
         result = validator.validate(broken, profile="peppol-bis-3", syntax="UBL")
         assert result.is_valid is False
         rule_ids = {e.rule_id for e in result.errors}
-        assert rule_ids == {"BR-CO-25"}
+        assert "BR-03" in rule_ids
+
+    def test_bundled_stylesheet_carries_cen_1_3_17_rule_ids(self):
+        from mcp_einvoicing_core import schematron_artifacts
+
+        text = schematron_artifacts._EN16931_BASE_XSLT.read_text(encoding="utf-8")
+        for rule_id in ("BR-IG-01", "BR-IP-01", "UBL-SR-57", "UBL-SR-58", "UBL-SR-59"):
+            assert f'"{rule_id}"' in text, rule_id
+        for retired in ("BR-AF-01", "BR-AG-01", "BR-CO-25"):
+            assert f'"{retired}"' not in text, retired
