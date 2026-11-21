@@ -35,6 +35,10 @@ git push origin vX.X.X
 
 ## Changelog
 
+### [1.36.0] - 2026-11-21
+#### Added
+- `audit.run_check_core_coverage()` accepts an optional `out_of_scope_modules={module_path: reason}`. A declared module yields one `[OUT_OF_SCOPE]` finding (reason plus unused-symbol count) instead of one `[MISSING]` warning per unused symbol. An empty reason raises `ValueError`. Default behaviour is unchanged.
+
 ### [1.35.0] - 2026-11-17
 #### Changed
 - The bundled compiled CEN EN 16931 base Schematron (`en16931_base_schematron_validator()`) is now built from the CEN EN 16931 validation artefacts 1.3.17 (UBL, 2026-10-09).
