@@ -15,6 +15,7 @@ from mcp_einvoicing_core.audit import (
     TaxRate,
     _read_core_version_spec,
     load_rates,
+    run_check_core_coverage,
     run_check_known_shared_helpers,
     run_check_no_internal_references,
 )
@@ -301,3 +302,50 @@ class TestCheckNoInternalReferences:
         assert result.blocking_count == 0, [
             f"{f.symbol}: {f.message}" for f in result.findings if f.severity == SEVERITY_BLOCKING
         ]
+
+
+# ---------------------------------------------------------------------------
+# CHECK 1 — out_of_scope_modules (CORE-11)
+# ---------------------------------------------------------------------------
+
+_PEPPOL = "mcp_einvoicing_core.peppol"
+
+
+def _coverage(**kwargs):
+    return run_check_core_coverage(
+        package_name="demo-pkg",
+        package_modules=[],
+        modules_to_check=[_PEPPOL],
+        **kwargs,
+    )
+
+
+class TestCheckCoreCoverageOutOfScope:
+    def test_default_reports_missing_per_symbol(self):
+        result = _coverage()
+        tags = {f.tag for f in result.findings}
+        assert "[MISSING]" in tags
+        assert "[OUT_OF_SCOPE]" not in tags
+
+    def test_out_of_scope_collapses_missing_into_one_finding(self):
+        baseline = _coverage()
+        missing = sum(1 for f in baseline.findings if f.tag == "[MISSING]")
+        assert missing > 1
+
+        result = _coverage(out_of_scope_modules={_PEPPOL: "no Peppol leg"})
+        assert result.warning_count == 0
+        scoped = [f for f in result.findings if f.tag == "[OUT_OF_SCOPE]"]
+        assert len(scoped) == 1
+        assert scoped[0].symbol == _PEPPOL
+        assert "no Peppol leg" in scoped[0].message
+        assert f"{missing} unused symbol(s)" in scoped[0].message
+        assert scoped[0].severity == SEVERITY_OK
+
+    def test_empty_reason_is_rejected(self):
+        with pytest.raises(ValueError, match="non-empty reason"):
+            _coverage(out_of_scope_modules={_PEPPOL: "  "})
+
+    def test_modules_not_declared_keep_warning_behaviour(self):
+        result = _coverage(out_of_scope_modules={"mcp_einvoicing_core.pdf": "no PDF leg"})
+        assert any(f.tag == "[MISSING]" for f in result.findings)
+        assert not any(f.tag == "[OUT_OF_SCOPE]" for f in result.findings)

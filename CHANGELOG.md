@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `audit.run_check_core_coverage()` gains an optional `out_of_scope_modules={module_path: reason}` parameter. A package can declare a whole core sub-module outside its scope (for example `mcp_einvoicing_core.peppol` for a package with no Peppol leg) and receives one `[OUT_OF_SCOPE]` finding per module, with the reason and the unused-symbol count, instead of one `[MISSING]` warning per symbol. An empty reason raises `ValueError`. The default is unchanged, so existing callers are unaffected.
+
 ### Changed
 - The bundled, compiled CEN EN 16931 base Schematron (`en16931_base_schematron_validator()`) is now built from the CEN EN 16931 validation artefacts 1.3.17 (UBL, released 2026-10-09) instead of the 1.3.15-era copy distributed inside the Peppol BIS 3.0.20 bundle. Rule changes visible to callers: `BR-CO-25` is no longer emitted (retired upstream in 1.3.16), `BR-AF-01..10` and `BR-AG-01..10` are replaced by `BR-IG-01..10` and `BR-IP-01..10`, and `UBL-SR-56`, `UBL-SR-57`, `UBL-SR-58`, `UBL-SR-59` are added. Provenance, licence notice and the compile script are updated accordingly.
 - The EN 16931 code-list reference copies are unchanged (they are deployer-supplied and not bundled); the code lists v18, EAS v17 and VATEX v9 effective 2026-11-15 are available as the vendored registry workbooks.

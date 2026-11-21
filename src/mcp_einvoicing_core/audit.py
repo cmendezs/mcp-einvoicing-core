@@ -402,6 +402,7 @@ def run_check_core_coverage(
     modules_to_check: list[str] | None = None,
     is_en16931_family: bool | None = None,
     primary_invoice_class: tuple[str, str] | None = None,
+    out_of_scope_modules: dict[str, str] | None = None,
 ) -> CheckResult:
     """CHECK 1 — Core interface coverage.
 
@@ -422,12 +423,26 @@ def run_check_core_coverage(
             ``False`` → must extend ``InvoiceDocument``; ``None`` → skip tree check.
         primary_invoice_class: ``(module_path, class_name)`` of the package's
             main invoice model. Required when *is_en16931_family* is not ``None``.
+        out_of_scope_modules: ``{module_path: reason}`` declaring whole core
+            sub-modules the package's scope never needs (for example a package
+            with no Peppol leg declaring ``mcp_einvoicing_core.peppol``). Each
+            declared module yields one ``[OUT_OF_SCOPE]`` finding carrying the
+            reason and the number of unused symbols, instead of one
+            ``[MISSING]`` warning per symbol. Symbols the package does import
+            still report ``[OK]``, and *intentional_overrides* still apply.
+            The reason must be a non-empty string; an empty reason raises
+            ``ValueError`` so the declaration stays a deliberate, documented
+            choice. Defaults to ``{}``.
 
     Returns:
         CheckResult with id ``"CHECK_1"``.
     """
     result = CheckResult(check_id="CHECK_1", name="Core interface coverage")
     overrides = intentional_overrides or {}
+    out_of_scope = out_of_scope_modules or {}
+    for scoped_mod, scoped_reason in out_of_scope.items():
+        if not scoped_reason.strip():
+            raise ValueError(f"out_of_scope_modules[{scoped_mod!r}] needs a non-empty reason.")
     mods = modules_to_check if modules_to_check is not None else DEFAULT_CORE_MODULES
     label = package_name
 
@@ -465,6 +480,8 @@ def run_check_core_coverage(
 
         overrides_for_mod = overrides.get(mod_path, set())
         symbols = _get_public_symbols(core_mod)
+        out_of_scope_reason = out_of_scope.get(mod_path)
+        unused_in_scope = 0
 
         for sym_name, sym_obj in symbols.items():
             if not (inspect.isclass(sym_obj) or inspect.isfunction(sym_obj)):
@@ -490,6 +507,8 @@ def run_check_core_coverage(
                         message="Imported and used.",
                     )
                 )
+            elif out_of_scope_reason is not None:
+                unused_in_scope += 1
             else:
                 result.findings.append(
                     CheckFinding(
@@ -504,6 +523,20 @@ def run_check_core_coverage(
                         ),
                     )
                 )
+
+        if out_of_scope_reason is not None:
+            result.findings.append(
+                CheckFinding(
+                    check_id="CHECK_1",
+                    tag="[OUT_OF_SCOPE]",
+                    severity=SEVERITY_OK,
+                    symbol=mod_path,
+                    message=(
+                        f"Module declared out of scope for {label}: {out_of_scope_reason} "
+                        f"({unused_in_scope} unused symbol(s) not reported individually)."
+                    ),
+                )
+            )
 
     # Canonical invoice tree sub-check
     if is_en16931_family is not None and primary_invoice_class is not None:
